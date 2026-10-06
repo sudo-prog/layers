@@ -1,0 +1,21 @@
+// Syncthing ignore — MUST be set on BOTH devices (per-device file, not synced). Copy to each machine.
+.git
+.generated
+.trash
+.obsidian/workspace*.json
+.obsidian/cache
+*.lv-tmp
+*.sync-conflict-*
+.DS_Store
+.env
+.env.*
+node_modules
+target
+dist
+.turbo
+.next
+.vercel
+.venv
+__pycache__
+coverage
+pkg

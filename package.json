@@ -1,0 +1,21 @@
+{
+  "name": "layers",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "dev": "turbo run dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5"
+  },
+  "packageManager": "pnpm@9.15.9"
+}
