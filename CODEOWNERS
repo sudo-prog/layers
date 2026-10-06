@@ -1,0 +1,28 @@
+# BE owns: contracts, packages/schema|sync|vector, services/**, tools/, .github/, root configs, third_party/, docs/
+/contracts/ @sudo-prog
+/packages/schema/ @sudo-prog
+/packages/sync/ @sudo-prog
+/packages/vector/ @sudo-prog
+/services/ @sudo-prog
+/tools/ @sudo-prog
+/.github/ @sudo-prog
+/docs/ @sudo-prog
+/third_party/ @sudo-prog
+/*.md @sudo-prog
+/.gitignore @sudo-prog
+/.gitattributes @sudo-prog
+/CODEOWNERS @sudo-prog
+/*.toml @sudo-prog
+/*.json @sudo-prog
+/*.yaml @sudo-prog
+/*.yml @sudo-prog
+
+# FE owns: packages/engine|cores|stack|ui, apps/**, tests/e2e|visual|perf
+/packages/engine/ @sudo-prog
+/packages/cores/ @sudo-prog
+/packages/stack/ @sudo-prog
+/packages/ui/ @sudo-prog
+/apps/ @sudo-prog
+/tests/e2e/ @sudo-prog
+/tests/visual/ @sudo-prog
+/tests/perf/ @sudo-prog
