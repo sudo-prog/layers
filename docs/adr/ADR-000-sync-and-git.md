@@ -18,11 +18,10 @@ LAYERS uses two private GitHub repos: `layers` (code) and `layers-vault` (Obsidi
 - Vulnerability alerts + automated security fixes enabled
 
 ## Protection Probe Result
-TBD - will probe after repo creation.
+**403: "Upgrade to GitHub Pro or make this repository public to enable this feature."** — Branch protection unavailable on Free plan for private repos.
+**Fallback strategy:** pre-push hook + PR discipline + T-BE-004 pre-commit ownership hook (enforced locally).
 
 ## Next Steps
-- Create both private repos (T-BE-001)
 - Add vault remote (H-M-003 §1)
-- Install fallback pre-push hook (H-M-002 §8)
-- Probe real branch protection (H-M-002 §8)
-- Enable vulnerability alerts + automated security fixes
+- Install fallback pre-push hook (already done for code repo)
+- Enable vulnerability alerts + automated security fixes (done)
