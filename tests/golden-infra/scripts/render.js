@@ -80,11 +80,18 @@ const html = '<!DOCTYPE html>' +
 async function render() {
   const browser = await chromium.launch({
     args: [
+      '--headless=new',
       '--use-gl=angle',
-      '--use-angle=swiftshader',
+      '--use-angle=swiftshader-webgl',
       '--enable-unsafe-swiftshader',
-      '--disable-gpu-sandbox',
+      '--disable-dev-shm-usage',
       '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-gpu-sandbox',
+      '--disable-software-rasterizer',
+      '--disable-extensions',
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
     ],
   });
 
