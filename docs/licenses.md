@@ -7,8 +7,8 @@
 
 | Verdict | Count |
 |---------|-------|
-| ✅ OK | 14 |
-| ⚠️ WARNING | 7 |
+| ✅ OK | 17 |
+| ⚠️ WARNING | 8 |
 | 🚫 BLOCKED | 1 |
 
 **Policy:** The client bundle must not contain AGPL/SSPL/PolyForm/non-commercial dependencies. All third-party code is vendored into `third_party/<name>/` with LICENSE, NOTICE, URL, and commit hash, wrapped behind internal interfaces.
@@ -69,6 +69,10 @@
 | `Workbox` | MIT | Tooling (PWA) | https://github.com/apache/workbox | ✅ OK | Service worker tooling |
 | `Zustand` | MIT | State management | https://github.com/pmndrs/zustand | ✅ OK | Client state library |
 | `Octokit` | MIT (believed) | GitHub API client | https://github.com/octokit/octokit | ⚠️ WARNING | License unconfirmed — preferred over isomorphic-git |
+| `three` | MIT | WebGL/WebGPU renderer + TSL | https://github.com/mrdoob/three.js | ✅ OK | TSL (Three.js Shading Language) is MIT. Node-based shader graph compiles to GLSL/WGSL. |
+| `paper.js` | MIT | Vector graphics scripting | https://github.com/paperjs/paper.js | ✅ OK | Canvas2D vector graphics. Current version 0.12.18. |
+| `gsap` | Free (commercial) | Animation library | https://github.com/greensock/gsap | ✅ OK | 100% free for commercial use as of April 30, 2025 (Webflow acquisition). All Club plugins now free. |
+| `penpot` | AGPL-3.0 (server) | Design/prototyping tool | https://github.com/penpot/penpot | ⚠️ WARNING | Reference only — no code reuse. Server is AGPL-3.0. If integrating, use HTTP API. |
 
 ### pnpm-lock.yaml Warnings
 
