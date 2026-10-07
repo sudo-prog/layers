@@ -52,15 +52,39 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Verify license register exists
+        run: |
+          if [ ! -f "docs/licenses.md" ]; then
+            echo "ERROR: License register (docs/licenses.md) not found."
+            echo "Every dependency must be documented in docs/licenses.md before merging."
+            exit 1
+          fi
       - name: Check licenses
         run: |
-          # Only allow-list licenses
+          # Verify against allow-listed licenses AND cross-check with the license register
           npx license-checker --production --csv | tail -n +2 | while IFS=',' read -r name version license; do
             case "$license" in
               MIT|BSD*|Apache*|ISC|Unlicense|CC0*|Public*Domain|WTFPL)
                 ;;
               *)
                 echo "DISALLOWED LICENSE: $name@$version - $license"
+                exit 1
+                ;;
+            esac
+            # Cross-check: package must appear in docs/licenses.md
+            if ! grep -q "\`${name}\`" docs/licenses.md; then
+              echo "ERROR: $name@$version is not documented in docs/licenses.md"
+              echo "Add it to the register before merging."
+              exit 1
+            fi
+          done
+      - name: Check for BLOCKED licenses in client bundle
+        run: |
+          # Fail if any BLOCKED license appears in the dependency tree
+          npx license-checker --production --csv | tail -n +2 | while IFS=',' read -r name version license; do
+            case "$license" in
+              AGPL*|SSPL*|PolyForm*|CC-BY-NC*|CC-BY-ND*|NonCommercial*)
+                echo "BLOCKED LICENSE IN DEPENDENCY TREE: $name@$version - $license"
                 exit 1
                 ;;
             esac
