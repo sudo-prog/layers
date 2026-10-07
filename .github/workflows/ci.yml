@@ -116,7 +116,4 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check ownership
-        run: |
-          # This would need a script to check changed files vs CODEOWNERS
-          # For now, just a placeholder
-          echo "Ownership check placeholder"
+        run: bash .github/scripts/ownership-check.sh
