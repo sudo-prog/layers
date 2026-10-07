@@ -117,3 +117,28 @@ jobs:
           fetch-depth: 0
       - name: Check ownership
         run: bash .github/scripts/ownership-check.sh
+
+  golden-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright + Chromium
+        run: |
+          cd tests/golden-infra
+          pnpm install
+          npx playwright install chromium --with-deps
+      - name: Run golden-image tests
+        run: |
+          cd tests/golden-infra
+          node scripts/run-all.js
+        env:
+          LAYERS_GOLDEN_THRESHOLD: 0.98
+          LAYERS_GOLDEN_SEED: 42
