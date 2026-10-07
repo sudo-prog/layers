@@ -69,10 +69,12 @@
 | `Workbox` | MIT | Tooling (PWA) | https://github.com/apache/workbox | ✅ OK | Service worker tooling |
 | `Zustand` | MIT | State management | https://github.com/pmndrs/zustand | ✅ OK | Client state library |
 | `Octokit` | MIT (believed) | GitHub API client | https://github.com/octokit/octokit | ⚠️ WARNING | License unconfirmed — preferred over isomorphic-git |
-| `three` | MIT | WebGL/WebGPU renderer + TSL | https://github.com/mrdoob/three.js | ✅ OK | TSL (Three.js Shading Language) is MIT. Node-based shader graph compiles to GLSL/WGSL. |
-| `paper.js` | MIT | Vector graphics scripting | https://github.com/paperjs/paper.js | ✅ OK | Canvas2D vector graphics. Current version 0.12.18. |
-| `gsap` | Free (commercial) | Animation library | https://github.com/greensock/gsap | ✅ OK | 100% free for commercial use as of April 30, 2025 (Webflow acquisition). All Club plugins now free. |
-| `penpot` | AGPL-3.0 (server) | Design/prototyping tool | https://github.com/penpot/penpot | ⚠️ WARNING | Reference only — no code reuse. Server is AGPL-3.0. If integrating, use HTTP API. |
+| `three` | 0.186.1 | MIT | https://github.com/mrdoob/three.js | ✅ OK | WebGL/WebGPU renderer + TSL (Three.js Shading Language). TSL lives in `src/nodes/` within the same package — MIT license verified from `LICENSE` file on master branch. Node-based shader graph compiles to GLSL/WGSL. 0 dependencies. Lazy-load outside 150 KB engine bundle. **Bundle: 719 kB minified / 180.6 kB gzip**; tree-shakeable via `three/examples` (node-based TSL API). |
+| `paper.js` | 0.12.18 | MIT | https://github.com/paperjs/paper.js | ✅ OK | "Swiss Army Knife of Vector Graphics Scripting" — Canvas2D-based vector graphics. MIT confirmed from npm registry. **Bundle: 232.3 kB minified / 82.2 kB gzip.** No ES6 module exports (not tree-shakeable); lazy-load only. No dependencies. |
+| `gsap` | 3.15.0 | Custom (Standard No-Charge) | https://github.com/greensock/GSAP | ✅ OK | **License is NOT MIT** — it's Webflow's "Standard No-Charge GSAP License" (effective 2025-04-30, replacing GreenSock's custom license post-acquisition). Free for commercial projects including all formerly Club-only plugins (SplitText, MorphSVG, etc.). **Restriction:** Prohibited Uses = visual animation builders that compete with Webflow. LAYERS is a visual design tool — potential conflict. **Recommendation:** ✅ OK for now (FAQ explicitly says AI tools generating GSAP code are fine), but if LAYERS ships a visual animation builder, get explicit written confirmation from Webflow/GreenSock. Lazy-load only. **Bundle: 69 kB minified / 26.7 kB gzip**; tree-shakeable, side-effect free. 0 dependencies. |
+| `penpot` | — | MPL-2.0 (client) / AGPL-3.0 (server) | https://github.com/penpot/penpot | ⚠️ WARNING | Reference only per Brief-Rev2 line 16 ("Penpot secondary"). NOT for code reuse. Server is AGPL-3.0; client UI is MPL-2.0. If integration via HTTP API is needed, MPL-2.0 only requires source disclosure of modified MPL files — acceptable for reference/inspiration. Do not vendor client code into the bundle. |
+
+**Rev-2 bundle impact:** Per Brief-Rev2 line 17 (R-40), all four new deps are lazy-loaded outside the 150 KB engine bundle. Only `three` and `gsap` are tree-shakeable (side-effect free); `paper.js` is not (no ESM exports). `penpot` is reference-only (no bundle inclusion).
 
 ### pnpm-lock.yaml Warnings
 
