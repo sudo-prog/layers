@@ -11,15 +11,17 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.resolve(__dirname, '../fixtures');
 const outputDir = path.resolve(__dirname, '../output');
 const threshold = parseFloat(process.env.LAYERS_GOLDEN_THRESHOLD || '0.98');
 const seed = parseInt(process.env.LAYERS_GOLDEN_SEED || '42', 10);
 
 if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
+  try { fs.mkdirSync(outputDir, { recursive: true }); } catch (err) { console.error('Cannot create output dir:', err.message); process.exit(1); }
 }
 
 const fixtures = fs.readdirSync(fixturesDir).filter(f => {
@@ -47,7 +49,7 @@ for (const fixture of fixtures) {
     // Render
     execSync(
       `node ${path.resolve(__dirname, 'render.js')} ${stackPath} ${outputPath}`,
-      { stdio: 'inherit', env: { ...process.env, LAYERS_RENDER_SEED: seed } }
+      { stdio: 'pipe', encoding: 'utf-8', env: { ...process.env, LAYERS_RENDER_SEED: seed } }
     );
 
     // Compare
@@ -61,6 +63,8 @@ for (const fixture of fixtures) {
     results.push({ fixture, status: 'pass', output: result.trim() });
   } catch (err) {
     console.log(`  FAIL ${fixture}`);
+    if (err.stdout) console.error(`  stdout: ${err.stdout}`);
+    if (err.stderr) console.error(`  stderr: ${err.stderr}`);
     failed++;
     results.push({ fixture, status: 'fail', error: err.message });
   }

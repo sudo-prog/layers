@@ -2,6 +2,9 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const contractsDir = path.resolve(__dirname, '../../../contracts');
 
@@ -46,15 +49,34 @@ export const schemas = {
   document: documentSchema,
 };
 
-export function canonicalizePreset(preset: Preset): string {
-  // Canonical key ordering for reproducible JSON
-  return JSON.stringify(preset, Object.keys(preset).sort());
+function deepSort(obj: any): any {
+  if (Array.isArray(obj)) return obj.map(deepSort);
+  if (obj && typeof obj === 'object') {
+    return Object.keys(obj).sort().reduce((acc: any, key) => {
+      if (obj[key] === undefined) return acc;
+      acc[key] = deepSort(obj[key]);
+      return acc;
+    }, {});
+  }
+  return obj;
 }
 
+export function canonicalizePreset(preset: Preset): string {
+  return JSON.stringify(deepSort(preset));
+}
+
+const PASS_COSTS: Record<string, number> = {
+  'bevel-emboss': 2,
+  'gradient-overlay': 1,
+  'pattern-dither': 2,
+  'noise-grain': 2,
+  'gaussian-blur': 3,
+  'displacement': 2,
+  'color-adjust': 1,
+};
+
 export function estimatePasses(effectStack: EffectStack): number {
-  // Rough pass estimation: each core = 1 pass, blend modes may add passes
-  // TODO: per-core pass costs from [[03-Reference/Cores]]
-  return effectStack.length;
+  return effectStack.reduce((sum: number, item: any) => sum + (PASS_COSTS[item.core] ?? 1), 0);
 }
 
 export function mobileOk(passes: number): boolean {

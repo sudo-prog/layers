@@ -1,0 +1,10 @@
+{
+  "fixture": "gradient-overlay",
+  "description": "Linear gradient overlay (red to blue, 45 degrees) at 80% opacity",
+  "resolution": { "width": 1024, "height": 1024 },
+  "seed": 42,
+  "core": "gradient-overlay",
+  "expectedPasses": 1,
+  "mobileOk": true,
+  "tags": ["core", "gradient", "overlay", "deterministic"]
+}

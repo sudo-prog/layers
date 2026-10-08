@@ -1,0 +1,10 @@
+{
+  "fixture": "noise-grain",
+  "description": "Perlin noise grain overlay at full opacity",
+  "resolution": { "width": 1024, "height": 1024 },
+  "seed": 42,
+  "core": "noise-grain",
+  "expectedPasses": 1,
+  "mobileOk": true,
+  "tags": ["core", "noise", "grain", "perlin", "deterministic"]
+}

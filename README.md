@@ -7,15 +7,27 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 ## Project Status (2026-10-08)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
+**Phase:** 0.7 (Eval harness) — **IN PROGRESS**
+**Phase:** 1.2 (Feature extraction) — **IN PROGRESS**
 
-### Backend (BE) — All tasks done except T-BE-008
+### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
 - T-BE-002: Syncthing + .stignore ✅
 - T-BE-004: Monorepo skeleton + CI + CODEOWNERS + pre-commit hook ✅
 - T-BE-005: Preset JSON Schema v0 + contracts (17 tests) ✅
 - T-BE-006: License register (17 OK / 8 WARNING / 1 BLOCKED) ✅
 - T-BE-007: Skills audit (7/13 categories) ✅
-- T-BE-008: Headless renderer + golden-image infra — **IN PROGRESS** (blocked on T-FE-003)
+- T-BE-008: Headless renderer + golden-image infra ✅ (3 fixtures, SSIM, benchmark)
+
+### Backend (BE) — Phase 1.2
+- Feature extraction pipeline (palette, edges, frequency, tone, CLIP) ✅
+- Cross-reference consistency + outlier detection ✅
+- FastAPI service skeleton + job queue ✅
+- packages/sync: SyncProvider + MemorySyncProvider (13 tests) ✅
+- packages/vector: VectorStore + MemoryVectorStore (11 tests) ✅
+- services/ai: OpenAPI 3.1 spec ✅
+- services/eval: README ✅
+- services/learning: README ✅
 
 ### Frontend (FE) — Pending Mac agent
 - T-FE-001: Mac setup (Hermes, Syncthing, Node/pnpm)
@@ -46,10 +58,12 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 17/17 passing (packages/schema)
+- 24/24 JS tests passing (6 packages: schema, sync, vector, tsconfig, golden-infra)
+- 4/4 Python tests passing (services/ai)
+- 3/3 golden-image fixtures passing
 - pnpm build: success
 - pnpm test: success
 
 ### Commits
-- 14 commits on main (2026-10-07)
+- 15+ commits on main (2026-10-07 → 2026-10-08)
 - Branch feat/preset-schema-v0 merged to main

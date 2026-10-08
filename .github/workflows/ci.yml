@@ -32,7 +32,7 @@ jobs:
         run: pnpm lint
 
       - name: Typecheck
-        run: pnpm -r exec tsc --noEmit
+        run: pnpm exec tsc -b
 
       - name: Build
         run: pnpm build
@@ -59,7 +59,18 @@ jobs:
             echo "Every dependency must be documented in docs/licenses.md before merging."
             exit 1
           fi
-      - name: Check licenses
+      - name: Check for BLOCKED licenses in dependency tree
+        run: |
+          # Fail if any BLOCKED license appears in the dependency tree (checked FIRST)
+          npx license-checker --production --csv | tail -n +2 | while IFS=',' read -r name version license; do
+            case "$license" in
+              AGPL*|SSPL*|PolyForm*|CC-BY-NC*|CC-BY-ND*|NonCommercial*)
+                echo "BLOCKED LICENSE: $name@$version - $license"
+                exit 1
+                ;;
+            esac
+          done
+      - name: Check allow-listed licenses
         run: |
           # Verify against allow-listed licenses AND cross-check with the license register
           npx license-checker --production --csv | tail -n +2 | while IFS=',' read -r name version license; do
@@ -77,17 +88,6 @@ jobs:
               echo "Add it to the register before merging."
               exit 1
             fi
-          done
-      - name: Check for BLOCKED licenses in client bundle
-        run: |
-          # Fail if any BLOCKED license appears in the dependency tree
-          npx license-checker --production --csv | tail -n +2 | while IFS=',' read -r name version license; do
-            case "$license" in
-              AGPL*|SSPL*|PolyForm*|CC-BY-NC*|CC-BY-ND*|NonCommercial*)
-                echo "BLOCKED LICENSE IN DEPENDENCY TREE: $name@$version - $license"
-                exit 1
-                ;;
-            esac
           done
 
   conflict-files:
