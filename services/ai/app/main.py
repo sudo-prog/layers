@@ -4,6 +4,8 @@ Provides feature extraction, job queue, and image management endpoints.
 All models run on-device; no network access is required after the model is cached.
 """
 
+from __future__ import annotations
+
 import base64
 import os
 import tempfile
@@ -11,6 +13,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -34,6 +37,12 @@ from app.models import FeatureVector, ExtractRequest, ExtractResponse, JobRespon
 from app.extractors.pipeline import preprocess_image, extract_features, extract_features_multiscale
 from app.consistency import cross_reference, detect_outliers
 from app.queue import IMAGE_DIR, queue
+
+# Stage 1.4: stack search / optimization / pruning
+from app.search import search_stacks, RankedStack
+from app.optimize import optimize_stack, OptimizationResult, _inject_params
+from app.pareto import prune_stack, pareto_frontier, stack_metrics
+from app.search import _stack_passes
 
 
 class _APIExtractRequest(BaseModel):
@@ -248,3 +257,65 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("app.main:app", host="127.0.0.1", port=8123)
+
+
+# ---------------------------------------------------------------------------
+# Stage 1.4: stack search / optimization / pruning endpoints
+# ---------------------------------------------------------------------------
+
+class SearchRequest(BaseModel):
+    """Request body for /v1/stacks/search."""
+
+    feature: FeatureVector
+    beam_width: int = 8
+    levels: int = 1
+
+
+class OptimizeRequest(BaseModel):
+    """Request body for /v1/stacks/optimize."""
+
+    feature: FeatureVector
+    stack: list[dict[str, Any]]
+    max_trials: int = 200
+
+
+class PruneRequest(BaseModel):
+    """Request body for /v1/stacks/prune."""
+
+    feature: FeatureVector
+    stack: list[dict[str, Any]]
+    max_loss_pct: float = 0.02
+
+
+@app.post("/v1/stacks/search")
+def search_stacks_endpoint(request: SearchRequest) -> dict[str, Any]:
+    """Beam-search over effect-stack candidates for the given feature vector."""
+    candidates = search_stacks(
+        request.feature,
+        beam_width=request.beam_width,
+        max_layers=5,
+        seed=None,
+    )
+    return {"candidates": [r.to_dict() for r in candidates], "count": len(candidates)}
+
+
+@app.post("/v1/stacks/optimize")
+def optimize_stacks_endpoint(request: OptimizeRequest) -> dict[str, Any]:
+    """Optimize stack parameters via CMA-ES (optuna not installed)."""
+    result: OptimizationResult = optimize_stack(
+        request.stack, request.feature, max_trials=request.max_trials
+    )
+    optimized_stack = _inject_params(request.stack, result.optimized_params)
+    return {
+        "optimized_stack": optimized_stack,
+        "score": result.score,
+        "trace": result.trace,
+        "passes": _stack_passes(optimized_stack),
+    }
+
+
+@app.post("/v1/stacks/prune")
+def prune_stacks_endpoint(request: PruneRequest) -> dict[str, Any]:
+    """Prune layers from a stack keeping fidelity loss within max_loss_pct."""
+    report = prune_stack(request.stack, request.feature, max_loss_pct=request.max_loss_pct)
+    return {"report": report}
