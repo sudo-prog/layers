@@ -4,11 +4,12 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Project Status (2026-10-08)
+## Project Status (2026-10-09)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
-**Phase:** 0.7 (Eval harness) — **IN PROGRESS**
-**Phase:** 1.2 (Feature extraction) — **IN PROGRESS**
+**Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
+**Phase:** 1.2 (Feature extraction) — **COMPLETE**
+**Phase:** 1.3 (Core scaffolding) — **COMPLETE**
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -29,12 +30,14 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - services/eval: README ✅
 - services/learning: README ✅
 
-### Frontend (FE) — Pending Mac agent
-- T-FE-001: Mac setup (Hermes, Syncthing, Node/pnpm)
-- T-FE-002: Install + vet FE skills
-- T-FE-003: WebGL2 context + ping-pong skeleton
-- T-FE-004: Design tokens
-- T-FE-005: Pattern/Dither core v0
+### Frontend (FE) — Stage 0.2/0.3 foundation
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with program cache (compiles once, not per frame). 11 tests.
+- `@layers/cores` — 7 shader cores with real GLSL: Pattern/Dither, Noise/Grain, Blur, Color/Blend, Displacement, Lighting, Outline. 15 tests (compile-verified against mocked GL context).
+- `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
+- `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
+- `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation, multi-pass render pixel audit, context-loss, resize, and readPixels-synced FPS benchmark.
+
+**Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
 ### Manager (MGR)
 - T-M-001: License audit addendum ✅
@@ -58,12 +61,13 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 24/24 JS tests passing (6 packages: schema, sync, vector, tsconfig, golden-infra)
-- 4/4 Python tests passing (services/ai)
+- 87/87 JS tests passing (7 packages: schema, sync, vector, stack, ui, engine, cores); 4 new JS packages (engine, cores, stack, ui) with 46 tests
+- 57/57 Python tests passing (services/ai)
 - 3/3 golden-image fixtures passing
-- pnpm build: success
-- pnpm test: success
+- 9/9 live browser checks passing (tests/e2e)
+- pnpm build: 7/7 tasks successful
+- pnpm test: 15/15 turbo tasks successful
 
 ### Commits
-- 15+ commits on main (2026-10-07 → 2026-10-08)
+- 15+ commits on main (2026-10-07 → 2026-10-09)
 - Branch feat/preset-schema-v0 merged to main

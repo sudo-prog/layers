@@ -91,3 +91,28 @@ def build_pyramid(image: Image.Image, levels: int = 3) -> list[Image.Image]:
         current = current.resize((new_w, new_h), Image.Resampling.LANCZOS)
         pyramid.append(current)
     return pyramid
+
+
+def extract_features_multiscale(
+    image: Image.Image, extractors: Optional[list[str]] = None, levels: int = 3
+) -> list[FeatureVector]:
+    """Extract features from *image* at multiple scales.
+
+    A Gaussian-style pyramid with *levels* entries is built from *image*
+    (see :func:`build_pyramid`).  The same set of *extractors* is then run
+    on every pyramid level, producing one :class:`~app.models.FeatureVector`
+    per level.
+
+    Args:
+        image: The source image (already preprocessed).
+        extractors: Optional list of extractor names to run.  When ``None``
+            or empty, all registered extractors are used (same semantics
+            as :func:`extract_features`).
+        levels: Number of pyramid levels (including the base level).
+
+    Returns:
+        A list of :class:`~app.models.FeatureVector` objects with one entry
+        per pyramid level (index 0 is the full-resolution base).
+    """
+    pyramid = build_pyramid(image, levels=levels)
+    return [extract_features(level, extractors) for level in pyramid]

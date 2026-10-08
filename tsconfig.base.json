@@ -19,7 +19,11 @@
     "paths": {
       "@layers/schema": ["packages/schema/src"],
       "@layers/sync": ["packages/sync/src"],
-      "@layers/vector": ["packages/vector/src"]
+      "@layers/vector": ["packages/vector/src"],
+      "@layers/engine": ["packages/engine/src"],
+      "@layers/cores": ["packages/cores/src"],
+      "@layers/stack": ["packages/stack/src"],
+      "@layers/ui": ["packages/ui/src"]
     }
   },
   "exclude": ["node_modules", "dist"]

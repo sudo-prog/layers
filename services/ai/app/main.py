@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field
 #    (preprocess_image -> extract_features -> consistency analysis),
 #    and returns an ``ExtractResponse``.
 from app.models import FeatureVector, ExtractRequest, ExtractResponse, JobResponse
-from app.extractors.pipeline import preprocess_image, extract_features
+from app.extractors.pipeline import preprocess_image, extract_features, extract_features_multiscale
 from app.consistency import cross_reference, detect_outliers
 from app.queue import IMAGE_DIR, queue
 
@@ -41,6 +41,20 @@ class _APIExtractRequest(BaseModel):
 
     image_data: str = Field(
         ..., description="Base64-encoded image data (PNG/JPEG/etc.)"
+    )
+
+
+class MultiscaleExtractResponse(BaseModel):
+    """Response from the multiscale feature extraction endpoint."""
+
+    features: list[FeatureVector] = Field(
+        ..., description="Feature vectors, one per pyramid level."
+    )
+    pyramid_levels: int = Field(
+        ..., description="Number of pyramid levels used for extraction."
+    )
+    consistency: dict = Field(
+        ..., description="Consistency report: cross_reference_scores, outliers."
     )
 
 
@@ -85,6 +99,40 @@ def _extract_from_base64(image_data: str) -> ExtractResponse:
         os.unlink(tmp.name)
 
 
+def _extract_multiscale_from_base64(
+    image_data: str, levels: int = 3
+) -> MultiscaleExtractResponse:
+    """Decode base64 image, run multiscale extraction, return response."""
+    try:
+        image_bytes = base64.b64decode(image_data)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid base64 image data: {exc}"
+        ) from exc
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    try:
+        tmp.write(image_bytes)
+        tmp.close()
+
+        image = preprocess_image(tmp.name)
+        features = extract_features_multiscale(image, levels=levels)
+
+        xref = cross_reference(features)
+        consistency = {
+            **xref,
+            "outliers": detect_outliers(features),
+        }
+
+        return MultiscaleExtractResponse(
+            features=features,
+            pyramid_levels=len(features),
+            consistency=consistency,
+        )
+    finally:
+        os.unlink(tmp.name)
+
+
 def _to_job_response(job) -> JobResponse:
     """Convert a queue.JobResponse to models.JobResponse for the API."""
     return JobResponse(
@@ -120,6 +168,19 @@ def health() -> dict[str, str]:
 def extract_features_endpoint(request: _APIExtractRequest) -> ExtractResponse:
     """Extract features from base64-encoded image data (synchronous)."""
     return _extract_from_base64(request.image_data)
+
+
+@app.post("/v1/features/extract-multiscale", response_model=MultiscaleExtractResponse)
+def extract_features_multiscale_endpoint(
+    request: _APIExtractRequest, levels: int = 3
+) -> MultiscaleExtractResponse:
+    """Extract features at multiple scales using an image pyramid (synchronous).
+
+    Builds a Gaussian-style pyramid with *levels* entries and runs feature
+    extraction on each level.  Returns one :class:`FeatureVector` per level
+    along with a consistency report.
+    """
+    return _extract_multiscale_from_base64(request.image_data, levels=levels)
 
 
 @app.post("/v1/jobs", response_model=JobResponse)

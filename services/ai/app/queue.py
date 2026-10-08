@@ -4,6 +4,7 @@ Provides a simple thread-based job queue that runs tasks in the background.
 Jobs are stored in memory with status tracking.
 """
 
+import os
 import shutil
 import threading
 import time
@@ -16,6 +17,13 @@ from pydantic import BaseModel, Field
 # Ephemeral image storage
 IMAGE_DIR = Path("/tmp/layers-ai-images")
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Image TTL: images older than this are eligible for cleanup.
+# Configurable via LAYERS_IMAGE_TTL env var (seconds).
+_IMAGE_TTL = int(os.environ.get("LAYERS_IMAGE_TTL", "3600"))  # default 1 hour
+
+# How often (seconds) the worker runs cleanup.
+_CLEANUP_INTERVAL = 300  # 5 minutes
 
 
 class JobResponse(BaseModel):
@@ -67,6 +75,7 @@ class JobQueue:
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
         self._worker_running = False
+        self._last_cleanup: float = 0.0
 
     def submit(self, func: Callable, *args: Any) -> str:
         """Submit a callable for asynchronous execution.
@@ -111,15 +120,51 @@ class JobQueue:
         finally:
             job.updated_at = time.time()
 
+    def cleanup_old_images(self) -> int:
+        """Remove ephemeral images older than the configured TTL.
+
+        The TTL is read from the ``LAYERS_IMAGE_TTL`` environment variable
+        (in seconds; default 3600 = 1 hour).
+
+        Returns:
+            The number of images removed.
+        """
+        count = 0
+        if IMAGE_DIR.exists():
+            now = time.time()
+            for item in IMAGE_DIR.iterdir():
+                try:
+                    stat = item.stat()
+                    if now - stat.st_mtime > _IMAGE_TTL:
+                        if item.is_file():
+                            item.unlink()
+                        elif item.is_dir():
+                            shutil.rmtree(item)
+                        count += 1
+                except OSError:
+                    # File may have been deleted between iteration and stat.
+                    pass
+        return count
+
+    def _maybe_cleanup(self) -> None:
+        """Run cleanup at most once per ``_CLEANUP_INTERVAL`` seconds."""
+        now = time.time()
+        if now - self._last_cleanup >= _CLEANUP_INTERVAL:
+            self._last_cleanup = now
+            self.cleanup_old_images()
+
     def run_worker(self) -> None:
         """Start the background worker thread.
 
-        The worker processes pending and running jobs in a loop. This method
-        returns immediately; the worker runs in a daemon thread.
+        The worker processes pending and running jobs in a loop.  Every
+        ``_CLEANUP_INTERVAL`` seconds the worker also prunes ephemeral images
+        older than the configured TTL.  This method returns immediately; the
+        worker runs in a daemon thread.
         """
         if self._worker_running:
             return
         self._worker_running = True
+        self._last_cleanup = time.time()
 
         def _worker_loop() -> None:
             while self._worker_running:
@@ -128,6 +173,7 @@ class JobQueue:
                         j for j in self._jobs.values() if j.status == "pending"
                     ]
                 if not pending:
+                    self._maybe_cleanup()
                     time.sleep(0.1)
                     continue
                 for job in pending:
