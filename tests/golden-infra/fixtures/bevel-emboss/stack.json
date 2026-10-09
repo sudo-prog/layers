@@ -1,0 +1,12 @@
+{
+  "core": "bevel-emboss",
+  "params": {
+    "depth": 0.5,
+    "size": 8,
+    "angle": 135,
+    "softness": 0.3
+  },
+  "opacity": 1,
+  "blend": "normal",
+  "enabled": true
+}

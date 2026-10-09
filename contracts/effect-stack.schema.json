@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://layers.dev/schemas/effect-stack/v0",
+  "title": "EffectStack",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["core", "params", "opacity", "blend", "enabled"],
+    "properties": {
+      "core": {
+        "type": "string",
+        "description": "Core identifier (e.g., 'bevel-emboss', 'gradient-overlay', 'pattern-dither')"
+      },
+      "params": {
+        "type": "object",
+        "description": "Core-specific parameters (engine-neutral names)",
+        "additionalProperties": true
+      },
+      "opacity": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 1
+      },
+      "blend": {
+        "type": "string",
+        "enum": ["normal", "multiply", "screen", "overlay", "soft-light", "hard-light", "color-dodge", "color-burn", "darken", "lighten", "difference", "exclusion", "hue", "saturation", "color", "luminosity"],
+        "default": "normal"
+      },
+      "mask": {
+        "type": ["string", "null"],
+        "description": "Optional asset ID (Immich) for a mask texture"
+      },
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "minItems": 0
+}

@@ -1,0 +1,32 @@
+{
+  "name": "Gradient Overlay",
+  "version": "1.0.0",
+  "effectStack": [
+    {
+      "core": "gradient-overlay",
+      "params": {
+        "gradient": {
+          "type": "linear",
+          "angle": 90,
+          "stops": [
+            { "position": 0, "color": "#ff0000" },
+            { "position": 0.5, "color": "#ffff00" },
+            { "position": 1, "color": "#00ff00" }
+          ]
+        },
+        "scale": 1,
+        "offsetX": 0,
+        "offsetY": 0,
+        "dither": true,
+        "reverse": false,
+        "alignWithLayer": true
+      },
+      "opacity": 0.8,
+      "blend": "overlay",
+      "enabled": true
+    }
+  ],
+  "schemaVersion": 0,
+  "description": "Linear gradient overlay",
+  "tags": ["gradient", "color", "layer-style"]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://layers.dev/schemas/document/v0",
+  "title": "Document",
+  "type": "object",
+  "required": ["schemaVersion", "layers", "canvas", "version"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 0,
+      "description": "Schema version for migration"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Document version"
+    },
+    "canvas": {
+      "type": "object",
+      "required": ["width", "height", "dpi"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "dpi": { "type": "number", "minimum": 72, "maximum": 600, "default": 144 },
+        "colorSpace": { "type": "string", "enum": ["srgb", "display-p3", "a98rgb", "prophoto", "cmyk"], "default": "srgb" }
+      },
+      "additionalProperties": false
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/layer"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "required": ["id", "kind", "content", "effects", "transform", "visible", "locked", "opacity"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string", "enum": ["raster", "vector", "text", "group"] },
+        "content": { "type": "object" },
+        "effects": { "$ref": "https://layers.dev/schemas/effect-stack/v0" },
+        "transform": {
+          "type": "object",
+          "required": ["x", "y", "rotation", "scaleX", "scaleY"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "rotation": { "type": "number" },
+            "scaleX": { "type": "number", "default": 1 },
+            "scaleY": { "type": "number", "default": 1 }
+          },
+          "additionalProperties": false
+        },
+        "visible": { "type": "boolean", "default": true },
+        "locked": { "type": "boolean", "default": false },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/layer" },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

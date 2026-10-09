@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://layers.dev/schemas/preset/v0",
+  "title": "Preset",
+  "type": "object",
+  "required": ["name", "version", "effectStack", "schemaVersion"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of this preset"
+    },
+    "effectStack": {
+      "$ref": "https://layers.dev/schemas/effect-stack/v0"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 0,
+      "description": "Schema version for migration"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 10
+    },
+    "thumbnail": {
+      "type": ["string", "null"],
+      "description": "Asset ID (Immich) for preview image"
+    }
+  },
+  "additionalProperties": false
+}

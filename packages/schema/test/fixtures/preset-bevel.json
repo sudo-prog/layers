@@ -1,0 +1,30 @@
+{
+  "name": "Bevel & Emboss",
+  "version": "1.0.0",
+  "effectStack": [
+    {
+      "core": "bevel-emboss",
+      "params": {
+        "depth": 0.5,
+        "size": 8,
+        "soften": 2,
+        "angle": 120,
+        "altitude": 30,
+        "highlightMode": "screen",
+        "highlightColor": "#ffffff",
+        "highlightOpacity": 0.75,
+        "shadowMode": "multiply",
+        "shadowColor": "#000000",
+        "shadowOpacity": 0.75,
+        "technique": "smooth",
+        "direction": "up"
+      },
+      "opacity": 1,
+      "blend": "normal",
+      "enabled": true
+    }
+  ],
+  "schemaVersion": 0,
+  "description": "Classic bevel and emboss effect",
+  "tags": ["3d", "emboss", "layer-style"]
+}

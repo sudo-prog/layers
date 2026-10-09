@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@layers/schema": ["packages/schema/src"],
+      "@layers/sync": ["packages/sync/src"],
+      "@layers/vector": ["packages/vector/src"],
+      "@layers/engine": ["packages/engine/src"],
+      "@layers/cores": ["packages/cores/src"],
+      "@layers/stack": ["packages/stack/src"],
+      "@layers/ui": ["packages/ui/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

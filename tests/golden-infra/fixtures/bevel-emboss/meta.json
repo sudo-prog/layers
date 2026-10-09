@@ -1,0 +1,10 @@
+{
+  "fixture": "bevel-emboss",
+  "description": "Bevel/emboss core with default parameters",
+  "resolution": { "width": 1024, "height": 1024 },
+  "seed": 42,
+  "core": "bevel-emboss",
+  "expectedPasses": 1,
+  "mobileOk": true,
+  "tags": ["core", "bevel", "emboss", "deterministic"]
+}

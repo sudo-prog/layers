@@ -1,0 +1,11 @@
+{
+  "core": "gradient-overlay",
+  "params": {
+    "color1": "#ff0000",
+    "color2": "#0000ff",
+    "angle": 45
+  },
+  "opacity": 0.8,
+  "blend": "normal",
+  "enabled": true
+}

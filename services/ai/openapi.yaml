@@ -1,0 +1,296 @@
+openapi: 3.1.0
+info:
+  title: LAYERS AI Service
+  description: |
+    Local desktop AI service for feature extraction, hypothesis generation and
+    preset scoring. All models run on-device; no network access is required
+    after the model is cached.
+  version: 0.1.0
+  contact:
+    name: LAYERS
+    url: https://layers.dev
+servers:
+  - url: http://127.0.0.1:8123
+    description: Local desktop service
+
+x-layers:
+  model: CLIP ViT-B/32 (on-device)
+  privacy: no-network-after-cache
+  budget-gate: services reference packages/schema mobileOk / estimatePasses
+
+paths:
+  /v1/health:
+    get:
+      summary: Health check
+      description: Liveness probe. Returns 200 when the service and model are ready.
+      operationId: healthCheck
+      tags: [system]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Model not loaded yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/features/extract:
+    post:
+      summary: Extract features from reference images
+      description: |
+        Run CLIP on one or more reference images and return pooled image
+        embeddings plus per-token embeddings for similarity search.
+      operationId: extractFeatures
+      tags: [features]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FeatureExtractRequest'
+      responses:
+        '200':
+          description: Features extracted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureExtractResponse'
+        '400':
+          description: Bad request (missing image)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/hypotheses/generate:
+    post:
+      summary: Generate style hypotheses from features
+      description: |
+        Given reference features, propose candidate effect-stack hypotheses to
+        render and score against the references.
+      operationId: generateHypotheses
+      tags: [hypotheses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HypothesisRequest'
+      responses:
+        '200':
+          description: Generated hypotheses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HypothesisResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/presets/score:
+    post:
+      summary: Score a preset against reference features
+      description: |
+        Compute a similarity score for a single effect-stack preset against
+        reference image features. Returns cosine similarity and an estimated
+        pass budget.
+      operationId: scorePreset
+      tags: [presets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresetScoreRequest'
+      responses:
+        '200':
+          description: Preset scored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresetScoreResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+        code:
+          type: string
+          description: Stable error code.
+
+    HealthResponse:
+      type: object
+      required: [status, modelLoaded, uptime]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        modelLoaded:
+          type: boolean
+          description: Whether the CLIP model has finished loading.
+        model:
+          type: string
+          example: clip-vit-base-patch32
+        uptime:
+          type: integer
+          minimum: 0
+          description: Seconds since the service started.
+
+    FeatureExtractRequest:
+      type: object
+      required: [images]
+      properties:
+        images:
+          type: array
+          description: List of image paths or base64-encoded image data.
+          items:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: string
+                description: Base64-encoded image bytes (JPEG/PNG/WebP).
+        includeTokens:
+          type: boolean
+          description: Return per-token embeddings (heavier payload).
+          default: false
+
+    ImageEmbedding:
+      type: object
+      required: [id, vector]
+      properties:
+        id:
+          type: string
+          description: Identifier for the image (provided by caller).
+        vector:
+          type: array
+          items:
+            type: number
+          description: Pooled CLIP image embedding (normalized).
+        tokens:
+          type: array
+          description: Per-token embeddings (present when includeTokens is true).
+          items:
+            type: array
+            items:
+              type: number
+
+    FeatureExtractResponse:
+      type: object
+      required: [embeddings]
+      properties:
+        embeddings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageEmbedding'
+
+    Hypothesis:
+      type: object
+      required: [id, effectStack, rationale]
+      properties:
+        id:
+          type: string
+          description: Stable identifier for the hypothesis.
+        effectStack:
+          type: array
+          description: Proposed effect-stack (see effect-stack.schema.json).
+          items:
+            type: object
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Internal model confidence (0–1).
+        rationale:
+          type: string
+          description: Natural-language explanation of why this hypothesis was chosen.
+        estimatedPasses:
+          type: integer
+          minimum: 0
+          description: Estimated GPU pass budget (see packages/schema estimatePasses).
+
+    HypothesisRequest:
+      type: object
+      required: [features]
+      properties:
+        features:
+          type: array
+          description: Reference image embeddings to generate hypotheses for.
+          items:
+            $ref: '#/components/schemas/ImageEmbedding'
+        count:
+          type: integer
+          minimum: 1
+          maximum: 32
+          default: 5
+          description: Maximum number of hypotheses to generate.
+        constraints:
+          type: object
+          description: Optional render constraints.
+          properties:
+            maxPasses:
+              type: integer
+              default: 8
+              description: Mobile pass budget cap.
+
+    HypothesisResponse:
+      type: object
+      required: [hypotheses]
+      properties:
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hypothesis'
+
+    PresetScoreRequest:
+      type: object
+      required: [preset, features]
+      properties:
+        preset:
+          type: object
+          description: Effect-stack preset to score.
+        features:
+          type: array
+          description: Reference image embeddings.
+          items:
+            $ref: '#/components/schemas/ImageEmbedding'
+
+    PresetScoreResponse:
+      type: object
+      required: [score, similarity, estimatedPasses, mobileOk]
+      properties:
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Composite score (similarity weighted).
+        similarity:
+          type: number
+          minimum: -1
+          maximum: 1
+          description: Mean cosine similarity between preset projection and references.
+        estimatedPasses:
+          type: integer
+          minimum: 0
+        mobileOk:
+          type: boolean
+          description: Whether the preset fits the ≤ 8-pass mobile budget.

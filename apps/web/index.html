@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAYERS — Visual Style Engine</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="toolbar">
+      <h1 class="logo">LAYERS</h1>
+      <div class="toolbar-actions">
+        <button id="btn-undo" class="btn" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
+        <button id="btn-redo" class="btn" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
+        <span class="divider"></span>
+        <button id="btn-export" class="btn" title="Export preset JSON">Export</button>
+        <button id="btn-import" class="btn" title="Import preset JSON">Import</button>
+        <button id="btn-save" class="btn" title="Save to IndexedDB">💾 Save</button>
+        <button id="btn-clear" class="btn" title="Clear IndexedDB">🗑 Clear</button>
+        <span class="divider"></span>
+        <button id="btn-theme" class="btn" title="Toggle theme">🌙 Dark</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel panel-left">
+        <h2 class="panel-title">Cores</h2>
+        <div id="core-list" class="core-list"></div>
+      </aside>
+
+      <section class="canvas-area">
+        <canvas id="gl-canvas" width="512" height="512"></canvas>
+        <div class="canvas-info">
+          <span id="pass-count">0 passes</span>
+          <span id="fps-display"></span>
+        </div>
+      </section>
+
+      <aside class="panel panel-right">
+        <h2 class="panel-title">Stack</h2>
+        <div id="stack-list" class="stack-list"></div>
+        <div id="inspector" class="inspector">
+          <p class="inspector-empty">Select a core to edit its parameters</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <footer id="sync-status" class="sync-status">
+    <span class="sync-indicator"></span>
+    <span id="sync-text">Sync: --</span>
+  </footer>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
