@@ -16,6 +16,7 @@
         <span class="divider"></span>
         <button id="btn-export" class="btn" title="Export preset JSON">Export</button>
         <button id="btn-import" class="btn" title="Import preset JSON">Import</button>
+        <button id="btn-vector" class="btn" title="Vector Editor">✏️ Vector</button>
         <button id="btn-save" class="btn" title="Save to IndexedDB">💾 Save</button>
         <button id="btn-clear" class="btn" title="Clear IndexedDB">🗑 Clear</button>
         <span class="divider"></span>
@@ -30,7 +31,20 @@
       </aside>
 
       <section class="canvas-area">
-        <canvas id="gl-canvas" width="512" height="512"></canvas>
+        <div class="canvas-container">
+          <canvas id="gl-canvas" width="512" height="512"></canvas>
+          <canvas id="mask-canvas" width="512" height="512" class="mask-canvas hidden"></canvas>
+          <div id="mask-overlay" class="mask-overlay hidden">
+            <div class="mask-toolbar">
+              <button id="btn-paint" class="btn active">🖌 Paint</button>
+              <button id="btn-erase" class="btn">🧹 Erase</button>
+              <button id="btn-clear-mask" class="btn">Clear</button>
+              <button id="btn-close-mask" class="btn">✕ Close</button>
+              <label>Size <input type="range" id="brush-size" min="1" max="200" value="20"></label>
+              <label>Opacity <input type="range" id="brush-opacity" min="0" max="1" step="0.01" value="0.5"></label>
+            </div>
+          </div>
+        </div>
         <div class="canvas-info">
           <span id="pass-count">0 passes</span>
           <span id="fps-display"></span>
@@ -42,6 +56,7 @@
         <div id="stack-list" class="stack-list"></div>
         <div id="inspector" class="inspector">
           <p class="inspector-empty">Select a core to edit its parameters</p>
+          <button id="btn-mask" class="btn" style="display:none;width:100%;margin-top:8px;">🎭 Edit Mask</button>
         </div>
       </aside>
     </main>
@@ -51,6 +66,36 @@
     <span class="sync-indicator"></span>
     <span id="sync-text">Sync: --</span>
   </footer>
+
+  <!-- Help overlay -->
+  <div id="help-overlay" class="help-overlay">
+    <div class="help-modal">
+      <button id="btn-close-help" class="help-close">✕</button>
+      <div id="help-content" class="help-content"></div>
+    </div>
+  </div>
+
+  <!-- Vector editor panel -->
+  <div id="vector-panel" class="vector-panel hidden">
+    <div class="vector-header">
+      <h3>Vector Editor</h3>
+      <button id="btn-close-vector" class="btn">✕</button>
+    </div>
+    <div class="vector-toolbar">
+      <button id="btn-add-point" class="btn">+ Point</button>
+      <button id="btn-add-line" class="btn">+ Line</button>
+      <button id="btn-add-curve" class="btn">+ Curve</button>
+      <button id="btn-delete-point" class="btn">Delete</button>
+      <button id="btn-new-path" class="btn">New Path</button>
+      <span class="divider"></span>
+      <button id="btn-zoom-out" class="btn">−</button>
+      <button id="btn-zoom-in" class="btn">+</button>
+      <span class="divider"></span>
+      <button id="btn-export-svg" class="btn">Export</button>
+      <button id="btn-import-svg" class="btn">Import</button>
+    </div>
+    <svg id="vector-svg" width="256" height="256" class="vector-svg"></svg>
+  </div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>

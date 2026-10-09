@@ -39,6 +39,9 @@ import {
 import { applyTheme, generateCSSVariables } from "@layers/ui";
 import { validateEffectStack } from "@layers/schema";
 import { persistence } from "./persistence";
+import { handleKeyboard, getShortcuts, CORE_KEYS, type KeyboardHandlers } from "./keyboard";
+import { createMaskBrush, type MaskBrush } from "./maskBrush";
+import { createVectorEditor, type VectorEditor } from "./vectorEditor";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -206,7 +209,7 @@ let fpsValue = 0;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 
-const $ = <T extends HTMLElement>(sel: string): T => {
+const $ = <T extends Element>(sel: string): T => {
   const el = document.querySelector<T>(sel);
   if (!el) throw new Error(`Element not found: ${sel}`);
   return el;
@@ -227,6 +230,34 @@ const btnClear = $<HTMLButtonElement>("#btn-clear");
 const btnTheme = $<HTMLButtonElement>("#btn-theme");
 const syncIndicator = $<HTMLSpanElement>(".sync-indicator");
 const syncText = $<HTMLSpanElement>("#sync-text");
+const maskCanvas = $<HTMLCanvasElement>("#mask-canvas");
+const maskOverlay = $<HTMLDivElement>("#mask-overlay");
+const maskBrush = createMaskBrush(maskCanvas);
+const vectorEditor = createVectorEditor($<SVGSVGElement>("#vector-svg"));
+const helpOverlay = $<HTMLDivElement>("#help-overlay");
+const helpContent = $<HTMLDivElement>("#help-content");
+const vectorPanel = $<HTMLDivElement>("#vector-panel");
+const vectorSvg = $<SVGSVGElement>("#vector-svg");
+const btnVector = $<HTMLButtonElement>("#btn-vector");
+// btnMask is created dynamically in rebuildInspector
+const maskControls = $<HTMLDivElement>("#mask-controls");
+const brushSizeSlider = $<HTMLInputElement>("#brush-size");
+const brushOpacitySlider = $<HTMLInputElement>("#brush-opacity");
+const btnPaint = $<HTMLButtonElement>("#btn-paint");
+const btnErase = $<HTMLButtonElement>("#btn-erase");
+const btnClearMask = $<HTMLButtonElement>("#btn-clear-mask");
+const btnCloseMask = $<HTMLButtonElement>("#btn-close-mask");
+const btnCloseVector = $<HTMLButtonElement>("#btn-close-vector");
+const btnAddPoint = $<HTMLButtonElement>("#btn-add-point");
+const btnAddLine = $<HTMLButtonElement>("#btn-add-line");
+const btnAddCurve = $<HTMLButtonElement>("#btn-add-curve");
+const btnDeletePoint = $<HTMLButtonElement>("#btn-delete-point");
+const btnNewPath = $<HTMLButtonElement>("#btn-new-path");
+const btnZoomIn = $<HTMLButtonElement>("#btn-zoom-in");
+const btnZoomOut = $<HTMLButtonElement>("#btn-zoom-out");
+const btnExportSvg = $<HTMLButtonElement>("#btn-export-svg");
+const btnImportSvg = $<HTMLButtonElement>("#btn-import-svg");
+const btnCloseHelp = $<HTMLButtonElement>("#btn-close-help");
 
 // ── Undo/redo ──────────────────────────────────────────────────────────────
 
@@ -498,6 +529,27 @@ function rebuildInspector(): void {
 
   inspector.innerHTML = html;
 
+  // Add mask button when item is selected
+  const maskBtn = document.createElement("button");
+  maskBtn.id = "btn-mask";
+  maskBtn.className = "btn";
+  maskBtn.style.width = "100%";
+  maskBtn.style.marginTop = "8px";
+  maskBtn.textContent = "🎭 Edit Mask";
+  maskBtn.addEventListener("click", () => {
+    const sel = stackState.items.find((i) => i.id === stackState.selectedId);
+    if (!sel) return;
+    maskOverlay.classList.remove("hidden");
+    maskOverlay.classList.add("visible");
+    maskCanvas.classList.remove("hidden");
+    if (sel.mask) {
+      maskBrush.loadMaskData(sel.mask).then(() => {});
+    } else {
+      maskBrush.clear();
+    }
+  });
+  inspector.appendChild(maskBtn);
+
   // Wire up events
   inspector.querySelectorAll("[data-key]").forEach((el) => {
     const key = (el as HTMLElement).dataset.key!;
@@ -574,6 +626,232 @@ function toggleTheme(): void {
   btnTheme.textContent = theme === "light" ? "🌙 Dark" : "☀️ Light";
 }
 
+// ── Mask brush ─────────────────────────────────────────────────────────────
+
+let isPainting = false;
+let lastPaintX = 0;
+let lastPaintY = 0;
+
+function initMaskBrush(): void {
+  // Sync mask canvas size with GL canvas
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
+
+  // Brush size slider
+  brushSizeSlider.addEventListener("input", () => {
+    maskBrush.setSize(parseInt(brushSizeSlider.value, 10));
+  });
+
+  // Brush opacity slider
+  brushOpacitySlider.addEventListener("input", () => {
+    maskBrush.setOpacity(parseFloat(brushOpacitySlider.value));
+  });
+
+  // Paint/Erase mode buttons
+  btnPaint.addEventListener("click", () => {
+    maskBrush.setMode("paint");
+    btnPaint.classList.add("active");
+    btnErase.classList.remove("active");
+  });
+  btnErase.addEventListener("click", () => {
+    maskBrush.setMode("erase");
+    btnErase.classList.add("active");
+    btnPaint.classList.remove("active");
+  });
+
+  // Clear mask
+  btnClearMask.addEventListener("click", () => {
+    maskBrush.clear();
+    saveMaskToSelected();
+  });
+
+  // Close mask overlay
+  btnCloseMask.addEventListener("click", () => {
+    maskOverlay.classList.remove("visible");
+    maskOverlay.classList.add("hidden");
+    maskCanvas.classList.add("hidden");
+    saveMaskToSelected();
+  });
+
+  // Paint events on mask canvas
+  maskCanvas.addEventListener("mousedown", (e) => {
+    isPainting = true;
+    const rect = maskCanvas.getBoundingClientRect();
+    lastPaintX = e.clientX - rect.left;
+    lastPaintY = e.clientY - rect.top;
+    maskBrush.paint(lastPaintX, lastPaintY);
+  });
+  maskCanvas.addEventListener("mousemove", (e) => {
+    if (!isPainting) return;
+    const rect = maskCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    // Interpolate between last and current position for smooth strokes
+    const dx = x - lastPaintX;
+    const dy = y - lastPaintY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.max(1, Math.floor(dist / (maskBrush.getSize() / 4)));
+    for (let i = 1; i <= steps; i++) {
+      const ix = lastPaintX + (dx * i) / steps;
+      const iy = lastPaintY + (dy * i) / steps;
+      maskBrush.paint(ix, iy);
+    }
+    lastPaintX = x;
+    lastPaintY = y;
+  });
+  maskCanvas.addEventListener("mouseup", () => {
+    isPainting = false;
+    saveMaskToSelected();
+  });
+  maskCanvas.addEventListener("mouseleave", () => {
+    isPainting = false;
+    saveMaskToSelected();
+  });
+
+}
+
+function saveMaskToSelected(): void {
+  const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+  if (!selected) return;
+  const maskData = maskBrush.getMaskData();
+  if (maskData !== selected.mask) {
+    stackState = updateStackItem(stackState, selected.id, { mask: maskData });
+    scheduleSave();
+  }
+}
+
+// ── Vector editor ──────────────────────────────────────────────────────────
+
+function initVectorEditor(): void {
+  // Close button
+  btnCloseVector.addEventListener("click", () => {
+    vectorPanel.classList.remove("visible");
+  });
+
+  // Add point mode
+  let addPointMode = false;
+  btnAddPoint.addEventListener("click", () => {
+    addPointMode = !addPointMode;
+    btnAddPoint.classList.toggle("active", addPointMode);
+    vectorSvg.style.cursor = addPointMode ? "crosshair" : "default";
+  });
+
+  // Click on SVG to add point
+  vectorSvg.addEventListener("click", (e) => {
+    if (!addPointMode) return;
+    const rect = vectorSvg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    vectorEditor.addPoint(x, y);
+    vectorEditor.render();
+  });
+
+  // Add line
+  btnAddLine.addEventListener("click", () => {
+    const paths = vectorEditor.getPaths();
+    if (paths.length > 0 && paths[paths.length - 1].points.length >= 2) {
+      const pts = paths[paths.length - 1].points;
+      vectorEditor.addLine(pts.length - 2, pts.length - 1);
+      vectorEditor.render();
+    }
+  });
+
+  // Add curve
+  btnAddCurve.addEventListener("click", () => {
+    const paths = vectorEditor.getPaths();
+    if (paths.length > 0 && paths[paths.length - 1].points.length >= 2) {
+      const pts = paths[paths.length - 1].points;
+      const last = pts[pts.length - 1];
+      const prev = pts[pts.length - 2];
+      const cpx = (prev.x + last.x) / 2;
+      const cpy = Math.min(prev.y, last.y) - 50;
+      vectorEditor.addCurve(pts.length - 2, pts.length - 1, cpx, cpy);
+      vectorEditor.render();
+    }
+  });
+
+  // Delete last point
+  btnDeletePoint.addEventListener("click", () => {
+    const paths = vectorEditor.getPaths();
+    if (paths.length > 0 && paths[paths.length - 1].points.length > 0) {
+      const pts = paths[paths.length - 1].points;
+      vectorEditor.deletePoint(paths.length - 1, pts.length - 1);
+      vectorEditor.render();
+    }
+  });
+
+  // New path
+  btnNewPath.addEventListener("click", () => {
+    vectorEditor.newPath();
+    vectorEditor.render();
+  });
+
+  // Zoom
+  btnZoomIn.addEventListener("click", () => {
+    vectorEditor.zoomIn();
+    vectorEditor.render();
+  });
+  btnZoomOut.addEventListener("click", () => {
+    vectorEditor.zoomOut();
+    vectorEditor.render();
+  });
+
+  // Export SVG
+  btnExportSvg.addEventListener("click", () => {
+    const svgString = vectorEditor.exportSVG();
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vector-path.svg";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Import SVG
+  btnImportSvg.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".svg";
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      vectorEditor.importSVG(text);
+      vectorEditor.render();
+    });
+    input.click();
+  });
+
+  // Vector button in toolbar
+  btnVector.addEventListener("click", () => {
+    vectorPanel.classList.add("visible");
+    vectorEditor.render();
+  });
+}
+
+// ── Help overlay ───────────────────────────────────────────────────────────
+
+function initHelpOverlay(): void {
+  const shortcuts = getShortcuts();
+  let html = "<h3>Keyboard Shortcuts</h3><table>";
+  for (const [key, desc] of Object.entries(shortcuts)) {
+    html += `<tr><td class="shortcut-key">${key}</td><td>${desc}</td></tr>`;
+  }
+  html += "</table>";
+  helpContent.innerHTML = html;
+
+  btnCloseHelp.addEventListener("click", () => {
+    helpOverlay.classList.remove("visible");
+  });
+
+  helpOverlay.addEventListener("click", (e) => {
+    if (e.target === helpOverlay) {
+      helpOverlay.classList.remove("visible");
+    }
+  });
+}
+
 // ── Export / Import ────────────────────────────────────────────────────────
 
 function exportPreset(): void {
@@ -628,14 +906,98 @@ function importPreset(): void {
 
 // ── Keyboard shortcuts ─────────────────────────────────────────────────────
 
-function handleKeyboard(e: KeyboardEvent): void {
-  if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-    e.preventDefault();
-    doUndo();
-  } else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-    e.preventDefault();
-    doRedo();
-  }
+function handleKeyboardShortcut(e: KeyboardEvent): void {
+  const handlers: KeyboardHandlers = {
+    doUndo,
+    doRedo,
+    doSave: () => btnSave.click(),
+    doExport: exportPreset,
+    doDelete: () => {
+      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+      if (selected) {
+        pushUndo();
+        stackState = removeStackItem(stackState, selected.id);
+        rebuildStack();
+        rebuildInspector();
+        render();
+        scheduleSave();
+      }
+    },
+    doToggle: () => {
+      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+      if (selected) {
+        pushUndo();
+        stackState = toggleStackItem(stackState, selected.id);
+        rebuildStack();
+        render();
+        scheduleSave();
+      }
+    },
+    doMoveUp: () => {
+      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+      if (selected) {
+        pushUndo();
+        stackState = moveStackItem(stackState, selected.id, "up");
+        rebuildStack();
+        render();
+        scheduleSave();
+      }
+    },
+    doMoveDown: () => {
+      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+      if (selected) {
+        pushUndo();
+        stackState = moveStackItem(stackState, selected.id, "down");
+        rebuildStack();
+        render();
+        scheduleSave();
+      }
+    },
+    doDuplicate: () => {
+      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+      if (selected) {
+        pushUndo();
+        const newItem = {
+          ...selected,
+          id: `stack-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        };
+        stackState = addStackItem(stackState, newItem);
+        rebuildStack();
+        rebuildInspector();
+        render();
+        scheduleSave();
+      }
+    },
+    doToggleTheme: toggleTheme,
+    doAddCore: (index: number) => {
+      const coreName = CORE_KEYS[String(index)];
+      if (!coreName) return;
+      const def = CORE_DEFS.find((d) => d.name === coreName);
+      if (!def) return;
+      pushUndo();
+      const core = def.create();
+      const params: Record<string, unknown> = {};
+      for (const p of def.params) {
+        params[p.key] = p.default;
+      }
+      stackState = addStackItem(stackState, {
+        core: def.name,
+        params,
+        opacity: 1,
+        blend: "normal",
+        mask: null,
+        enabled: true,
+      });
+      rebuildStack();
+      rebuildInspector();
+      render();
+      scheduleSave();
+    },
+    doToggleHelp: () => {
+      helpOverlay.classList.toggle("visible");
+    },
+  };
+  handleKeyboard(e, { stackState, theme, undoStack, redoStack }, handlers);
 }
 
 // ── FPS counter ────────────────────────────────────────────────────────────
@@ -745,7 +1107,12 @@ async function init(): Promise<void> {
     updateSyncStatus();
   });
   btnTheme.addEventListener("click", toggleTheme);
-  document.addEventListener("keydown", handleKeyboard);
+  document.addEventListener("keydown", handleKeyboardShortcut);
+
+  // Initialize new features
+  initMaskBrush();
+  initVectorEditor();
+  initHelpOverlay();
 
   // Start render loop
   function loop(): void {

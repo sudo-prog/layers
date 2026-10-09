@@ -10,6 +10,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
 **Phase:** 1.2 (Feature extraction) — **COMPLETE**
 **Phase:** 1.3 (Core scaffolding) — **COMPLETE**
+**Phase:** 0.4 (Stack, presets & persistence) — **COMPLETE**
+**Phase:** 0.5 (Manual editor) — **COMPLETE**
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -30,13 +32,14 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - services/eval: README ✅
 - services/learning: README ✅
 
-### Frontend (FE) — Stage 0.2/0.3 foundation + web app
-- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** (compiles once, not per frame). 11 tests.
+### Frontend (FE) — Stage 0.2/0.3/0.4 foundation + web app
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. 13 tests.
 - `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 33 tests.
 - `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
 - `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
-- `@layers/schema` — JSON Schema validation (AJV) for contracts. Schemas inlined as TypeScript constants — browser-compatible (no fs/path). 17 tests.
-- `@layers/web` — **Web editor app** (Vite + TypeScript): 7 core buttons, stack panel, inspector with sliders/selects/colors/toggles, undo/redo, export/import JSON, light/dark theme, live WebGL2 rendering.
+- `@layers/schema` — JSON Schema validation (AJV) for contracts. Schemas inlined as TypeScript constants — browser-compatible (no fs/path). Preset v1 schema with v0→v1 migration. 54 tests.
+- `@layers/sync` — Browser-compatible SyncProvider (Web Crypto API, no node:crypto), IndexedDBProvider for persistence. 23 tests.
+- `@layers/web` — **Web editor app** (Vite + TypeScript): 7 core buttons, stack panel, inspector, undo/redo, export/import JSON, light/dark theme, live WebGL2 rendering, IndexedDB persistence, sync status UI.
 - `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation for all 7 cores, multi-pass render pixel audit, context-loss, resize, readPixels-synced FPS benchmark. 13 checks.
 - `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
 - `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
@@ -66,7 +69,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 105/105 JS unit tests passing (8 packages: schema, sync, vector, engine, cores, stack, ui, web)
+- 187/187 JS unit tests passing (7 packages: schema 54, sync 46, engine 13, cores 33, stack 11, ui 9, vector 11)
 - Python tests: NOT VERIFIABLE on Mac (pytest not installed locally; BE reports 57/57 on ThinkPad)
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)

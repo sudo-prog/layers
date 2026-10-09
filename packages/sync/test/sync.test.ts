@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   MemorySyncProvider,
   GitHubSyncProvider,
@@ -17,7 +17,6 @@ class MockIDBRequest<T> {
 
   constructor(result: T) {
     this.result = result;
-    // Fire onsuccess asynchronously to mimic real IndexedDB behavior.
     Promise.resolve().then(() => this.onsuccess?.());
   }
 }
@@ -54,7 +53,6 @@ class MockIDBTransaction {
 
   constructor(stores: Map<string, MockIDBObjectStore>) {
     this.stores = stores;
-    // Complete after all synchronous operations are done (microtask).
     Promise.resolve().then(() => this.oncomplete?.());
   }
 
@@ -112,7 +110,6 @@ function createMockIndexedDB() {
         databases.set(name, db);
       }
       request.result = db;
-      // Defer success callback so handlers can be attached first.
       Promise.resolve().then(() => {
         if (isNew) {
           request.onupgradeneeded?.();
@@ -209,7 +206,45 @@ describe('MemorySyncProvider', () => {
   });
 });
 
+// ── GitHub provider test helpers ───────────────────────────────────────────
+
+function setupSuccessfulCommitFetch(fetchMock: ReturnType<typeof vi.fn>) {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/git/ref/heads/')) {
+      return Response.json({ object: { sha: 'head-sha' } });
+    }
+    if (url.includes('/git/trees/')) {
+      return Response.json({ tree: [] });
+    }
+    if (url.includes('/git/blobs')) {
+      return Response.json({ sha: 'blob-sha' });
+    }
+    if (url.match(/\/api\.github\.com\/repos\/[^\/]+\/[^\/]+\/git\/trees$/)) {
+      return Response.json({ sha: 'tree-sha' });
+    }
+    if (url.includes('/git/commits')) {
+      return Response.json({ sha: 'commit-sha' });
+    }
+    if (url.includes('/git/refs/heads/')) {
+      return Response.json({ object: { sha: 'commit-sha' } });
+    }
+    return new Response('Not found', { status: 404 });
+  });
+}
+
 describe('GitHubSyncProvider', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
   it('constructor stores options and defaults branch to main', () => {
     const provider = new GitHubSyncProvider({
       owner: 'sudo-prog',
@@ -230,38 +265,205 @@ describe('GitHubSyncProvider', () => {
     expect(await provider.queueStatus()).toEqual([]);
   });
 
-  it('save enqueues a pending entry without performing a real commit', async () => {
+  it('save enqueues a pending entry', async () => {
     const provider = new GitHubSyncProvider({
       owner: 'sudo-prog',
       repo: 'layers-vault',
+      debounceMs: 60_000, // Prevent accidental flush
     });
     await provider.save(makeDoc());
     const queue = await provider.queueStatus();
     expect(queue).toHaveLength(1);
     expect(queue[0].operation).toBe('save');
     expect(queue[0].status).toBe('pending');
-    expect(queue[0].payload).toEqual({ id: 'doc-1', version: '1.0.0' });
+    const payload = queue[0].payload as Record<string, unknown>;
+    expect(payload.id).toBe('doc-1');
+    expect(payload.version).toBe('1.0.0');
   });
 
-  it('restore is a stub returning null', async () => {
+  it('flush commits document via Git Data API', async () => {
+    setupSuccessfulCommitFetch(fetchMock);
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      token: 'test-token',
+      debounceMs: 60_000,
+    });
+    await provider.save(makeDoc());
+    await provider.flush();
+
+    // Verify the correct sequence of API calls was made
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes('/git/ref/heads/main'))).toBe(true);
+    expect(calls.some((u) => u.includes('/git/trees/head-sha'))).toBe(true);
+    expect(calls.some((u) => u.includes('/git/blobs'))).toBe(true);
+    expect(calls.some((u) => u.match(/\/git\/trees$/))).toBe(true);
+    expect(calls.some((u) => u.includes('/git/commits'))).toBe(true);
+    expect(calls.some((u) => u.includes('/git/refs/heads/main'))).toBe(true);
+  });
+
+  it('flush marks queue item as synced on success', async () => {
+    setupSuccessfulCommitFetch(fetchMock);
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      debounceMs: 60_000,
+    });
+    await provider.save(makeDoc());
+    await provider.flush();
+    const queue = await provider.queueStatus();
+    expect(queue[0].status).toBe('synced');
+  });
+
+  it('flush marks queue item as error on failure', async () => {
+    fetchMock.mockImplementation(async () => {
+      return new Response('Server error', { status: 500 });
+    });
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      debounceMs: 60_000,
+    });
+    await provider.save(makeDoc());
+    await provider.flush();
+    const queue = await provider.queueStatus();
+    expect(queue[0].status).toBe('error');
+  });
+
+  it('restore fetches and decodes document', async () => {
+    const doc = makeDoc();
+    const encoded = btoa(JSON.stringify(doc));
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/contents/documents/doc-1.json')) {
+        return Response.json({ content: encoded });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+
     const provider = new GitHubSyncProvider({
       owner: 'sudo-prog',
       repo: 'layers-vault',
     });
-    expect(await provider.restore('anything')).toBeNull();
+    const result = await provider.restore('doc-1');
+    expect(result).toEqual(doc);
   });
 
-  it('link enqueues a pending entry referencing the asset and document', async () => {
+  it('restore returns null for 404', async () => {
+    fetchMock.mockImplementation(async () => {
+      return new Response('Not found', { status: 404 });
+    });
     const provider = new GitHubSyncProvider({
       owner: 'sudo-prog',
       repo: 'layers-vault',
+    });
+    expect(await provider.restore('missing')).toBeNull();
+  });
+
+  it('link commits links.json', async () => {
+    setupSuccessfulCommitFetch(fetchMock);
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      debounceMs: 60_000,
     });
     await provider.link('asset-7', 'doc-1');
-    const queue = await provider.queueStatus();
-    expect(queue).toHaveLength(1);
-    expect(queue[0].operation).toBe('save');
+    await provider.flush();
+
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    // Should have committed links.json
+    expect(calls.some((u) => u.includes('/git/blobs'))).toBe(true);
+  });
+
+  it('debounce batches rapid changes', async () => {
+    vi.useFakeTimers();
+    setupSuccessfulCommitFetch(fetchMock);
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      debounceMs: 2000,
+    });
+
+    await provider.save(makeDoc({ id: 'doc-1' }));
+    await provider.save(makeDoc({ id: 'doc-2' }));
+
+    // Before debounce fires, both should be pending
+    let queue = await provider.queueStatus();
+    expect(queue).toHaveLength(2);
     expect(queue[0].status).toBe('pending');
-    expect(queue[0].payload).toEqual({ assetId: 'asset-7', documentId: 'doc-1' });
+    expect(queue[1].status).toBe('pending');
+
+    // Advance timers to trigger debounce
+    vi.advanceTimersByTime(2000);
+    await vi.runAllTimersAsync();
+
+    // After debounce, both should be synced
+    queue = await provider.queueStatus();
+    expect(queue[0].status).toBe('synced');
+    expect(queue[1].status).toBe('synced');
+  });
+
+  it('retries on rate limit', async () => {
+    let callCount = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      callCount++;
+      if (callCount <= 2) {
+        return new Response('Rate limited', { status: 429 });
+      }
+      if (url.includes('/git/ref/heads/')) {
+        return Response.json({ object: { sha: 'head-sha' } });
+      }
+      if (url.includes('/git/trees/')) {
+        return Response.json({ tree: [] });
+      }
+      if (url.includes('/git/blobs')) {
+        return Response.json({ sha: 'blob-sha' });
+      }
+      if (url.match(/\/api\.github\.com\/repos\/[^\/]+\/[^\/]+\/git\/trees$/)) {
+        return Response.json({ sha: 'tree-sha' });
+      }
+      if (url.includes('/git/commits')) {
+        return Response.json({ sha: 'commit-sha' });
+      }
+      if (url.includes('/git/refs/heads/')) {
+        return Response.json({ object: { sha: 'commit-sha' } });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      debounceMs: 60_000,
+    });
+    await provider.save(makeDoc());
+    await provider.flush();
+
+    // Should have retried and eventually succeeded
+    expect(callCount).toBeGreaterThan(2);
+    const queue = await provider.queueStatus();
+    expect(queue[0].status).toBe('synced');
+  });
+
+  it('token is never logged', async () => {
+    const consoleSpy = vi.spyOn(console, 'log');
+    const consoleDebugSpy = vi.spyOn(console, 'debug');
+    setupSuccessfulCommitFetch(fetchMock);
+    const provider = new GitHubSyncProvider({
+      owner: 'sudo-prog',
+      repo: 'layers-vault',
+      token: 'super-secret-token',
+      debounceMs: 60_000,
+    });
+    await provider.save(makeDoc());
+    await provider.flush();
+
+    const allLogs = [
+      ...consoleSpy.mock.calls.map((c) => c.join(' ')),
+      ...consoleDebugSpy.mock.calls.map((c) => c.join(' ')),
+    ].join(' ');
+    expect(allLogs).not.toContain('super-secret-token');
+    consoleSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
   });
 });
 
@@ -269,7 +471,7 @@ describe('IndexedDBProvider', () => {
   let provider: IndexedDBProvider;
 
   beforeEach(() => {
-    // Reset the mock database between tests.
+    vi.stubGlobal('indexedDB', mock.indexedDB);
     mock.databases.clear();
     provider = new IndexedDBProvider();
   });
@@ -313,7 +515,6 @@ describe('IndexedDBProvider', () => {
   it('link stores the assetId → documentId mapping', async () => {
     await provider.save(makeDoc());
     await provider.link('asset-42', 'doc-1');
-    // Verify the link was stored by checking the database directly.
     const db = mock.databases.get('layers-sync');
     expect(db).toBeDefined();
     const tx = db!.transaction('links', 'readonly');

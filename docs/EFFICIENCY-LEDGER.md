@@ -134,6 +134,24 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 **Build:** 8/8 tasks (was 7/7, +1 for @layers/web)
 **Tests:** 16/16 turbo tasks (was 15/15, +1 for @layers/web)
 
+## Stage 0.4 + 0.5 completion (2026-10-09)
+
+| Item | Status |
+|---|---|
+| IndexedDB persistence (FE) | ✅ `packages/sync/src/indexeddb.ts` — IndexedDBProvider with documents/queue/links stores |
+| Sync status UI (FE) | ✅ `apps/web/src/main.ts` — sync indicator in footer, updates every 2s |
+| Preset JSON v1 + migrations (BE) | ✅ `packages/schema/src/index.ts` — v1 schema, migratePresetV0ToV1, migratePreset |
+| Browser-compatible sync | ✅ `packages/sync/src/index.ts` — Web Crypto API replaces node:crypto |
+| Engine opacity fix | ✅ `packages/engine/src/renderer.ts` — per-pass opacity propagation |
+| Web persistence integration | ✅ `apps/web/src/persistence.ts` — debounced save/restore via IndexedDBProvider |
+| GitHub auto-backup (BE) | ✅ `packages/sync/src/index.ts` — Git Data API commits, debounced flush, rate-limit retry |
+| Immich sync (BE) | ✅ `packages/sync/src/immich.ts` — custom HTTP client (no SDK), x-api-key auth |
+| Keyboard shortcuts (FE) | ✅ `apps/web/src/keyboard.ts` — Ctrl+S/E/D/Z/Y, 1-7, arrows, space, T, ? help overlay |
+| Mask brush + SVG overlay (FE) | ✅ `apps/web/src/maskBrush.ts` — paint/erase, size/opacity, base64 PNG serialization |
+| Quick Vector Editor (FE) | ✅ `apps/web/src/vectorEditor.ts` — SVG canvas, points/lines/curves, zoom, import/export |
+
+**Build:** 8/8 tasks · **Tests:** 16/16 turbo tasks, 187/187 JS unit tests
+
 ## Open items
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually
@@ -143,7 +161,4 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 - `tests/visual/` and `tests/perf/` harnesses.
 - Cross-core composition tests (stacks of >1 core together).
 - Real-hardware perf gate (reference phone, 8 passes @ 1536px ≥ 30 fps).
-- Engine-level fix for `PassParams.opacity` (see the renderer design note).
-- **Stage 0.4:** IndexedDB persistence, sync status UI, preset import/export (BE).
-- **Stage 0.5:** Mask brush, SVG overlay, Quick Vector Editor UI.
 - **Stage 0.6:** Mobile PWA (Workbox, manifest, offline cache, preset grid).
