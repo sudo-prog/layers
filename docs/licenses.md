@@ -7,7 +7,7 @@
 
 | Verdict | Count |
 |---------|-------|
-| ✅ OK | 17 |
+| ✅ OK | 37 |
 | ⚠️ WARNING | 8 |
 | 🚫 BLOCKED | 1 |
 
@@ -38,6 +38,26 @@
 | `jsdom` | 30.1.2 | MIT | https://github.com/jsdom/jsdom | ✅ OK | DOM environment for browser-API unit tests (`@layers/engine`, `@layers/cores`, `@layers/ui`) |
 | `esbuild` | 0.21.5 | MIT | https://github.com/evanw/esbuild | ✅ OK | Bundler (transitive, used by Vite/Vitest) |
 | `vite` | 5.4.21 | MIT | https://github.com/vitejs/vite | ✅ OK | Build tool (transitive, used by Vitest) |
+| `vite-plugin-pwa` | 0.20.5 | MIT | https://github.com/vite-pwa/vite-plugin-pwa | ✅ OK | PWA plugin for Vite — service worker + manifest generation |
+| `debug` | 4.4.3 | MIT | https://github.com/debug-js/debug | ✅ OK | Debug logging (transitive, used by vite-plugin-pwa) |
+| `pretty-bytes` | 6.1.1 | MIT | https://github.com/sindresorhus/pretty-bytes | ✅ OK | Human-readable byte formatting (transitive, used by vite-plugin-pwa) |
+| `tinyglobby` | 0.2.17 | MIT | https://github.com/SuperchupuDev/tinyglobby | ✅ OK | Fast glob matching (transitive, used by vite-plugin-pwa) |
+| `workbox-build` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Build-time service worker generation (transitive, used by vite-plugin-pwa) |
+| `workbox-window` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Service worker registration client (transitive, used by vite-plugin-pwa) |
+| `workbox-core` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Workbox core utilities (transitive) |
+| `workbox-precaching` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Precaching strategies (transitive) |
+| `workbox-routing` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Request routing (transitive) |
+| `workbox-strategies` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Caching strategies (transitive) |
+| `workbox-cacheable-response` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Cacheable response plugin (transitive) |
+| `workbox-expiration` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Cache expiration plugin (transitive) |
+| `workbox-background-sync` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Background sync plugin (transitive) |
+| `workbox-broadcast-update` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Broadcast update plugin (transitive) |
+| `workbox-google-analytics` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Google Analytics plugin (transitive) |
+| `workbox-navigation-preload` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Navigation preload plugin (transitive) |
+| `workbox-range-requests` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Range request plugin (transitive) |
+| `workbox-recipes` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Pre-built caching recipes (transitive) |
+| `workbox-streams` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Stream concatenation (transitive) |
+| `workbox-sw` | 7.4.1 | MIT | https://github.com/apache/workbox | ✅ OK | Service worker loader (transitive) |
 
 ### OpenSource Reference Entries (Not in package.json — Under Review / Inspiration Only)
 

@@ -178,9 +178,6 @@ void main() {
     pattern = 1. - smoothstep(-1., 1., wuv.y + wave);
   }
 
-  // Threshold the pattern against the source luminance to get coverage.
-  float coverage = step(pattern, lum);
-
   // Apply the dither type (Paper Shaders Bayer / random) to break up banding.
   vec2 pxUV = gl_FragCoord.xy;
   float ditherOffset = 0.0;
@@ -195,7 +192,12 @@ void main() {
     ditherOffset = hash21(pxUV) - 0.5;
   }
 
-  float res = step(0.5, lum + ditherOffset * 0.5);
+  // Combine the procedural pattern (scale / shape / angle) with the dither
+  // matrix and threshold against the source luminance. The pattern term must
+  // feed the comparison, otherwise uScale / uShape / uAngle are dead uniforms
+  // and the whole core degenerates to a plain luminance threshold.
+  float field = mix(lum, pattern, 0.5) + ditherOffset * 0.5;
+  float res = step(0.5, field);
 
   vec3 color = mix(uPaper, uInk, res);
   fragColor = vec4(color, src.a * uOpacity);

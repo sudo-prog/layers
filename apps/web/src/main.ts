@@ -42,6 +42,9 @@ import { persistence } from "./persistence";
 import { handleKeyboard, getShortcuts, CORE_KEYS, type KeyboardHandlers } from "./keyboard";
 import { createMaskBrush, type MaskBrush } from "./maskBrush";
 import { createVectorEditor, type VectorEditor } from "./vectorEditor";
+import { presetStore } from "./presetStore";
+import { mountPresetGrid } from "./presetGrid";
+import { openCamera, loadImageAsSource } from "./imageImport";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -49,7 +52,7 @@ interface CoreDef {
   name: string;
   label: string;
   icon: string;
-  create: () => any;
+  create: (params?: any) => any;
   params: ParamDef[];
 }
 
@@ -69,7 +72,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "pattern-dither",
     label: "Pattern/Dither",
     icon: "◉",
-    create: () => new PatternDitherCore(),
+    create: (p?: any) => new PatternDitherCore(p),
     params: [
       { key: "shape", label: "Shape", type: "select", options: [
         { value: "simplex", label: "Simplex" },
@@ -93,7 +96,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "noise-grain",
     label: "Noise/Grain",
     icon: "▒",
-    create: () => new NoiseGrainCore(),
+    create: (p?: any) => new NoiseGrainCore(p),
     params: [
       { key: "scale", label: "Scale", type: "slider", min: 1, max: 100, step: 1, default: 20 },
       { key: "octaves", label: "Octaves", type: "slider", min: 1, max: 6, step: 1, default: 3 },
@@ -105,7 +108,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "blur",
     label: "Blur/Convolution",
     icon: "◎",
-    create: () => new BlurCore(),
+    create: (p?: any) => new BlurCore(p),
     params: [
       { key: "radius", label: "Radius", type: "slider", min: 0.5, max: 20, step: 0.5, default: 2 },
       { key: "direction", label: "Direction", type: "select", options: [
@@ -126,7 +129,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "color-blend",
     label: "Color/Blend",
     icon: "◐",
-    create: () => new ColorBlendCore(),
+    create: (p?: any) => new ColorBlendCore(p),
     params: [
       { key: "hueShift", label: "Hue Shift", type: "slider", min: -180, max: 180, step: 1, default: 0 },
       { key: "saturation", label: "Saturation", type: "slider", min: 0, max: 3, step: 0.01, default: 1 },
@@ -145,7 +148,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "displacement",
     label: "Displacement",
     icon: "≋",
-    create: () => new DisplacementCore(),
+    create: (p?: any) => new DisplacementCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 50, step: 0.5, default: 5 },
       { key: "mapScale", label: "Map Scale", type: "slider", min: 1, max: 50, step: 1, default: 10 },
@@ -167,7 +170,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "lighting",
     label: "Lighting",
     icon: "☀",
-    create: () => new LightingCore(),
+    create: (p?: any) => new LightingCore(p),
     params: [
       { key: "offsetX", label: "Offset X", type: "slider", min: -100, max: 100, step: 1, default: 0 },
       { key: "offsetY", label: "Offset Y", type: "slider", min: -100, max: 100, step: 1, default: 0 },
@@ -186,7 +189,7 @@ const CORE_DEFS: CoreDef[] = [
     name: "outline",
     label: "Outline/Edge",
     icon: "✎",
-    create: () => new OutlineCore(),
+    create: (p?: any) => new OutlineCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 3, step: 0.01, default: 1 },
       { key: "width", label: "Width", type: "slider", min: 0.5, max: 10, step: 0.5, default: 1 },
@@ -240,7 +243,6 @@ const vectorPanel = $<HTMLDivElement>("#vector-panel");
 const vectorSvg = $<SVGSVGElement>("#vector-svg");
 const btnVector = $<HTMLButtonElement>("#btn-vector");
 // btnMask is created dynamically in rebuildInspector
-const maskControls = $<HTMLDivElement>("#mask-controls");
 const brushSizeSlider = $<HTMLInputElement>("#brush-size");
 const brushOpacitySlider = $<HTMLInputElement>("#brush-opacity");
 const btnPaint = $<HTMLButtonElement>("#btn-paint");
@@ -258,6 +260,52 @@ const btnZoomOut = $<HTMLButtonElement>("#btn-zoom-out");
 const btnExportSvg = $<HTMLButtonElement>("#btn-export-svg");
 const btnImportSvg = $<HTMLButtonElement>("#btn-import-svg");
 const btnCloseHelp = $<HTMLButtonElement>("#btn-close-help");
+
+// ── Core param conversion ──────────────────────────────────────────────────
+
+/**
+ * Cores declare colour params as [r,g,b] in 0-255 and divide by 255 for the
+ * uniform. The stack stores them as hex strings so the colour picker and
+ * IndexedDB round-trip cleanly, so convert at the core boundary.
+ */
+function toRgbArray(value: unknown): [number, number, number] | null {
+  if (Array.isArray(value) && value.length === 3) {
+    return [Number(value[0]), Number(value[1]), Number(value[2])];
+  }
+  if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) {
+    return [
+      parseInt(value.slice(1, 3), 16),
+      parseInt(value.slice(3, 5), 16),
+      parseInt(value.slice(5, 7), 16),
+    ];
+  }
+  return null;
+}
+
+/** Normalise any stored colour value to a #rrggbb string for <input type=color>. */
+function toHexColor(value: unknown, fallback: unknown): string {
+  if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) return value;
+  const rgb = toRgbArray(value) ?? toRgbArray(fallback);
+  if (!rgb) return "#000000";
+  const h = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
+}
+
+/** Convert a stack item's params into the shape the core constructor expects. */
+function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const p of def.params) {
+    const raw = itemParams[p.key] ?? p.default;
+    if (p.type === "color") {
+      out[p.key] = toRgbArray(raw) ?? toRgbArray(p.default) ?? [0, 0, 0];
+    } else if (p.type === "slider") {
+      out[p.key] = Number(raw);
+    } else {
+      out[p.key] = raw;
+    }
+  }
+  return out;
+}
 
 // ── Undo/redo ──────────────────────────────────────────────────────────────
 
@@ -343,11 +391,9 @@ function render(): void {
     const def = CORE_DEFS.find((d) => d.name === item.core);
     if (!def) continue;
 
-    const core = def.create();
-    // Apply params from stack item
-    for (const [key, value] of Object.entries(item.params)) {
-      (core as any)[key] = value;
-    }
+    // Params must go through the constructor: cores read from their private
+    // _params object, so assigning core[key] directly has no effect.
+    const core = def.create(buildCoreParams(def, item.params));
     renderer.addPass(core);
   }
 
@@ -491,9 +537,13 @@ function rebuildInspector(): void {
       }
       html += `</select>`;
     } else if (param.type === "color") {
+      // Colors are stored as hex strings in the stack (so the picker and
+      // IndexedDB round-trip correctly) and converted to [r,g,b] on the way
+      // into the core, which divides by 255.
+      const hexVal = toHexColor(val, param.default);
       html += `<div class="param-color">`;
-      html += `<input type="color" data-key="${param.key}" value="${val}">`;
-      html += `<span>${val}</span>`;
+      html += `<input type="color" data-key="${param.key}" value="${hexVal}">`;
+      html += `<span>${hexVal}</span>`;
       html += `</div>`;
     } else if (param.type === "toggle") {
       const checked = val ? " checked" : "";
@@ -585,11 +635,8 @@ function rebuildInspector(): void {
         const val = el.value;
         (el as HTMLElement).parentElement!.querySelector("span")!.textContent = val;
         pushUndo();
-        // Convert hex to RGB array
-        const r = parseInt(val.slice(1, 3), 16);
-        const g = parseInt(val.slice(3, 5), 16);
-        const b = parseInt(val.slice(5, 7), 16);
-        const newParams = { ...selected.params, [key]: [r, g, b] };
+        // Store the hex string; render() converts it to [r,g,b] for the core.
+        const newParams = { ...selected.params, [key]: val };
         stackState = updateStackItem(stackState, selected.id, { params: newParams });
         render();
         scheduleSave();
@@ -726,6 +773,7 @@ function initVectorEditor(): void {
   // Close button
   btnCloseVector.addEventListener("click", () => {
     vectorPanel.classList.remove("visible");
+    vectorPanel.classList.add("hidden");
   });
 
   // Add point mode
@@ -825,6 +873,7 @@ function initVectorEditor(): void {
 
   // Vector button in toolbar
   btnVector.addEventListener("click", () => {
+    vectorPanel.classList.remove("hidden");
     vectorPanel.classList.add("visible");
     vectorEditor.render();
   });
@@ -1050,6 +1099,94 @@ function scheduleSave(): void {
   persistence.scheduleSave(stackState);
 }
 
+// ── Stage 0.6 — Presets + photo import ─────────────────────────────────────
+
+function initStage06(): void {
+  const toolbarActions = document.querySelector(".toolbar-actions");
+  if (!toolbarActions) return;
+
+  // Find the theme button to insert before it (keeps the existing layout).
+  const btnThemeEl = document.getElementById("btn-theme");
+
+  // ── Presets toolbar button ─────────────────────────────────────────────
+  const btnPresets = document.createElement("button");
+  btnPresets.className = "btn";
+  btnPresets.textContent = "★ Presets";
+  btnPresets.title = "Browse and apply saved presets";
+  btnPresets.addEventListener("click", () => {
+    const existing = document.getElementById("preset-panel");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    openPresetPanel();
+  });
+  toolbarActions.insertBefore(btnPresets, btnThemeEl);
+
+  // ── Import Photo toolbar button ────────────────────────────────────────
+  const btnImportPhoto = document.createElement("button");
+  btnImportPhoto.className = "btn";
+  btnImportPhoto.textContent = "📷 Photo";
+  btnImportPhoto.title = "Import a photo from your camera or library";
+  btnImportPhoto.addEventListener("click", () => {
+    void importPhotoFromCamera();
+  });
+  toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
+}
+
+async function openPresetPanel(): Promise<void> {
+  const panel = document.createElement("div");
+  panel.id = "preset-panel";
+  panel.className = "preset-panel";
+
+  const header = document.createElement("div");
+  header.className = "preset-panel-header";
+  const title = document.createElement("h3");
+  title.className = "preset-panel-title";
+  title.textContent = "Presets";
+  header.appendChild(title);
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn";
+  closeBtn.textContent = "✕";
+  closeBtn.title = "Close presets";
+  closeBtn.addEventListener("click", () => panel.remove());
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
+
+  const gridContainer = document.createElement("div");
+  gridContainer.className = "preset-panel-grid";
+  panel.appendChild(gridContainer);
+
+  document.body.appendChild(panel);
+
+  await mountPresetGrid(gridContainer, {
+    onApply: (stack) => {
+      pushUndo();
+      stackState = stack;
+      rebuildStack();
+      rebuildInspector();
+      render();
+      scheduleSave();
+      panel.remove();
+    },
+    getCurrentStack: () => stackState,
+  });
+}
+
+async function importPhotoFromCamera(): Promise<void> {
+  const file = await openCamera();
+  if (!file) return;
+  try {
+    const source = await loadImageAsSource(file);
+    if (renderer) {
+      renderer.uploadSource(source.canvas, source.width, source.height);
+      render();
+    }
+  } catch (e) {
+    alert(`Could not load image: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
@@ -1113,6 +1250,7 @@ async function init(): Promise<void> {
   initMaskBrush();
   initVectorEditor();
   initHelpOverlay();
+  initStage06();
 
   // Start render loop
   function loop(): void {

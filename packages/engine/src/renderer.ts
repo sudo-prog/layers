@@ -146,9 +146,14 @@ export class Renderer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._sourceTexture);
 
+    // If no pass runs, the FBO stays uninitialised (black). Copy the source
+    // into the write FBO first so an empty stack still shows the source image.
+    let ranAnyPass = false;
+
     // Run each pass
     for (const pass of this._passes) {
       if (!pass.enabled) continue;
+      ranAnyPass = true;
 
       const program = this._getProgram(gl, pass);
       if (!program) continue;
@@ -170,6 +175,20 @@ export class Renderer {
 
       // Swap FBOs
       this.fbo.swap();
+    }
+
+    if (!ranAnyPass) {
+      // Seed the write target from the source texture with the blit program.
+      const seedProgram = this._getBlitProgram(gl);
+      if (seedProgram) {
+        this.fbo.bindWrite();
+        gl.useProgram(seedProgram);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this._sourceTexture);
+        gl.bindVertexArray(this._vao);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        this.fbo.swap();
+      }
     }
 
     // Final pass: render to screen
