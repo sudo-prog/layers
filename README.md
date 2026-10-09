@@ -12,6 +12,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.3 (Core scaffolding) — **COMPLETE**
 **Phase:** 0.4 (Stack, presets & persistence) — **COMPLETE**
 **Phase:** 0.5 (Manual editor) — **COMPLETE**
+**Phase:** 0.6 (Mobile PWA) — **COMPLETE**
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -69,7 +70,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 187/187 JS unit tests passing (7 packages: schema 54, sync 46, engine 13, cores 33, stack 11, ui 9, vector 11)
+- 260/260 JS unit tests passing (7 packages + web: schema 54, sync 46, engine 13, cores 33, stack 11, ui 9, vector 11, web 83)
 - Python tests: NOT VERIFIABLE on Mac (pytest not installed locally; BE reports 57/57 on ThinkPad)
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)

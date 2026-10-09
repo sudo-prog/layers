@@ -134,7 +134,7 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 **Build:** 8/8 tasks (was 7/7, +1 for @layers/web)
 **Tests:** 16/16 turbo tasks (was 15/15, +1 for @layers/web)
 
-## Stage 0.4 + 0.5 completion (2026-10-09)
+## Stage 0.4 + 0.5 + 0.6 completion (2026-10-09)
 
 | Item | Status |
 |---|---|
@@ -149,8 +149,40 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 | Keyboard shortcuts (FE) | ✅ `apps/web/src/keyboard.ts` — Ctrl+S/E/D/Z/Y, 1-7, arrows, space, T, ? help overlay |
 | Mask brush + SVG overlay (FE) | ✅ `apps/web/src/maskBrush.ts` — paint/erase, size/opacity, base64 PNG serialization |
 | Quick Vector Editor (FE) | ✅ `apps/web/src/vectorEditor.ts` — SVG canvas, points/lines/curves, zoom, import/export |
+| PWA shell (FE) | ✅ `apps/web/vite.config.ts` — vite-plugin-pwa, manifest, Workbox precache, generated icons |
+| Preset grid + one-tap apply (FE) | ✅ `apps/web/src/presetStore.ts`, `presetGrid.ts` — save/list/load/delete/import/export |
+| Camera + photo import (FE) | ✅ `apps/web/src/imageImport.ts` — capture input, downscale to 1024px |
 
-**Build:** 8/8 tasks · **Tests:** 16/16 turbo tasks, 187/187 JS unit tests
+**Build:** 8/8 tasks · **Tests:** 16/16 turbo tasks, 260/260 JS unit tests
+
+### Bugs found by browser verification (each is a ledger entry)
+
+Static gates (tsc, unit tests, `vite build`) were green through all of these.
+A real browser was the only thing that caught them.
+
+- **`main.ts` queried `#mask-controls`, an element that never existed.** The
+  `$()` helper throws on a miss, so module evaluation died and the app
+  rendered an empty shell — 0 core buttons, dead sync bar. The binding was
+  dead code; deleting it was the fix.
+- **Vector panel could never open.** The open handler added `.visible` but
+  never removed `.hidden`, and `.vector-panel.hidden{display:none}` wins on
+  precedence.
+- **No inspector control had any effect.** The app applied params with
+  `core[key] = value`, but cores read from their private `_params` object and
+  only accept params via the constructor. Every slider, select and colour
+  picker was decorative. Params now go through the constructor, with hex
+  colours converted to `[r,g,b]` at the core boundary.
+- **Pattern/Dither: `uScale`/`uShape`/`uAngle` were dead uniforms.** The
+  shader built a procedural `pattern` from them and then thresholded on
+  source luminance alone, so scale/shape/angle changed nothing.
+- **An empty stack rendered black.** The renderer only wrote the FBO inside
+  the pass loop, so zero passes left an uninitialised (black) target instead
+  of the source image.
+
+Verified in-browser after the fixes: app boots with 7 cores listed, all 7
+inspector params change the rendered pixels (and restoring defaults
+reproduces the baseline hash exactly), the empty stack blits the colourful
+source, and the presets panel renders its empty state.
 
 ## Open items
 
