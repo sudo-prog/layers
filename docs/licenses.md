@@ -34,6 +34,7 @@
 | `typescript` | 5.9.3 | Apache-2.0 | https://github.com/microsoft/TypeScript | ✅ OK | Type compiler |
 | `@types/node` | 22.20.5 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped | ✅ OK | Node.js type definitions |
 | `vitest` | 2.1.9 | MIT | https://github.com/vitest-dev/vitest | ✅ OK | Testing framework |
+| `@paper-design/shaders` (vendored, v0.0.81) | Apache-2.0 | https://github.com/paper-design/shaders | ✅ OK | Vendored into `third_party/paper-design-shaders/` with LICENSE + NOTICE. Bayer dithering + simplex noise used by `@layers/cores` cores 1–2. See PROVENANCE.md. |
 | `jsdom` | 30.1.2 | MIT | https://github.com/jsdom/jsdom | ✅ OK | DOM environment for browser-API unit tests (`@layers/engine`, `@layers/cores`, `@layers/ui`) |
 | `esbuild` | 0.21.5 | MIT | https://github.com/evanw/esbuild | ✅ OK | Bundler (transitive, used by Vite/Vitest) |
 | `vite` | 5.4.21 | MIT | https://github.com/vitejs/vite | ✅ OK | Build tool (transitive, used by Vitest) |

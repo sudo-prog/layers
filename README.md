@@ -31,11 +31,14 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - services/learning: README ✅
 
 ### Frontend (FE) — Stage 0.2/0.3 foundation
-- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with program cache (compiles once, not per frame). 11 tests.
-- `@layers/cores` — 7 shader cores with real GLSL: Pattern/Dither, Noise/Grain, Blur, Color/Blend, Displacement, Lighting, Outline. 15 tests (compile-verified against mocked GL context).
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** (compiles once, not per frame). 11 tests.
+- `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 33 tests.
 - `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
 - `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
-- `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation, multi-pass render pixel audit, context-loss, resize, and readPixels-synced FPS benchmark.
+- `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation for all 7 cores, multi-pass render pixel audit, context-loss, resize, readPixels-synced FPS benchmark. 13 checks.
+- `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
+- `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
+- `docs/EFFICIENCY-LEDGER.md` — Pass/param/look/ms accounting + Simplification Gate verdict.
 
 **Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
@@ -61,10 +64,12 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 87/87 JS tests passing (7 packages: schema, sync, vector, stack, ui, engine, cores); 4 new JS packages (engine, cores, stack, ui) with 46 tests
-- 57/57 Python tests passing (services/ai)
-- 3/3 golden-image fixtures passing
-- 9/9 live browser checks passing (tests/e2e)
+- 105/105 JS unit tests passing (7 packages: schema, sync, vector, engine, cores, stack, ui)
+- Python tests: NOT VERIFIABLE on Mac (pytest not installed locally; BE reports 57/57 on ThinkPad)
+- 3/3 golden-image fixtures passing (legacy)
+- 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)
+- **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
+- 13/13 live browser checks passing (tests/e2e)
 - pnpm build: 7/7 tasks successful
 - pnpm test: 15/15 turbo tasks successful
 

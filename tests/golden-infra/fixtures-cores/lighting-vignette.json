@@ -1,0 +1,23 @@
+{
+  "core": "LightingCore",
+  "params": {
+    "offsetX": 0,
+    "offsetY": 0,
+    "blur": 1,
+    "color": [
+      0,
+      0,
+      0
+    ],
+    "opacity": 0.6,
+    "mode": "vignette"
+  },
+  "source": "flat-white",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98
+}

@@ -1,0 +1,23 @@
+{
+  "core": "OutlineCore",
+  "params": {
+    "strength": 1,
+    "width": 1,
+    "roughness": 0,
+    "inkBleed": false
+  },
+  "source": "checker",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98,
+  "zeroControl": {
+    "strength": 0,
+    "width": 1,
+    "roughness": 0,
+    "inkBleed": false
+  }
+}

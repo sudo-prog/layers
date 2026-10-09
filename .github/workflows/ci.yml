@@ -130,15 +130,31 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Build engine + cores (golden tests render the real pipeline)
+        run: pnpm build --filter @layers/engine --filter @layers/cores
       - name: Install Playwright + Chromium
         run: |
           cd tests/golden-infra
           pnpm install
           npx playwright install chromium --with-deps
-      - name: Run golden-image tests
+      - name: Run golden-image tests (legacy fixtures)
         run: |
           cd tests/golden-infra
           node scripts/run-all.js
+        env:
+          LAYERS_GOLDEN_THRESHOLD: 0.98
+          LAYERS_GOLDEN_SEED: 42
+      - name: Run per-core golden tests (real @layers/cores + effect-presence guard)
+        run: |
+          cd tests/golden-infra
+          node scripts/cores-golden.js --verify
+        env:
+          LAYERS_GOLDEN_THRESHOLD: 0.98
+          LAYERS_GOLDEN_SEED: 42
+      - name: Run multi-look coverage gate (>= 6 distinct looks per core)
+        run: |
+          cd tests/golden-infra
+          node scripts/cores-looks.js
         env:
           LAYERS_GOLDEN_THRESHOLD: 0.98
           LAYERS_GOLDEN_SEED: 42

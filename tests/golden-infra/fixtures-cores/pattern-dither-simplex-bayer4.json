@@ -1,0 +1,28 @@
+{
+  "core": "PatternDitherCore",
+  "params": {
+    "shape": "simplex",
+    "scale": 60,
+    "levels": "bayer4",
+    "angle": 0,
+    "contrast": 1.2,
+    "inkColor": [
+      10,
+      10,
+      30
+    ],
+    "paperColor": [
+      245,
+      240,
+      225
+    ]
+  },
+  "source": "gradient",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98
+}

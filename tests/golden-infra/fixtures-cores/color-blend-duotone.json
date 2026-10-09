@@ -1,0 +1,35 @@
+{
+  "core": "ColorBlendCore",
+  "params": {
+    "palette": [
+      [
+        20,
+        20,
+        40
+      ],
+      [
+        180,
+        80,
+        60
+      ],
+      [
+        240,
+        230,
+        200
+      ]
+    ],
+    "hueShift": 10,
+    "saturation": 1.1,
+    "brightness": 1,
+    "blend": "normal",
+    "opacity": 1
+  },
+  "source": "gradient",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98
+}
