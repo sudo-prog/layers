@@ -4,6 +4,22 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
+## Repository locations
+
+| Item | Path |
+|---|---|
+| Code (this repo) | `~/Data/20_Projects/20.34_LAYERS` |
+| Vault | `~/Data/20_Projects/20.34_LAYERS-Vault` |
+| GitHub | `github.com/sudo-prog/layers` (private) |
+
+Both peers use the **same relative path** (`~/Data/20_Projects/...`) — ThinkPad and MacBook Air.
+
+Syncthing syncs the code folder between peers; `.git` is deliberately excluded from sync, so
+**git push/pull is the mechanism for code**, and Syncthing carries only working-tree files.
+`.stignore` must be present on **both** devices (it is per-device, never synced).
+
+> **Convention:** all numbered project folders live under `~/Data/20_Projects/`. Never at the home root.
+
 ## Project Status (2026-10-09)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
