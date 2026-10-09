@@ -1,14 +1,14 @@
 # License Register
 
 > Generated from the OpenSource reference, `package.json` files, `pnpm-lock.yaml`, and `node_modules` verification.  
-> Status as of 2026-10-07.
+> Status as of 2026-10-10.
 
 ## Summary
 
 | Verdict | Count |
 |---------|-------|
-| ✅ OK | 37 |
-| ⚠️ WARNING | 8 |
+| ✅ OK | 50 |
+| ⚠️ WARNING | 9 |
 | 🚫 BLOCKED | 1 |
 
 **Policy:** The client bundle must not contain AGPL/SSPL/PolyForm/non-commercial dependencies. All third-party code is vendored into `third_party/<name>/` with LICENSE, NOTICE, URL, and commit hash, wrapped behind internal interfaces.
@@ -74,7 +74,7 @@
 | `igorski/bitmappery` | Confirm | Layer caching, worker offload patterns | https://github.com/igorski/bitmappery | ⚠️ WARNING | License unconfirmed — patterns, not code |
 | `GraphiteEditor/Graphite` | Apache-2.0 (verified) | Node-graph concepts | https://github.com/GraphiteEditor/Graphite | ✅ OK | Rust/WASM too heavy; no branding |
 | `Openshop` | Could not confirm | Inspiration only | Unknown | ⚠️ WARNING | Do not plan reuse — repo/license unconfirmed |
-| `@immich/sdk` | AGPL-3.0 (server-reported) | Immich client | https://github.com/immich-app/immich | 🚫 BLOCKED | Client over HTTP; confirm SDK license or generate own client |
+| `@immich/sdk` | AGPL-3.0 (server-reported) | Immich client | https://github.com/immich-app/immich | 🚫 BLOCKED | **RESOLVED — not imported.** Replaced by our own HTTP client (`packages/sync/src/immich.ts`, fetch + `x-api-key`). Kept BLOCKED so the AGPL SDK is never pulled in. |
 | `isomorphic-git` | MIT (believed) | In-browser git | https://github.com/isomorphic-git/isomorphic-git | ⚠️ WARNING | License unconfirmed — Octokit first |
 | `Optuna` | Apache-2.0 | AI pipeline | https://github.com/optuna/optuna | ✅ OK | Python optimization framework |
 | `pycma` | BSD-3-Clause | AI pipeline | https://github.com/CMA-ES/pycma | ✅ OK | Covariance Matrix Adaptation |

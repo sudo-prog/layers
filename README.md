@@ -77,7 +77,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
 - 13/13 live browser checks passing (tests/e2e)
 - pnpm build: 8/8 tasks successful
-- pnpm test: 16/16 turbo tasks successful
+- pnpm test: 17/17 turbo tasks successful
 
 ### Commits
 - 15+ commits on main (2026-10-07 → 2026-10-09)

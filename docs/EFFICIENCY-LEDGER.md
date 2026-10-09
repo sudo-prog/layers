@@ -132,7 +132,7 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 | `@layers/schema` | ~ removed `fs`/`path` deps → schemas inlined as TS constants (browser-compatible) |
 
 **Build:** 8/8 tasks (was 7/7, +1 for @layers/web)
-**Tests:** 16/16 turbo tasks (was 15/15, +1 for @layers/web)
+**Tests:** 17/17 turbo tasks (was 15/15, +1 for @layers/web)
 
 ## Stage 0.4 + 0.5 + 0.6 completion (2026-10-09)
 
@@ -153,7 +153,7 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 | Preset grid + one-tap apply (FE) | ✅ `apps/web/src/presetStore.ts`, `presetGrid.ts` — save/list/load/delete/import/export |
 | Camera + photo import (FE) | ✅ `apps/web/src/imageImport.ts` — capture input, downscale to 1024px |
 
-**Build:** 8/8 tasks · **Tests:** 16/16 turbo tasks, 260/260 JS unit tests
+**Build:** 8/8 tasks · **Tests:** 17/17 turbo tasks, 260/260 JS unit tests
 
 ### Bugs found by browser verification (each is a ledger entry)
 
