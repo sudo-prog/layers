@@ -124,6 +124,252 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /v1/vlm/refine:
+    post:
+      summary: VLM refinement of candidate cores
+      description: |
+        Simulates a Vision-Language Model refining candidate cores against a
+        feature vector. Returns refined candidates with accepted/rejected status,
+        updated confidence scores, and VLM notes. This is the mock AI server used
+        by Stage 1.5 frontend integration.
+      operationId: vlmRefine
+      tags: [vlm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VLMRefineRequest'
+      responses:
+        '200':
+          description: Refined candidates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VLMRefineResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/vlm/regenerate:
+    post:
+      summary: Regenerate a single layer in a stack
+      description: |
+        Replaces the layer at the given index with the best-matching candidate
+        core, scored by proxy fidelity. Returns the regenerated core, parameters,
+        and the resulting stack.
+      operationId: vlmRegenerate
+      tags: [vlm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feature, stack, layer_index]
+              properties:
+                feature:
+                  $ref: '#/components/schemas/FeatureVector'
+                stack:
+                  type: array
+                  items:
+                    type: object
+                layer_index:
+                  type: integer
+                max_trials:
+                  type: integer
+                  default: 50
+      responses:
+        '200':
+          description: Regenerated layer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VLMRegenerateResponse'
+        '400':
+          description: Invalid layer index
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/vlm/suggest:
+    post:
+      summary: Suggest alternative stacks
+      description: |
+        Returns alternative stacks (each within the 8-pass budget) ranked by
+        proxy-fidelity score. These are alternatives to the current stack.
+      operationId: vlmSuggest
+      tags: [vlm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feature, stack]
+              properties:
+                feature:
+                  $ref: '#/components/schemas/FeatureVector'
+                stack:
+                  type: array
+                  items:
+                    type: object
+                max_suggestions:
+                  type: integer
+                  default: 5
+      responses:
+        '200':
+          description: Suggested alternatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VLMSuggestResponse'
+
+  /v1/vlm/optimize:
+    post:
+      summary: Re-optimize a stack
+      description: |
+        Runs CMA-ES parameter optimization on the stack and also computes a
+        pruned variant for comparison. Returns the optimized stack, score,
+        trace, pass count, and pruning report.
+      operationId: vlmOptimize
+      tags: [vlm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feature, stack]
+              properties:
+                feature:
+                  $ref: '#/components/schemas/FeatureVector'
+                stack:
+                  type: array
+                  items:
+                    type: object
+                max_trials:
+                  type: integer
+                  default: 200
+      responses:
+        '200':
+          description: Optimized stack and pruning report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VLMOptimizeResponse'
+
+  /v1/style-clusters:
+    get:
+      summary: Style clusters
+      description: Return the canonical list of style-cluster names.
+      operationId: getStyleClusters
+      tags: [style]
+      responses:
+        '200':
+          description: Style clusters list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StyleClustersResponse'
+
+  /v1/core-types:
+    get:
+      summary: Core types
+      description: Return the canonical list of core-type identifiers.
+      operationId: getCoreTypes
+      tags: [style]
+      responses:
+        '200':
+          description: Core types list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoreTypesResponse'
+
+  /v1/retrieve:
+    post:
+      summary: Weighted retrieval
+      description: |
+        Retrieve top-k stacks for a target FeatureVector via weighted retrieval.
+        Score = 0.40 * cosine_sim + 0.30 * acceptance_rate + 0.20 * recency_weight
+        + 0.10 * user_rating.
+      operationId: retrieveStacks
+      tags: [retrieval]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrieveRequest'
+      responses:
+        '200':
+          description: Ranked retrieval results with weighting formula
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrieveResponse'
+
+  /v1/dashboard/acceptance:
+    get:
+      summary: Acceptance rate dashboard
+      description: |
+        Returns a full matrix of all core types × all style clusters with
+        acceptance rates (applied / suggested, 0.0–1.0).
+      operationId: acceptanceDashboard
+      tags: [dashboard]
+      responses:
+        '200':
+          description: Acceptance rate matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceDashboardResponse'
+
+  /v1/events/suggest:
+    post:
+      summary: Record a stack suggestion
+      description: Record that a stack was suggested for acceptance-rate tracking.
+      operationId: recordSuggestion
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptanceEventRequest'
+      responses:
+        '200':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventRecordResponse'
+
+  /v1/events/apply:
+    post:
+      summary: Record a stack application
+      description: Record that a stack was applied for acceptance-rate tracking.
+      operationId: recordApplication
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptanceEventRequest'
+      responses:
+        '200':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventRecordResponse'
+
 components:
   schemas:
     Error:
@@ -294,3 +540,220 @@ components:
         mobileOk:
           type: boolean
           description: Whether the preset fits the ≤ 8-pass mobile budget.
+        mobileBudget:
+          type: integer
+          description: Maximum GPU passes allowed on mobile.
+
+    FeatureVector:
+      type: object
+      required: [palette, edges, frequency, tone]
+      properties:
+        palette:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+          description: Dominant RGB colors sorted by frequency.
+        edges:
+          type: object
+          description: Edge statistics with magnitude, direction, edge_density.
+        frequency:
+          type: object
+          description: Frequency energy ratios with low, mid, high.
+        tone:
+          type: object
+          description: Tone statistics with mean, std, histogram.
+        clip_embedding:
+          type: array
+          items:
+            type: number
+          nullable: true
+          description: 512-dim CLIP embedding (optional).
+
+    VLMRefineRequest:
+      type: object
+      required: [feature, candidates]
+      properties:
+        feature:
+          $ref: '#/components/schemas/FeatureVector'
+        candidates:
+          type: array
+          description: Optional candidate cores to refine.
+          items:
+            type: object
+
+    VLMRefineResponse:
+      type: object
+      required: [refined_candidates, overall_confidence, vlm_summary]
+      properties:
+        refined_candidates:
+          type: array
+          items:
+            type: object
+        overall_confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        vlm_summary:
+          type: string
+        image_description:
+          type: string
+          nullable: true
+        feature_summary:
+          type: object
+        style_cluster:
+          type: string
+
+    VLMRegenerateResponse:
+      type: object
+      required: [regenerated_core, stack, score]
+      properties:
+        original_core:
+          type: string
+        original_params:
+          type: object
+        regenerated_core:
+          type: string
+        regenerated_params:
+          type: object
+        stack:
+          type: array
+          items:
+            type: object
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidence:
+          type: number
+        reasoning:
+          type: string
+        passes:
+          type: integer
+
+    VLMSuggestResponse:
+      type: object
+      required: [alternatives, count]
+      properties:
+        alternatives:
+          type: array
+          items:
+            type: object
+        count:
+          type: integer
+        current_stack_passes:
+          type: integer
+        current_stack_score:
+          type: number
+        target_cluster:
+          type: string
+        style_clusters:
+          type: array
+          items:
+            type: string
+
+    VLMOptimizeResponse:
+      type: object
+      required: [optimized_stack, score, passes, mobile_ok]
+      properties:
+        optimized_stack:
+          type: array
+          items:
+            type: object
+        score:
+          type: number
+        trace:
+          type: array
+          items:
+            type: number
+        passes:
+          type: integer
+        params_count:
+          type: integer
+        pruned_stack:
+          type: array
+          items:
+            type: object
+        pruned_passes:
+          type: integer
+        pruned_fidelity:
+          type: number
+        layers_removed_pct:
+          type: number
+        mobile_ok:
+          type: boolean
+
+    StyleClustersResponse:
+      type: object
+      properties:
+        clusters:
+          type: array
+          items:
+            type: string
+
+    CoreTypesResponse:
+      type: object
+      properties:
+        core_types:
+          type: array
+          items:
+            type: string
+
+    RetrieveRequest:
+      type: object
+      required: [feature]
+      properties:
+        feature:
+          $ref: '#/components/schemas/FeatureVector'
+        k:
+          type: integer
+          default: 10
+
+    RetrieveResponse:
+      type: object
+      required: [results, count, weighting_formula]
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+        count:
+          type: integer
+        weighting_formula:
+          type: string
+
+    AcceptanceDashboardResponse:
+      type: object
+      required: [acceptance_rates, core_types, style_clusters]
+      properties:
+        acceptance_rates:
+          type: object
+          description: Dict of core_type to dict of cluster to rate.
+        core_types:
+          type: array
+          items:
+            type: string
+        style_clusters:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+
+    AcceptanceEventRequest:
+      type: object
+      required: [core_type, cluster]
+      properties:
+        core_type:
+          type: string
+        cluster:
+          type: string
+
+    EventRecordResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        event:
+          type: string
