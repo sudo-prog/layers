@@ -124,6 +124,66 @@ propagates per-pass opacity). Any core that wants its own opacity must expose a
 separate uniform — reading `uOpacity` for a core-level parameter silently
 discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 
+## Web App (Stage 0.4)
+
+| Component | ledger |
+|---|---|
+| `@layers/web` | + Vite + TypeScript app: 7 core buttons, stack panel, inspector, undo/redo, export/import, theme toggle |
+| `@layers/schema` | ~ removed `fs`/`path` deps → schemas inlined as TS constants (browser-compatible) |
+
+**Build:** 8/8 tasks (was 7/7, +1 for @layers/web)
+**Tests:** 17/17 turbo tasks (was 15/15, +1 for @layers/web)
+
+## Stage 0.4 + 0.5 + 0.6 completion (2026-10-09)
+
+| Item | Status |
+|---|---|
+| IndexedDB persistence (FE) | ✅ `packages/sync/src/indexeddb.ts` — IndexedDBProvider with documents/queue/links stores |
+| Sync status UI (FE) | ✅ `apps/web/src/main.ts` — sync indicator in footer, updates every 2s |
+| Preset JSON v1 + migrations (BE) | ✅ `packages/schema/src/index.ts` — v1 schema, migratePresetV0ToV1, migratePreset |
+| Browser-compatible sync | ✅ `packages/sync/src/index.ts` — Web Crypto API replaces node:crypto |
+| Engine opacity fix | ✅ `packages/engine/src/renderer.ts` — per-pass opacity propagation |
+| Web persistence integration | ✅ `apps/web/src/persistence.ts` — debounced save/restore via IndexedDBProvider |
+| GitHub auto-backup (BE) | ✅ `packages/sync/src/index.ts` — Git Data API commits, debounced flush, rate-limit retry |
+| Immich sync (BE) | ✅ `packages/sync/src/immich.ts` — custom HTTP client (no SDK), x-api-key auth |
+| Keyboard shortcuts (FE) | ✅ `apps/web/src/keyboard.ts` — Ctrl+S/E/D/Z/Y, 1-7, arrows, space, T, ? help overlay |
+| Mask brush + SVG overlay (FE) | ✅ `apps/web/src/maskBrush.ts` — paint/erase, size/opacity, base64 PNG serialization |
+| Quick Vector Editor (FE) | ✅ `apps/web/src/vectorEditor.ts` — SVG canvas, points/lines/curves, zoom, import/export |
+| PWA shell (FE) | ✅ `apps/web/vite.config.ts` — vite-plugin-pwa, manifest, Workbox precache, generated icons |
+| Preset grid + one-tap apply (FE) | ✅ `apps/web/src/presetStore.ts`, `presetGrid.ts` — save/list/load/delete/import/export |
+| Camera + photo import (FE) | ✅ `apps/web/src/imageImport.ts` — capture input, downscale to 1024px |
+
+**Build:** 8/8 tasks · **Tests:** 17/17 turbo tasks, 260/260 JS unit tests
+
+### Bugs found by browser verification (each is a ledger entry)
+
+Static gates (tsc, unit tests, `vite build`) were green through all of these.
+A real browser was the only thing that caught them.
+
+- **`main.ts` queried `#mask-controls`, an element that never existed.** The
+  `$()` helper throws on a miss, so module evaluation died and the app
+  rendered an empty shell — 0 core buttons, dead sync bar. The binding was
+  dead code; deleting it was the fix.
+- **Vector panel could never open.** The open handler added `.visible` but
+  never removed `.hidden`, and `.vector-panel.hidden{display:none}` wins on
+  precedence.
+- **No inspector control had any effect.** The app applied params with
+  `core[key] = value`, but cores read from their private `_params` object and
+  only accept params via the constructor. Every slider, select and colour
+  picker was decorative. Params now go through the constructor, with hex
+  colours converted to `[r,g,b]` at the core boundary.
+- **Pattern/Dither: `uScale`/`uShape`/`uAngle` were dead uniforms.** The
+  shader built a procedural `pattern` from them and then thresholded on
+  source luminance alone, so scale/shape/angle changed nothing.
+- **An empty stack rendered black.** The renderer only wrote the FBO inside
+  the pass loop, so zero passes left an uninitialised (black) target instead
+  of the source image.
+
+Verified in-browser after the fixes: app boots with 7 cores listed, all 7
+inspector params change the rendered pixels (and restoring defaults
+reproduces the baseline hash exactly), the empty stack blits the colourful
+source, and the presets panel renders its empty state.
+
 ## Open items
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually
@@ -133,4 +193,4 @@ discards it. This is a footgun worth fixing at the engine level in Stage 0.4.
 - `tests/visual/` and `tests/perf/` harnesses.
 - Cross-core composition tests (stacks of >1 core together).
 - Real-hardware perf gate (reference phone, 8 passes @ 1536px ≥ 30 fps).
-- Engine-level fix for `PassParams.opacity` (see the renderer design note).
+- **Stage 0.6:** Mobile PWA (Workbox, manifest, offline cache, preset grid).

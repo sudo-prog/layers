@@ -4,28 +4,15 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Repository locations
-
-| Item | Path |
-|---|---|
-| Code (this repo) | `~/Data/20_Projects/20.34_LAYERS` |
-| Vault | `~/Data/20_Projects/20.34_LAYERS-Vault` |
-| GitHub | `github.com/sudo-prog/layers` (private) |
-
-Both peers use the **same relative path** (`~/Data/20_Projects/...`) — ThinkPad and MacBook Air.
-
-Syncthing syncs the code folder between peers; `.git` is deliberately excluded from sync, so
-**git push/pull is the mechanism for code**, and Syncthing carries only working-tree files.
-`.stignore` must be present on **both** devices (it is per-device, never synced).
-
-> **Convention:** all numbered project folders live under `~/Data/20_Projects/`. Never at the home root.
-
 ## Project Status (2026-10-09)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
 **Phase:** 1.2 (Feature extraction) — **COMPLETE**
 **Phase:** 1.3 (Core scaffolding) — **COMPLETE**
+**Phase:** 0.4 (Stack, presets & persistence) — **COMPLETE**
+**Phase:** 0.5 (Manual editor) — **COMPLETE**
+**Phase:** 0.6 (Mobile PWA) — **COMPLETE**
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -46,11 +33,14 @@ Syncthing syncs the code folder between peers; `.git` is deliberately excluded f
 - services/eval: README ✅
 - services/learning: README ✅
 
-### Frontend (FE) — Stage 0.2/0.3 foundation
-- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** (compiles once, not per frame). 11 tests.
+### Frontend (FE) — Stage 0.2/0.3/0.4 foundation + web app
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. 13 tests.
 - `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 33 tests.
 - `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
 - `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
+- `@layers/schema` — JSON Schema validation (AJV) for contracts. Schemas inlined as TypeScript constants — browser-compatible (no fs/path). Preset v1 schema with v0→v1 migration. 54 tests.
+- `@layers/sync` — Browser-compatible SyncProvider (Web Crypto API, no node:crypto), IndexedDBProvider for persistence. 23 tests.
+- `@layers/web` — **Web editor app** (Vite + TypeScript): 7 core buttons, stack panel, inspector, undo/redo, export/import JSON, light/dark theme, live WebGL2 rendering, IndexedDB persistence, sync status UI.
 - `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation for all 7 cores, multi-pass render pixel audit, context-loss, resize, readPixels-synced FPS benchmark. 13 checks.
 - `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
 - `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
@@ -80,15 +70,20 @@ Syncthing syncs the code folder between peers; `.git` is deliberately excluded f
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 105/105 JS unit tests passing (7 packages: schema, sync, vector, engine, cores, stack, ui)
+- 260/260 JS unit tests passing (7 packages + web: schema 54, sync 46, engine 13, cores 33, stack 11, ui 9, vector 11, web 83)
 - Python tests: NOT VERIFIABLE on Mac (pytest not installed locally; BE reports 57/57 on ThinkPad)
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)
 - **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
 - 13/13 live browser checks passing (tests/e2e)
-- pnpm build: 7/7 tasks successful
-- pnpm test: 15/15 turbo tasks successful
+- pnpm build: 8/8 tasks successful
+- pnpm test: 17/17 turbo tasks successful
 
 ### Commits
 - 15+ commits on main (2026-10-07 → 2026-10-09)
 - Branch feat/preset-schema-v0 merged to main
+
+### Project Location
+- **Code:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS/`
+- **Vault:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS-Vault/`
+- Synced with ThinkPad via Syncthing (5 folders)
