@@ -4,7 +4,7 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Project Status (2026-10-09)
+## Project Status (2026-10-13)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
@@ -13,6 +13,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 0.4 (Stack, presets & persistence) — **COMPLETE**
 **Phase:** 0.5 (Manual editor) — **COMPLETE**
 **Phase:** 0.6 (Mobile PWA) — **COMPLETE**
+**Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
