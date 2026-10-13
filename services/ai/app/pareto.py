@@ -202,26 +202,30 @@ def prune_stack(
     indexed_layers = list(enumerate(working))  # [(orig_idx, layer), ...]
 
     # Greedy ablation: at each step remove the single layer whose removal
-    # costs the least fidelity, provided the TOTAL loss from the original
-    # stack stays within ``max_loss_pct``.  This differs from a naive
-    # first-removable sweep: every removal is judged against the ORIGINAL
-    # fidelity, so cumulative loss can never exceed the threshold (a sweep
-    # that compares each trial against ``fidelity_before`` allows losses to
-    # compound past the bound).
+    # costs the least fidelity, provided the CUMULATIVE loss from the
+    # ORIGINAL stack stays within ``max_loss_pct``.
+    #
+    # Only non-negative losses are accepted.  Layers that would *improve*
+    # the proxy fidelity when removed (negative loss) are NOT pruned — they
+    # may be redundant in the proxy but essential in real rendering, so we
+    # err on the side of caution and keep them.  This prevents a scenario
+    # where removing several "improvement" layers inflates the working
+    # fidelity, masking subsequent losses that compound past the threshold.
     changed = True
     while changed and len(indexed_layers) > 1:
         changed = False
         best_i = -1
         best_loss = float("inf")
-        best_fidelity = None
         for i in range(len(indexed_layers)):
             trial = [layer for j, layer in indexed_layers if j != i]
             trial_fidelity = stack_metrics(trial, features)["fidelity"]
             loss = fidelity_before - trial_fidelity
-            if loss <= max_loss_pct and loss < best_loss:
+            # Only accept removals with non-negative loss (actual degradation).
+            # The loss is measured from the original fidelity, ensuring the
+            # TOTAL fidelity loss never exceeds max_loss_pct.
+            if 0.0 <= loss <= max_loss_pct and loss < best_loss:
                 best_loss = loss
                 best_i = i
-                best_fidelity = trial_fidelity
         if best_i >= 0:
             removed_indices.append(indexed_layers[best_i][0])
             indexed_layers.pop(best_i)
@@ -242,4 +246,6 @@ def prune_stack(
         "params_before": params_before,
         "params_after": metrics_after["params_count"],
         "layers_removed_pct": layers_removed_pct,
+        "layers_before": original_len,
+        "layers_after": len(pruned_stack),
     }
