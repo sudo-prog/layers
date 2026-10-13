@@ -13,3 +13,9 @@ pkg/
 *.sync-conflict-*
 .DS_Store
 *.lv-tmp
+.stfolder/
+.stignore
+tests/golden-infra/output/
+tests/golden-infra/fixtures-cores/output/
+*.tsbuildinfo
+.hermes_result.json

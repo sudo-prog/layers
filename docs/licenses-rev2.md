@@ -106,5 +106,5 @@ All Rev-2 dependencies are allow-listed. No changes to policy required.
 - GSAP: https://github.com/greensock/gsap
 - GSAP free announcement: https://webflow.com/updates/gsap-becomes-free
 - Penpot: https://github.com/penpot/penpot
-- Brief-Rev2: /home/thinkpad/20.34_LAYERS-Vault/03-Reference/Brief-Rev2.md
-- OpenSource.md: /home/thinkpad/20.34_LAYERS-Vault/03-Reference/OpenSource.md
+- Brief-Rev2: /home/thinkpad/Data/20_Projects/20.34_LAYERS-Vault/03-Reference/Brief-Rev2.md
+- OpenSource.md: /home/thinkpad/Data/20_Projects/20.34_LAYERS-Vault/03-Reference/OpenSource.md

@@ -1,0 +1,28 @@
+{
+  "core": "PatternDitherCore",
+  "params": {
+    "shape": "dots",
+    "scale": 40,
+    "levels": "bayer8",
+    "angle": 15,
+    "contrast": 1,
+    "inkColor": [
+      0,
+      0,
+      0
+    ],
+    "paperColor": [
+      255,
+      255,
+      255
+    ]
+  },
+  "source": "gradient",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98
+}

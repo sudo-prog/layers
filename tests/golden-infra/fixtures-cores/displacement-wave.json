@@ -1,0 +1,23 @@
+{
+  "core": "DisplacementCore",
+  "params": {
+    "strength": 6,
+    "mapScale": 12,
+    "axis": "y",
+    "type": "wave"
+  },
+  "source": "stripes-h",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98,
+  "zeroControl": {
+    "strength": 0,
+    "mapScale": 12,
+    "axis": "y",
+    "type": "wave"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "core": "noise-grain",
+  "params": {
+    "type": "perlin",
+    "scale": 4,
+    "octaves": 3,
+    "strength": 0.3
+  },
+  "opacity": 1,
+  "blend": "normal",
+  "enabled": true
+}

@@ -1,0 +1,17 @@
+{
+  "core": "BlurCore",
+  "params": {
+    "radius": 3,
+    "direction": "omni",
+    "passes": 1,
+    "edgeMode": "clamp"
+  },
+  "source": "checker",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "seed": 42,
+  "time": 0,
+  "threshold": 0.98
+}
