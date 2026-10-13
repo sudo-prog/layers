@@ -208,7 +208,7 @@ def optimize_stack(
     if isinstance(features, FeatureVector):
         features_list = [features]
     else:
-        features_list = features if features else [features] if False else []  # noqa: E501
+        features_list = features if features else []
 
     if not stack or not features_list:
         return OptimizationResult(

@@ -45,6 +45,7 @@ import { createVectorEditor, type VectorEditor } from "./vectorEditor";
 import { presetStore } from "./presetStore";
 import { mountPresetGrid } from "./presetGrid";
 import { openCamera, loadImageAsSource } from "./imageImport";
+import { mountAIPanel, type AIPanelHandle } from "./aiPanel";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -1132,6 +1133,38 @@ function initStage06(): void {
     void importPhotoFromCamera();
   });
   toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
+
+  // ── AI toolbar button ──────────────────────────────────────────────────
+  const btnAI = document.createElement("button");
+  btnAI.className = "btn";
+  btnAI.textContent = "🤖 AI";
+  btnAI.title = "AI Assistant — extract features, search/optimize/prune stacks";
+  btnAI.addEventListener("click", () => {
+    const existing = document.getElementById("ai-panel-mount");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const mount = document.createElement("div");
+    mount.id = "ai-panel-mount";
+    document.body.appendChild(mount);
+    const handle = mountAIPanel(mount, {
+      getCurrentStack: () => stackState,
+      applyStack: (items: any[]) => {
+        pushUndo();
+        stackState = {
+          items: items,
+          selectedId: items[0]?.id ?? null,
+        };
+        rebuildStack();
+        rebuildInspector();
+        render();
+        scheduleSave();
+      },
+    });
+    void handle.refreshHealth();
+  });
+  toolbarActions.insertBefore(btnAI, btnThemeEl);
 }
 
 async function openPresetPanel(): Promise<void> {

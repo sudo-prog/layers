@@ -5,6 +5,12 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "127.0.0.1",
+    proxy: {
+      "/v1": {
+        target: "http://127.0.0.1:8123",
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     target: "es2022",
