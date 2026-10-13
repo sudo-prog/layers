@@ -14,6 +14,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 0.5 (Manual editor) — **COMPLETE**
 **Phase:** 0.6 (Mobile PWA) — **COMPLETE**
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
+**Phase:** 1.5 (Review & refine UI) — **IN PROGRESS** (BE prep done: events, consent, retrieval, mock AI)
+**Phase:** 1.6 (Learning store) — **IN PROGRESS** (BE prep done: retrieval weighting, acceptance dashboard)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
