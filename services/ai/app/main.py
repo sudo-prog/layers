@@ -268,7 +268,6 @@ class SearchRequest(BaseModel):
 
     feature: FeatureVector
     beam_width: int = 8
-    levels: int = 1
 
 
 class OptimizeRequest(BaseModel):
