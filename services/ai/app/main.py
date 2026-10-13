@@ -44,6 +44,20 @@ from app.optimize import optimize_stack, OptimizationResult, _inject_params
 from app.pareto import prune_stack, pareto_frontier, stack_metrics
 from app.search import _stack_passes
 
+# Stage 1.5/1.6: mock AI server & retrieval weighting
+from app.mock_ai import router as vlm_router
+from app.retrieval import (
+    WeightedRetrieval,
+    AcceptanceRateTracker,
+    get_style_clusters,
+    CORE_TYPES,
+    STYLE_CLUSTERS,
+    WEIGHT_COSINE,
+    WEIGHT_ACCEPTANCE,
+    WEIGHT_RECENCY,
+    WEIGHT_RATING,
+)
+
 
 class _APIExtractRequest(BaseModel):
     """Request body for the live single-image extraction endpoints."""
@@ -165,6 +179,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="LAYERS AI Service", version="0.1.0", lifespan=lifespan
 )
+
+# Stage 1.5: mount the mock AI (VLM) router for regenerate / suggest / re-optimize.
+app.include_router(vlm_router)
 
 
 @app.get("/v1/health")
@@ -318,3 +335,95 @@ def prune_stacks_endpoint(request: PruneRequest) -> dict[str, Any]:
     """Prune layers from a stack keeping fidelity loss within max_loss_pct."""
     report = prune_stack(request.stack, request.feature, max_loss_pct=request.max_loss_pct)
     return {"report": report}
+
+
+# ---------------------------------------------------------------------------
+# Stage 1.6: retrieval weighting & acceptance-rate dashboard endpoints
+# ---------------------------------------------------------------------------
+
+class RetrieveRequest(BaseModel):
+    """Request body for /v1/retrieve."""
+    feature: FeatureVector
+    k: int = 10
+
+
+class AcceptanceRequest(BaseModel):
+    """Request body for recording acceptance events."""
+    core_type: str
+    cluster: str
+
+
+@app.get("/v1/style-clusters")
+def get_clusters_endpoint() -> dict[str, Any]:
+    """Return the canonical list of style-cluster names."""
+    return {"clusters": get_style_clusters()}
+
+
+@app.get("/v1/core-types")
+def get_core_types_endpoint() -> dict[str, Any]:
+    """Return the canonical list of core types."""
+    return {"core_types": list(CORE_TYPES)}
+
+
+@app.post("/v1/retrieve")
+def retrieve_endpoint(request: RetrieveRequest) -> dict[str, Any]:
+    """Retrieve top-k stacks for a target feature vector via weighted retrieval.
+
+    Uses the composite scoring formula (40% cosine similarity + 30% acceptance
+    rate + 20% recency + 10% user rating) against the event log.
+    """
+    retriever = WeightedRetrieval()
+    results = retriever.retrieve(request.feature, k=request.k)
+    return {
+        "results": [
+            {
+                "stack": record.stack,
+                "core_type": record.core_type,
+                "cluster": record.cluster,
+                "score": round(score, 4),
+                "rating": record.rating,
+            }
+            for record, score in results
+        ],
+        "count": len(results),
+        "weighting_formula": (
+            f"score = {WEIGHT_COSINE} * cosine_sim "
+            f"+ {WEIGHT_ACCEPTANCE} * acceptance_rate "
+            f"+ {WEIGHT_RECENCY} * recency_weight "
+            f"+ {WEIGHT_RATING} * user_rating"
+        ),
+    }
+
+
+@app.get("/v1/dashboard/acceptance")
+def acceptance_dashboard_endpoint() -> dict[str, Any]:
+    """Acceptance-rate dashboard: per-core-type acceptance rate per cluster.
+
+    Returns a full matrix of all core types × all style clusters, with
+    acceptance rates (0.0–1.0) for each pair.
+    """
+    tracker = AcceptanceRateTracker()
+    rates = tracker.get_all_acceptance_rates()
+    return {
+        "acceptance_rates": rates,
+        "core_types": list(CORE_TYPES),
+        "style_clusters": list(STYLE_CLUSTERS),
+        "description": "Rate = applied / suggested per (core_type, cluster).",
+    }
+
+
+@app.post("/v1/events/suggest")
+def record_suggestion_endpoint(request: AcceptanceRequest) -> dict[str, Any]:
+    """Record that a stack was suggested (Stage 1.6 event logging)."""
+    tracker = AcceptanceRateTracker()
+    tracker.record_suggested(request.core_type, request.cluster)
+    return {"status": "recorded", "event": "stack_suggested"}
+
+
+@app.post("/v1/events/apply")
+def record_application_endpoint(request: AcceptanceRequest) -> dict[str, Any]:
+    """Record that a stack was applied (Stage 1.6 event logging)."""
+    tracker = AcceptanceRateTracker()
+    tracker.record_applied(request.core_type, request.cluster)
+    return {"status": "recorded", "event": "stack_applied"}
+
