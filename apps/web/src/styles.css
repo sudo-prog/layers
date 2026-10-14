@@ -1427,3 +1427,217 @@ body {
   border-radius: var(--space-1);
   background: var(--bg-tertiary);
 }
+
+/* ── Stage 1.6 — Learning store panel ─────────────────────────────────────── */
+
+.learning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.learning-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(920px, 94vw);
+  max-height: 88vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.learning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.learning-title {
+  font-size: var(--text-lg-size);
+  font-weight: var(--text-lg-weight);
+  margin: 0;
+}
+
+.learning-close {
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.learning-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.learning-tab {
+  padding: var(--space-2) var(--space-4);
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm-size);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--duration-fast-easing),
+              color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.learning-tab:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.learning-tab.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border);
+  font-weight: 500;
+}
+
+.learning-content {
+  padding: var(--space-4);
+  overflow: auto;
+  flex: 1;
+}
+
+.learning-content .tab-content {
+  display: none;
+}
+
+.learning-content .tab-content.active {
+  display: block;
+}
+
+/* Acceptance matrix */
+.acceptance-matrix {
+  overflow: auto;
+}
+
+.acceptance-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-xs-size);
+}
+
+.acceptance-table th,
+.acceptance-table td {
+  border: 1px solid var(--border);
+  padding: var(--space-2);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.acceptance-table th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}
+
+.acceptance-table th:first-child,
+.acceptance-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.acceptance-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.acceptance-empty,
+.acceptance-loading,
+.retrieval-guidance {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm-size);
+}
+
+/* Retrieval list */
+.retrieval-btn {
+  min-height: 40px;
+  margin-bottom: var(--space-3);
+}
+
+.retrieval-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.retrieval-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+}
+
+.retrieval-stack {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-sm-size);
+  color: var(--text-primary);
+}
+
+.retrieval-meta {
+  display: flex;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-xs-size);
+}
+
+.retrieval-rating {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Consent toggle */
+.consent-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  cursor: pointer;
+  font-size: var(--text-sm-size);
+  color: var(--text-primary);
+}
+
+.consent-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .learning-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+  .learning-tab { padding: var(--space-2) var(--space-3); }
+}
+
+/* Generic visibility utility — the learning panel relies on `.hidden` on
+   <p>/<div> children that have no element-specific hidden rule. */
+.hidden {
+  display: none !important;
+}
