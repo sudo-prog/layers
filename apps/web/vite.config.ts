@@ -5,11 +5,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "127.0.0.1",
-    headers: {
+    // Security headers for production preview. In dev mode, CSP blocks Vite HMR eval,
+    // so CSP is applied at the hosting/CDN level instead. See docs/security-review.md.
+    headers: process.env.NODE_ENV === "production" ? {
       "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
-    },
+    } : undefined,
     proxy: {
       "/v1": {
         target: "http://127.0.0.1:8123",
