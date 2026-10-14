@@ -42,6 +42,12 @@ export default defineConfig({
         ],
       },
       workbox: {
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/v1/, /^\/api/],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /\/assets\/.*\.(?:js|css)$/,
@@ -57,6 +63,14 @@ export default defineConfig({
             options: {
               cacheName: "preset-json",
               expiration: { maxEntries: 20, maxAgeSeconds: 604800 },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|gif|svg|webp|avif)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images",
+              expiration: { maxEntries: 100, maxAgeSeconds: 2592000 },
             },
           },
         ],
