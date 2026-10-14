@@ -17,8 +17,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
 **Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7: search, tags, categories, visibility flags, deep links, import/export)
-**Phase:** 2.3 (Performance & reliability) — **COMPLETE** (PR #12 f3ee646: pass-rebuild decoupling, error boundary)
-**Phase:** 2.4 (Accessibility) — **COMPLETE** (PR #12 f3ee646: WCAG 2.2 AA — focus, 44px targets, ARIA dialogs, Escape, reduced-motion, safe-area)
+**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (PR #12 f3ee646: per-frame pass recompilation eliminated + error boundary; device matrix, shader cache, adaptive quality, WebGPU parity NOT done)
+**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (PR #12 f3ee646: WCAG 2.2 AA FE half done — focus, 44px targets, ARIA dialogs, Escape, reduced-motion, safe-area; axe-core run, BE security review, privacy review NOT done)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -76,8 +76,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Turborepo 2.0: `pipeline` renamed to `tasks`
 
 ### Tests
-- 260/260 JS unit tests passing (7 packages + web: schema 54, sync 46, engine 13, cores 33, stack 11, ui 9, vector 11, web 83)
-- Python tests: NOT VERIFIABLE on Mac (pytest not installed locally; BE reports 57/57 on ThinkPad)
+- **319/319 JS unit tests passing** (8 packages: web 142, schema 54, sync 46, cores 33, engine 13, stack 11, vector 11, ui 9)
+- Python tests: run on the ThinkPad (`services/ai`, `.venv`) — not verifiable from the Mac
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)
 - **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
@@ -85,9 +85,15 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - pnpm build: 8/8 tasks successful
 - pnpm test: 17/17 turbo tasks successful
 
+### Deferred / open work (not claimed complete)
+- **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), shader compile cache / baked LUTs, adaptive quality + 60-min soak, WebGPU parity — all need real hardware or are unstarted
+- **Stage 2.4:** axe-core automated a11y run (would add a dependency), BE security review (tokens, CSP, SSRF on URL import), privacy review + data-flow diagram
+- **Stage 2.2:** real device-to-device preset sync verification; thumbnails currently use a deterministic gradient placeholder rather than rendered previews
+- **Stages 2.1 / 2.5:** not started (smarter AI, beta & v1.0 launch)
+
 ### Commits
-- 15+ commits on main (2026-10-07 → 2026-10-09)
-- Branch feat/preset-schema-v0 merged to main
+- 15+ commits on main (2026-10-07 → 2026-10-14)
+- Merged PRs: #9 (Stage 1.5), #10 (Stage 1.6), #12 (Stages 2.3/2.4), #14 (Stage 2.2)
 
 ### Project Location
 - **Code:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS/`
