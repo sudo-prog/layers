@@ -16,9 +16,9 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
-**Phase:** 2.1 (Smarter AI) — **PARTIAL** (classical fallback done; ranker + simplification in progress)
+**Phase:** 2.1 (Smarter AI) — **COMPLETE** (classical fallback + learned ranker + simplification pass; 57 new Python tests)
 **Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7 + thumbnails with real rendered previews)
-**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (shader compile cache + adaptive quality done; device matrix + soak test need real hardware)
+**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (shader compile cache + adaptive quality + WebGPU parity done; device matrix + soak test need real hardware)
 **Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (security review done + 3 high/medium findings fixed; privacy review done; axe-core run pending — would add dep)
 
 ### Backend (BE)
