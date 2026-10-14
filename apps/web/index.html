@@ -17,7 +17,7 @@
     <header class="toolbar">
       <h1 class="logo">LAYERS</h1>
       <div class="toolbar-actions">
-        <button id="btn-undo" class="btn" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
+        <button id="btn-undo" class="btn" title="Undo (Ctrl+Z)" disabled aria-label="Undo">↩ Undo</button>
         <button id="btn-redo" class="btn" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
         <span class="divider"></span>
         <button id="btn-export" class="btn" title="Export preset JSON">Export</button>
@@ -74,9 +74,9 @@
   </footer>
 
   <!-- Help overlay -->
-  <div id="help-overlay" class="help-overlay">
+  <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
     <div class="help-modal">
-      <button id="btn-close-help" class="help-close">✕</button>
+      <button id="btn-close-help" class="help-close" aria-label="Close keyboard shortcuts">✕</button>
       <div id="help-content" class="help-content"></div>
     </div>
   </div>

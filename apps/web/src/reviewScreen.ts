@@ -50,17 +50,20 @@ export function mountReviewScreen(container: HTMLElement, options: ReviewScreenO
   let panels: HTMLElement[] = [];
   let activeTabIndex = 0;
 
-  // Create the overlay and modal
-  overlay = document.createElement("div");
-  overlay.className = "review-overlay";
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      options.onAction("close");
-    }
-  });
+   // Create the overlay and modal
+   overlay = document.createElement("div");
+   overlay.className = "review-overlay";
+   overlay.addEventListener("click", (e) => {
+     if (e.target === overlay) {
+       options.onAction("close");
+     }
+   });
 
-  modal = document.createElement("div");
-  modal.className = "review-modal";
+   modal = document.createElement("div");
+   modal.className = "review-modal";
+   modal.setAttribute("role", "dialog");
+   modal.setAttribute("aria-modal", "true");
+   modal.setAttribute("aria-label", "Review source vs reconstruction");
 
   // Create tabs
   const tabLabels = ["Reference", "Reconstruction", "Layers", "Fidelity"];
