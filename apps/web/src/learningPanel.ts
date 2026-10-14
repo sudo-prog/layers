@@ -91,11 +91,14 @@ function getAcceptanceColor(value: number): string {
 // ── Main ───────────────────────────────────────────────────────────────
 
 export function mountLearningPanel(
-  container: HTMLElement,
-  opts: LearningPanelOptions,
+   container: HTMLElement,
+   opts: LearningPanelOptions,
 ): LearningPanelHandle {
-  container.innerHTML = "";
-  container.className = "learning-overlay";
+   container.innerHTML = "";
+   container.className = "learning-overlay";
+   container.setAttribute("role", "dialog");
+   container.setAttribute("aria-modal", "true");
+   container.setAttribute("aria-label", "Learning panel");
 
   // ── Header ──
   const header = el("div", "learning-header");
@@ -265,44 +268,53 @@ export function mountLearningPanel(
       return;
     }
     
-    // Create table
-    const table = el("table", "acceptance-table");
-    const thead = el("thead");
-    const tbody = el("tbody");
+     // Create table
+     const table = el("table", "acceptance-table");
+     const caption = el("caption");
+     caption.textContent = "Acceptance rates by core type and style cluster";
+     table.appendChild(caption);
+     const thead = el("thead");
+     const tbody = el("tbody");
     
-    // Header row
-    const headerRow = el("tr");
-    const emptyHeader = el("th");
-    headerRow.appendChild(emptyHeader);
-    
-    for (const cluster of style_clusters) {
-      const th = el("th");
-      th.textContent = cluster;
-      headerRow.appendChild(th);
-    }
-    thead.appendChild(headerRow);
-    
-    // Data rows
-    for (const coreType of core_types) {
-      const row = el("tr");
-      
-      // Core type label
-      const coreTh = el("th");
-      coreTh.textContent = coreType;
-      row.appendChild(coreTh);
-      
-      // Data cells
-      for (const cluster of style_clusters) {
-        const rate = acceptance_rates[coreType]?.[cluster] ?? 0;
-        const td = el("td", "acceptance-cell");
-        td.textContent = formatPercent(rate);
-        td.style.backgroundColor = getAcceptanceColor(rate);
-        td.style.color = rate > 0.5 ? "white" : "inherit"; // Light text on dark background
-        row.appendChild(td);
-      }
-      
-      tbody.appendChild(row);
-    }
+     // Header row
+     const headerRow = el("tr");
+     const emptyHeader = el("th");
+     // Add scope="col" for column headers
+     emptyHeader.setAttribute("scope", "col");
+     headerRow.appendChild(emptyHeader);
+     
+     for (const cluster of style_clusters) {
+       const th = el("th");
+       // Add scope="col" for column headers
+       th.setAttribute("scope", "col");
+       th.textContent = cluster;
+       headerRow.appendChild(th);
+     }
+     thead.appendChild(headerRow);
+     
+     // Data rows
+     for (const coreType of core_types) {
+       const row = el("tr");
+       
+       // Core type label
+       const coreTh = el("th");
+       // Add scope="row" for row headers
+       coreTh.setAttribute("scope", "row");
+       coreTh.textContent = coreType;
+       row.appendChild(coreTh);
+       
+       // Data cells
+       for (const cluster of style_clusters) {
+         const rate = acceptance_rates[coreType]?.[cluster] ?? 0;
+         const td = el("td", "acceptance-cell");
+         td.textContent = formatPercent(rate);
+         td.style.backgroundColor = getAcceptanceColor(rate);
+         td.style.color = rate > 0.5 ? "white" : "inherit"; // Light text on dark background
+         row.appendChild(td);
+       }
+       
+       tbody.appendChild(row);
+     }
     
     table.appendChild(thead);
     table.appendChild(tbody);

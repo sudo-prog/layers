@@ -50,6 +50,8 @@ import { mountReviewScreen, type ReviewScreenHandle } from "./reviewScreen";
 import { mountComparisonTools, type ComparisonToolsHandle } from "./comparisonTools";
 import { mountLearningPanel, type LearningPanelHandle } from "./learningPanel";
 import { emitEvent } from "./eventEmitter";
+import { stackSignature as stackSignatureOf } from "./renderState";
+import { installGlobalErrorHandlers } from "./errorBoundary";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -236,6 +238,7 @@ let redoStack: StackState[] = [];
 let frameCount = 0;
 let lastFpsTime = performance.now();
 let fpsValue = 0;
+let stackSignatureCache: string = "";
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 
@@ -253,6 +256,8 @@ const passCount = $<HTMLSpanElement>("#pass-count");
 const fpsDisplay = $<HTMLSpanElement>("#fps-display");
 const btnUndo = $<HTMLButtonElement>("#btn-undo");
 const btnRedo = $<HTMLButtonElement>("#btn-redo");
+btnUndo.setAttribute("aria-label", "Undo");
+btnRedo.setAttribute("aria-label", "Redo");
 const btnExport = $<HTMLButtonElement>("#btn-export");
 const btnImport = $<HTMLButtonElement>("#btn-import");
 const btnSave = $<HTMLButtonElement>("#btn-save");
@@ -288,6 +293,11 @@ const btnExportSvg = $<HTMLButtonElement>("#btn-export-svg");
 const btnImportSvg = $<HTMLButtonElement>("#btn-import-svg");
 const btnCloseHelp = $<HTMLButtonElement>("#btn-close-help");
 
+// Set ARIA labels for icon-only buttons
+btnCloseMask.setAttribute("aria-label", "Close mask");
+btnCloseVector.setAttribute("aria-label", "Close vector editor");
+btnCloseHelp.setAttribute("aria-label", "Close help");
+
 // ── Core param conversion ──────────────────────────────────────────────────
 
 /**
@@ -320,18 +330,26 @@ function toHexColor(value: unknown, fallback: unknown): string {
 
 /** Convert a stack item's params into the shape the core constructor expects. */
 function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const p of def.params) {
-    const raw = itemParams[p.key] ?? p.default;
-    if (p.type === "color") {
-      out[p.key] = toRgbArray(raw) ?? toRgbArray(p.default) ?? [0, 0, 0];
-    } else if (p.type === "slider") {
-      out[p.key] = Number(raw);
-    } else {
-      out[p.key] = raw;
-    }
-  }
-  return out;
+   const out: Record<string, unknown> = {};
+   for (const p of def.params) {
+     const raw = itemParams[p.key] ?? p.default;
+     if (p.type === "color") {
+       out[p.key] = toRgbArray(raw) ?? toRgbArray(p.default) ?? [0, 0, 0];
+     } else if (p.type === "slider") {
+       out[p.key] = Number(raw);
+     } else {
+       out[p.key] = raw;
+     }
+   }
+   return out;
+ }
+
+/**
+ * Creates a signature string for the current stack state to detect changes.
+ * Delegates to the pure helper in ./renderState (unit-tested separately).
+ */
+function stackSignature(state: StackState): string {
+  return stackSignatureOf(state);
 }
 
 // ── Undo/redo ──────────────────────────────────────────────────────────────
@@ -349,99 +367,161 @@ function updateUndoButtons(): void {
 }
 
 function doUndo(): void {
-  if (undoStack.length === 0) return;
-  redoStack.push(stackState);
-  stackState = undoStack.pop()!;
-  updateUndoButtons();
-  rebuildStack();
-  rebuildInspector();
-  render();
-  scheduleSave();
-}
+   if (undoStack.length === 0) return;
+   redoStack.push(stackState);
+   stackState = undoStack.pop()!;
+   updateUndoButtons();
+   rebuildStack();
+   rebuildInspector();
+   rebuildPasses();
+   scheduleSave();
+ }
 
 function doRedo(): void {
-  if (redoStack.length === 0) return;
-  undoStack.push(stackState);
-  stackState = redoStack.pop()!;
-  updateUndoButtons();
-  rebuildStack();
-  rebuildInspector();
-  render();
-  scheduleSave();
+   if (redoStack.length === 0) return;
+   undoStack.push(stackState);
+   stackState = redoStack.pop()!;
+   updateUndoButtons();
+   rebuildStack();
+   rebuildInspector();
+   rebuildPasses();
+   scheduleSave();
 }
 
 // ── Renderer ───────────────────────────────────────────────────────────────
 
-function initRenderer(): void {
-  renderer = new Renderer(canvas, {
-    width: 512,
-    height: 512,
-    preserveDrawingBuffer: true,
-    alpha: false,
-    antialias: false,
-    premultipliedAlpha: false,
-  });
+let contextLostBanner: HTMLDivElement | null = null;
 
-  // Create a default gradient source
-  const src = new OffscreenCanvas(512, 512);
-  const sctx = src.getContext("2d")!;
-  const grad = sctx.createLinearGradient(0, 0, 512, 512);
-  grad.addColorStop(0, "#ff6b6b");
-  grad.addColorStop(0.5, "#feca57");
-  grad.addColorStop(1, "#48dbfb");
-  sctx.fillStyle = grad;
-  sctx.fillRect(0, 0, 512, 512);
-
-  // Add some shapes for visual interest
-  sctx.fillStyle = "rgba(255,255,255,0.3)";
-  sctx.beginPath();
-  sctx.arc(256, 256, 120, 0, Math.PI * 2);
-  sctx.fill();
-
-  sctx.fillStyle = "rgba(0,0,0,0.2)";
-  sctx.fillRect(100, 100, 150, 150);
-
-  // Store the source canvas for later use
-  sourceCanvas = document.createElement("canvas");
-  sourceCanvas.width = 512;
-  sourceCanvas.height = 512;
-  const sourceCtx = sourceCanvas.getContext("2d")!;
-  sourceCtx.drawImage(src, 0, 0);
-
-  renderer.uploadSource(src, 512, 512);
+function showContextLostBanner(): void {
+   if (contextLostBanner) {
+     return; // Already showing
+   }
+   
+   contextLostBanner = document.createElement('div');
+   contextLostBanner.textContent = 'Graphics context lost — restoring…';
+   contextLostBanner.style.position = 'fixed';
+   contextLostBanner.style.top = '0';
+   contextLostBanner.style.left = '0';
+   contextLostBanner.style.right = '0';
+   contextLostBanner.style.backgroundColor = 'rgba(255, 165, 0, 0.9)';
+   contextLostBanner.style.color = '#000';
+   contextLostBanner.style.padding = '0.75rem';
+   contextLostBanner.style.textAlign = 'center';
+   contextLostBanner.style.fontWeight = 'bold';
+   contextLostBanner.style.zIndex = '1000';
+   contextLostBanner.style.boxSizing = 'border-box';
+   document.body.appendChild(contextLostBanner);
 }
 
-function render(): void {
-  if (!renderer) return;
+function hideContextLostBanner(): void {
+   if (contextLostBanner) {
+     contextLostBanner.remove();
+     contextLostBanner = null;
+   }
+}
 
-  // Clear existing passes
-  for (const pass of [...renderer.passes]) {
-    renderer.removePass(pass.id);
-  }
+function initRenderer(): void {
+   renderer = new Renderer(canvas, {
+     width: 512,
+     height: 512,
+     preserveDrawingBuffer: true,
+     alpha: false,
+     antialias: false,
+     premultipliedAlpha: false,
+   });
 
-  // Add enabled stack items as passes
-  const enabled = getEnabledItems(stackState);
-  for (const item of enabled) {
-    const def = CORE_DEFS.find((d) => d.name === item.core);
-    if (!def) continue;
+   // Create a default gradient source
+   const src = new OffscreenCanvas(512, 512);
+   const sctx = src.getContext("2d")!;
+   const grad = sctx.createLinearGradient(0, 0, 512, 512);
+   grad.addColorStop(0, "#ff6b6b");
+   grad.addColorStop(0.5, "#feca57");
+   grad.addColorStop(1, "#48dbfb");
+   sctx.fillStyle = grad;
+   sctx.fillRect(0, 0, 512, 512);
 
-    // Params must go through the constructor: cores read from their private
-    // _params object, so assigning core[key] directly has no effect.
-    const core = def.create(buildCoreParams(def, item.params));
-    renderer.addPass(core);
-  }
+   // Add some shapes for visual interest
+   sctx.fillStyle = "rgba(255,255,255,0.3)";
+   sctx.beginPath();
+   sctx.arc(256, 256, 120, 0, Math.PI * 2);
+   sctx.fill();
 
-  renderer.warmUp();
-  renderer.render(0);
+   sctx.fillStyle = "rgba(0,0,0,0.2)";
+   sctx.fillRect(100, 100, 150, 150);
 
-  // Update pass count
-  const passes = estimatePasses(enabled);
-  passCount.textContent = `${passes} passes`;
-  if (!isMobileOk(passes)) {
-    passCount.style.color = "var(--error)";
-  } else {
-    passCount.style.color = "var(--text-tertiary)";
-  }
+   // Store the source canvas for later use
+   sourceCanvas = document.createElement("canvas");
+   sourceCanvas.width = 512;
+   sourceCanvas.height = 512;
+   const sourceCtx = sourceCanvas.getContext("2d")!;
+   sourceCtx.drawImage(src, 0, 0);
+
+   renderer.uploadSource(src, 512, 512);
+   
+   // Set up WebGL context loss handlers
+   const glContext = renderer.context;
+   glContext.onContextLost(() => {
+     showContextLostBanner();
+   });
+   
+   glContext.onContextRestored(() => {
+     hideContextLostBanner();
+     // Rebuild passes when context is restored
+     rebuildPasses();
+   });
+ }
+
+function rebuildPasses(): void {
+   if (!renderer) return;
+
+   // Clear existing passes
+   for (const pass of [...renderer.passes]) {
+     renderer.removePass(pass.id);
+   }
+
+   // Add enabled stack items as passes
+   const enabled = getEnabledItems(stackState);
+   for (const item of enabled) {
+     const def = CORE_DEFS.find((d) => d.name === item.core);
+     if (!def) continue;
+
+     // Params must go through the constructor: cores read from their private
+     // _params object, so assigning core[key] directly has no effect.
+     const core = def.create(buildCoreParams(def, item.params));
+     renderer.addPass(core);
+   }
+
+   renderer.warmUp();
+}
+
+function renderFrame(): void {
+   if (!renderer) return;
+   
+   // If context is lost, don't render but still update UI
+   if (renderer.context.isLost) {
+     // Still update pass count for UI consistency
+     const enabled = getEnabledItems(stackState);
+     const passes = estimatePasses(enabled);
+     passCount.textContent = `${passes} passes`;
+     if (!isMobileOk(passes)) {
+       passCount.style.color = "var(--error)";
+     } else {
+       passCount.style.color = "var(--text-tertiary)";
+     }
+     return;
+   }
+   
+   renderer.render(0);
+
+   // Update pass count
+   const enabled = getEnabledItems(stackState);
+   const passes = estimatePasses(enabled);
+   passCount.textContent = `${passes} passes`;
+   if (!isMobileOk(passes)) {
+     passCount.style.color = "var(--error)";
+   } else {
+     passCount.style.color = "var(--text-tertiary)";
+   }
 }
 
 // ── Core list UI ───────────────────────────────────────────────────────────
@@ -454,24 +534,24 @@ function buildCoreList(): void {
     btn.innerHTML = `<span class="core-icon">${def.icon}</span><span>${def.label}</span>`;
      btn.addEventListener("click", () => {
        pushUndo();
-       const core = def.create();
-       const params: Record<string, unknown> = {};
-       for (const p of def.params) {
-         params[p.key] = p.default;
-       }
-       stackState = addStackItem(stackState, {
-         core: def.name,
-         params,
-         opacity: 1,
-         blend: "normal",
-         mask: null,
-         enabled: true,
-       });
-       rebuildStack();
-       rebuildInspector();
-       render();
-       scheduleSave();
-       emitEvent("stack_created", { core_type: def.name });
+        const core = def.create();
+        const params: Record<string, unknown> = {};
+        for (const p of def.params) {
+          params[p.key] = p.default;
+        }
+        stackState = addStackItem(stackState, {
+          core: def.name,
+          params,
+          opacity: 1,
+          blend: "normal",
+          mask: null,
+          enabled: true,
+        });
+        rebuildStack();
+        rebuildInspector();
+        rebuildPasses();
+        scheduleSave();
+        emitEvent("stack_created", { core_type: def.name });
      });
     coreList.appendChild(btn);
   }
@@ -502,12 +582,12 @@ function rebuildStack(): void {
     toggle.textContent = item.enabled ? "👁" : "—";
     toggle.title = "Toggle enabled";
     toggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      pushUndo();
-      stackState = toggleStackItem(stackState, item.id);
-      rebuildStack();
-      render();
-      scheduleSave();
+       e.stopPropagation();
+       pushUndo();
+       stackState = toggleStackItem(stackState, item.id);
+       rebuildStack();
+       rebuildPasses();
+       scheduleSave();
     });
     el.appendChild(toggle);
 
@@ -516,13 +596,13 @@ function rebuildStack(): void {
     remove.textContent = "✕";
     remove.title = "Remove";
     remove.addEventListener("click", (e) => {
-      e.stopPropagation();
-      pushUndo();
-      stackState = removeStackItem(stackState, item.id);
-      rebuildStack();
-      rebuildInspector();
-      render();
-      scheduleSave();
+       e.stopPropagation();
+       pushUndo();
+       stackState = removeStackItem(stackState, item.id);
+       rebuildStack();
+       rebuildInspector();
+       rebuildPasses();
+       scheduleSave();
     });
     el.appendChild(remove);
 
@@ -644,57 +724,57 @@ function rebuildInspector(): void {
         const numVal = parseFloat(el.value);
         (el as HTMLElement).parentElement!.querySelector(".param-value")!.textContent = String(numVal);
         pushUndo();
-        if (key === "__opacity") {
-          stackState = updateStackItem(stackState, selected.id, { opacity: numVal });
-        } else {
-          const newParams = { ...selected.params, [key]: numVal };
-          stackState = updateStackItem(stackState, selected.id, { params: newParams });
-        }
-        render();
-        scheduleSave();
+         if (key === "__opacity") {
+           stackState = updateStackItem(stackState, selected.id, { opacity: numVal });
+         } else {
+           const newParams = { ...selected.params, [key]: numVal };
+           stackState = updateStackItem(stackState, selected.id, { params: newParams });
+         }
+         rebuildPasses();
+         scheduleSave();
       });
     } else if (el instanceof HTMLSelectElement) {
       el.addEventListener("change", () => {
         pushUndo();
-        if (key === "__blend") {
-          stackState = updateStackItem(stackState, selected.id, { blend: el.value });
-        } else {
-          const newParams = { ...selected.params, [key]: el.value };
-          stackState = updateStackItem(stackState, selected.id, { params: newParams });
-        }
-        render();
-        scheduleSave();
+         if (key === "__blend") {
+           stackState = updateStackItem(stackState, selected.id, { blend: el.value });
+         } else {
+           const newParams = { ...selected.params, [key]: el.value };
+           stackState = updateStackItem(stackState, selected.id, { params: newParams });
+         }
+         rebuildPasses();
+         scheduleSave();
       });
     } else if (el instanceof HTMLInputElement && el.type === "color") {
-      el.addEventListener("input", () => {
-        const val = el.value;
-        (el as HTMLElement).parentElement!.querySelector("span")!.textContent = val;
-        pushUndo();
-        // Store the hex string; render() converts it to [r,g,b] for the core.
-        const newParams = { ...selected.params, [key]: val };
-        stackState = updateStackItem(stackState, selected.id, { params: newParams });
-        render();
-        scheduleSave();
-      });
+       el.addEventListener("input", () => {
+         const val = el.value;
+         (el as HTMLElement).parentElement!.querySelector("span")!.textContent = val;
+         pushUndo();
+         // Store the hex string; render() converts it to [r,g,b] for the core.
+         const newParams = { ...selected.params, [key]: val };
+         stackState = updateStackItem(stackState, selected.id, { params: newParams });
+         rebuildPasses();
+         scheduleSave();
+       });
     } else if (el instanceof HTMLInputElement && el.type === "checkbox") {
-      el.addEventListener("change", () => {
-        pushUndo();
-        const newParams = { ...selected.params, [key]: el.checked };
-        stackState = updateStackItem(stackState, selected.id, { params: newParams });
-        render();
-        scheduleSave();
-      });
+       el.addEventListener("change", () => {
+         pushUndo();
+         const newParams = { ...selected.params, [key]: el.checked };
+         stackState = updateStackItem(stackState, selected.id, { params: newParams });
+         rebuildPasses();
+         scheduleSave();
+       });
     } else if (el instanceof HTMLButtonElement) {
       el.addEventListener("click", () => {
         pushUndo();
-        if (key === "__moveUp") {
-          stackState = moveStackItem(stackState, selected.id, "up");
-        } else if (key === "__moveDown") {
-          stackState = moveStackItem(stackState, selected.id, "down");
-        }
-        rebuildStack();
-        render();
-        scheduleSave();
+         if (key === "__moveUp") {
+           stackState = moveStackItem(stackState, selected.id, "up");
+         } else if (key === "__moveDown") {
+           stackState = moveStackItem(stackState, selected.id, "down");
+         }
+         rebuildStack();
+         rebuildPasses();
+         scheduleSave();
       });
     }
   });
@@ -970,18 +1050,18 @@ function importPreset(): void {
     if (!file) return;
     const text = await file.text();
     try {
-      const preset = JSON.parse(text);
-      const validation = validateEffectStack(preset.stack);
-      if (!validation.valid) {
-        alert("Invalid preset: " + JSON.stringify(validation.errors));
-        return;
-      }
-      pushUndo();
-      stackState = createStackState(preset.stack);
-      rebuildStack();
-      rebuildInspector();
-      render();
-      scheduleSave();
+       const preset = JSON.parse(text);
+       const validation = validateEffectStack(preset.stack);
+       if (!validation.valid) {
+         alert("Invalid preset: " + JSON.stringify(validation.errors));
+         return;
+       }
+       pushUndo();
+       stackState = createStackState(preset.stack);
+       rebuildStack();
+       rebuildInspector();
+       rebuildPasses();
+       scheduleSave();
     } catch (e) {
       alert("Failed to import: " + String(e));
     }
@@ -1000,44 +1080,44 @@ function handleKeyboardShortcut(e: KeyboardEvent): void {
     doDelete: () => {
       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
       if (selected) {
-        pushUndo();
-        stackState = removeStackItem(stackState, selected.id);
-        rebuildStack();
-        rebuildInspector();
-        render();
-        scheduleSave();
+         pushUndo();
+         stackState = removeStackItem(stackState, selected.id);
+         rebuildStack();
+         rebuildInspector();
+         rebuildPasses();
+         scheduleSave();
       }
     },
-    doToggle: () => {
-      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-      if (selected) {
-        pushUndo();
-        stackState = toggleStackItem(stackState, selected.id);
-        rebuildStack();
-        render();
-        scheduleSave();
-      }
-    },
-    doMoveUp: () => {
-      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-      if (selected) {
-        pushUndo();
-        stackState = moveStackItem(stackState, selected.id, "up");
-        rebuildStack();
-        render();
-        scheduleSave();
-      }
-    },
-    doMoveDown: () => {
-      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-      if (selected) {
-        pushUndo();
-        stackState = moveStackItem(stackState, selected.id, "down");
-        rebuildStack();
-        render();
-        scheduleSave();
-      }
-    },
+     doToggle: () => {
+       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+       if (selected) {
+         pushUndo();
+         stackState = toggleStackItem(stackState, selected.id);
+         rebuildStack();
+         rebuildPasses();
+         scheduleSave();
+       }
+     },
+     doMoveUp: () => {
+       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+       if (selected) {
+         pushUndo();
+         stackState = moveStackItem(stackState, selected.id, "up");
+         rebuildStack();
+         rebuildPasses();
+         scheduleSave();
+       }
+     },
+     doMoveDown: () => {
+       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+       if (selected) {
+         pushUndo();
+         stackState = moveStackItem(stackState, selected.id, "down");
+         rebuildStack();
+         rebuildPasses();
+         scheduleSave();
+       }
+     },
     doDuplicate: () => {
       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
       if (selected) {
@@ -1046,11 +1126,11 @@ function handleKeyboardShortcut(e: KeyboardEvent): void {
           ...selected,
           id: `stack-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         };
-        stackState = addStackItem(stackState, newItem);
-        rebuildStack();
-        rebuildInspector();
-        render();
-        scheduleSave();
+         stackState = addStackItem(stackState, newItem);
+         rebuildStack();
+         rebuildInspector();
+         rebuildPasses();
+         scheduleSave();
       }
     },
     doToggleTheme: toggleTheme,
@@ -1075,7 +1155,7 @@ function handleKeyboardShortcut(e: KeyboardEvent): void {
       });
       rebuildStack();
       rebuildInspector();
-      render();
+      rebuildPasses();
       scheduleSave();
     },
     doToggleHelp: () => {
@@ -1210,7 +1290,7 @@ function initStage06(): void {
             items: preIsolateStack.items.map((it) => ({ ...it, enabled: it.id === itemId })),
           };
         }
-        render();
+        rebuildPasses();
       },
       onAction: (action) => {
         if (action === "close") {
@@ -1300,7 +1380,7 @@ function initStage06(): void {
          };
          rebuildStack();
          rebuildInspector();
-         render();
+         rebuildPasses();
          scheduleSave();
          emitEvent("stack_applied", {});
        },
@@ -1341,7 +1421,7 @@ async function openPresetPanel(): Promise<void> {
       stackState = stack;
       rebuildStack();
       rebuildInspector();
-      render();
+      rebuildPasses();
       scheduleSave();
       panel.remove();
     },
@@ -1360,7 +1440,7 @@ async function importPhotoFromCamera(): Promise<void> {
       // OffscreenCanvas; the review/compare tools need a real HTMLCanvasElement
       // (for toDataURL + getContext('2d')), so normalise by blitting into one.
       sourceCanvas = toHTMLCanvas(source.canvas, source.width, source.height);
-      render();
+      rebuildPasses();
       emitEvent("photo_imported", {});
     }
   } catch (e) {
@@ -1371,21 +1451,65 @@ async function importPhotoFromCamera(): Promise<void> {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  // Initialize persistence and restore state
-  const persistenceReady = await persistence.init();
-  if (persistenceReady) {
-    const restored = await persistence.restore();
-    if (restored && restored.items.length > 0) {
-      stackState = restored;
-      console.info("[persistence] Restored stack state from IndexedDB");
-    }
-  }
+   // Initialize persistence and restore state
+   const persistenceReady = await persistence.init();
+   if (persistenceReady) {
+     const restored = await persistence.restore();
+     if (restored && restored.items.length > 0) {
+       stackState = restored;
+       console.info("[persistence] Restored stack state from IndexedDB");
+     }
+   }
 
-  initRenderer();
-  buildCoreList();
-  rebuildStack();
-  rebuildInspector();
-  render();
+   // Install global error handlers
+   installGlobalErrorHandlers({
+     maxToasts: 5,
+     logToConsole: true
+   });
+
+   // ── Escape closes the topmost open overlay (WCAG 2.2 AA) ──
+   // Ordered outermost-last so the most recently opened overlay closes first.
+   const OVERLAY_SELECTORS = [
+     "#help-overlay",
+     ".review-overlay",
+     ".compare-overlay",
+     ".learning-overlay",
+     "#vector-panel",
+   ];
+   document.addEventListener("keydown", (e) => {
+     if (e.key !== "Escape") return;
+     for (const sel of OVERLAY_SELECTORS) {
+       const nodes = Array.from(document.querySelectorAll<HTMLElement>(sel));
+       // Help/vector use a `hidden`/`visible` class; the mounted overlays are
+       // removed from the DOM by their own close button.
+       const open = nodes.filter((n) => {
+         if (n.classList.contains("hidden")) return false;
+         if (n.classList.contains("help-overlay")) return n.classList.contains("visible");
+         return true;
+       });
+       const top = open[open.length - 1];
+       if (top) {
+         e.preventDefault();
+         const close = Array.from(top.querySelectorAll("button")).find(
+           (b) => (b.getAttribute("aria-label") || "").toLowerCase().includes("close")
+             || b.textContent?.trim() === "✕",
+         );
+         if (close) {
+           (close as HTMLButtonElement).click();
+         } else {
+           top.remove();
+         }
+         return;
+       }
+     }
+   });
+
+   initRenderer();
+   buildCoreList();
+   rebuildStack();
+   rebuildInspector();
+   rebuildPasses();
+   renderFrame();
 
   // Event listeners
   btnUndo.addEventListener("click", doUndo);
@@ -1415,7 +1539,7 @@ async function init(): Promise<void> {
       updateUndoButtons();
       rebuildStack();
       rebuildInspector();
-      render();
+      rebuildPasses();
       syncText.textContent = "Sync: cleared";
       syncIndicator.className = "sync-indicator synced";
     } else {
@@ -1433,13 +1557,13 @@ async function init(): Promise<void> {
   initHelpOverlay();
   initStage06();
 
-  // Start render loop
-  function loop(): void {
-    render();
-    updateFps();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
+   // Start render loop
+   function loop(): void {
+     renderFrame();
+     updateFps();
+     requestAnimationFrame(loop);
+   }
+   requestAnimationFrame(loop);
 
   // Start sync status updates
   updateSyncStatus();

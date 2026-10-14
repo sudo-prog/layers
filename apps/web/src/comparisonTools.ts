@@ -88,10 +88,13 @@ export function mountComparisonTools(container: HTMLElement, options: Comparison
   const contentContainer = document.createElement("div");
   contentContainer.className = "compare-content";
 
-  // Assemble modal
-  modal.appendChild(toolContainer);
-  modal.appendChild(contentContainer);
-  overlay.appendChild(modal);
+   // Assemble modal
+   modal.appendChild(toolContainer);
+   modal.appendChild(contentContainer);
+   modal.setAttribute("role", "dialog");
+   modal.setAttribute("aria-modal", "true");
+   modal.setAttribute("aria-label", "Compare source vs reconstruction");
+   overlay.appendChild(modal);
 
   // Add to container
   container.appendChild(overlay);
