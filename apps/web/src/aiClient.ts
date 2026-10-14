@@ -77,6 +77,27 @@ export interface SearchStacksResponse {
   count: number;
 }
 
+// ── Learning Store endpoints ───────────────────────────────────────────────────
+
+export interface AcceptanceDashboard {
+  acceptance_rates: Record<string, Record<string, number>>;
+  core_types: string[];
+  style_clusters: string[];
+  description?: string;
+}
+export interface RetrieveResult {
+  stack: ApiLayer[];
+  core_type: string;
+  cluster: string;
+  score: number;
+  rating?: number;
+}
+export interface RetrieveResponse {
+  results: RetrieveResult[];
+  count: number;
+  weighting_formula?: string;
+}
+
 // ── Adapters ─────────────────────────────────────────────────────────────────
 
 /**
@@ -229,4 +250,66 @@ export async function pruneStack(
     ...report,
     stack: apiToStack(report.pruned_stack),
   };
+}
+
+// ── Learning Store endpoints ───────────────────────────────────────────────────
+
+/**
+ * Record that a stack suggestion was made for a core-type/cluster pair.
+ * Fire-and-forget: swallows network errors so a down backend never breaks the editor.
+ */
+export async function recordSuggestion(coreType: string, cluster: string): Promise<void> {
+  try {
+    await postJSON<{ status: string; event: string }>(
+      "/events/suggest",
+      { core_type: coreType, cluster },
+    );
+  } catch (e) {
+    // Swallow network errors for fire-and-forget event emitters
+    console.warn(`Failed to record suggestion: ${e}`);
+  }
+}
+
+/**
+ * Record that a stack suggestion was applied for a core-type/cluster pair.
+ * Fire-and-forget: swallows network errors so a down backend never breaks the editor.
+ */
+export async function recordApplication(coreType: string, cluster: string): Promise<void> {
+  try {
+    await postJSON<{ status: string; event: string }>(
+      "/events/apply",
+      { core_type: coreType, cluster },
+    );
+  } catch (e) {
+    // Swallow network errors for fire-and-forget event emitters
+    console.warn(`Failed to record application: ${e}`);
+  }
+}
+
+/**
+ * Get the acceptance dashboard showing acceptance rates per core-type/cluster.
+ */
+export async function getAcceptanceDashboard(): Promise<AcceptanceDashboard> {
+  const data = await fetch(`${baseUrl}/dashboard/acceptance`, {
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!data.ok) {
+    const text = await data.text().catch(() => "");
+    throw new Error(`AI request failed (${data.status}): ${text || data.statusText}`);
+  }
+  return (await data.json()) as AcceptanceDashboard;
+}
+
+/**
+ * Retrieve similar stacks based on a feature vector.
+ */
+export async function retrieveStacks(
+  feature: FeatureVector,
+  k: number = 10,
+): Promise<RetrieveResponse> {
+  const data = await postJSON<RetrieveResponse>(
+    "/retrieve",
+    { feature, k },
+  );
+  return data;
 }

@@ -4,7 +4,7 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Project Status (2026-10-13)
+## Project Status (2026-10-14)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
@@ -14,7 +14,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 0.5 (Manual editor) — **COMPLETE**
 **Phase:** 0.6 (Mobile PWA) — **COMPLETE**
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
-**Phase:** 1.5 (Review & refine UI) — **IN PROGRESS** (BE prep done: events, consent, retrieval, mock AI)
+**Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **IN PROGRESS** (BE prep done: retrieval weighting, acceptance dashboard)
 
 ### Backend (BE)

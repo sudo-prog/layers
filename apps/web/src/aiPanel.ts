@@ -29,6 +29,7 @@ import {
   apiToStack,
 } from "./aiClient";
 import { openCamera } from "./imageImport";
+import { emitEvent } from "./eventEmitter";
 
 // ── Options ────────────────────────────────────────────────────────────────
 
@@ -188,66 +189,69 @@ export function mountAIPanel(
     }
   }
 
-  async function onSearch(): Promise<void> {
-    if (!features) {
-      setStatus("error", "No features extracted yet.");
-      return;
-    }
-    setStatus("loading", "Searching stacks…");
-    try {
-      candidates = await searchStacks(features, 8);
-      renderCandidates(candidates);
-      setStatus("success", `${candidates.length} candidates found`);
-    } catch (e) {
-      setStatus("error", `Search failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
+   async function onSearch(): Promise<void> {
+     if (!features) {
+       setStatus("error", "No features extracted yet.");
+       return;
+     }
+     setStatus("loading", "Searching stacks…");
+     try {
+       candidates = await searchStacks(features, 8);
+       renderCandidates(candidates);
+       setStatus("success", `${candidates.length} candidates found`);
+       emitEvent("ai_search", {});
+     } catch (e) {
+       setStatus("error", `Search failed: ${e instanceof Error ? e.message : String(e)}`);
+     }
+   }
 
-  async function onOptimize(): Promise<void> {
-    if (!features) {
-      setStatus("error", "No features extracted yet.");
-      return;
-    }
-    const current = opts.getCurrentStack();
-    if (current.items.length === 0) {
-      setStatus("error", "Stack is empty.");
-      return;
-    }
-    setStatus("loading", "Optimizing…");
-    try {
-      const result: OptimizeResult = await optimizeStack(features, current.items);
-      setStatus("success", `Optimized (score: ${result.score.toFixed(3)})`);
-      opts.applyStack(result.stack);
-    } catch (e) {
-      setStatus("error", `Optimize failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
+   async function onOptimize(): Promise<void> {
+     if (!features) {
+       setStatus("error", "No features extracted yet.");
+       return;
+     }
+     const current = opts.getCurrentStack();
+     if (current.items.length === 0) {
+       setStatus("error", "Stack is empty.");
+       return;
+     }
+     setStatus("loading", "Optimizing…");
+     try {
+       const result: OptimizeResult = await optimizeStack(features, current.items);
+       setStatus("success", `Optimized (score: ${result.score.toFixed(3)})`);
+       opts.applyStack(result.stack);
+       emitEvent("stack_optimized", {});
+     } catch (e) {
+       setStatus("error", `Optimize failed: ${e instanceof Error ? e.message : String(e)}`);
+     }
+   }
 
-  async function onPrune(): Promise<void> {
-    if (!features) {
-      setStatus("error", "No features extracted yet.");
-      return;
-    }
-    const current = opts.getCurrentStack();
-    if (current.items.length === 0) {
-      setStatus("error", "Stack is empty.");
-      return;
-    }
-    setStatus("loading", "Pruning…");
-    try {
-      const report: PruneReport & { stack: StackItem[] } = await pruneStack(
-        features,
-        current.items,
-      );
-      setStatus(
-        "success",
-        `Pruned: removed ${report.removed_indices.length} layer(s)`,
-      );
-      opts.applyStack(report.stack);
-    } catch (e) {
-      setStatus("error", `Prune failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
+   async function onPrune(): Promise<void> {
+     if (!features) {
+       setStatus("error", "No features extracted yet.");
+       return;
+     }
+     const current = opts.getCurrentStack();
+     if (current.items.length === 0) {
+       setStatus("error", "Stack is empty.");
+       return;
+     }
+     setStatus("loading", "Pruning…");
+     try {
+       const report: PruneReport & { stack: StackItem[] } = await pruneStack(
+         features,
+         current.items,
+       );
+       setStatus(
+         "success",
+         `Pruned: removed ${report.removed_indices.length} layer(s)`,
+       );
+       opts.applyStack(report.stack);
+       emitEvent("stack_pruned", {});
+     } catch (e) {
+       setStatus("error", `Prune failed: ${e instanceof Error ? e.message : String(e)}`);
+     }
+   }
 
   btnExtract.addEventListener("click", () => void onExtract());
   btnSearch.addEventListener("click", () => void onSearch());

@@ -48,6 +48,8 @@ import { openCamera, loadImageAsSource } from "./imageImport";
 import { mountAIPanel, type AIPanelHandle } from "./aiPanel";
 import { mountReviewScreen, type ReviewScreenHandle } from "./reviewScreen";
 import { mountComparisonTools, type ComparisonToolsHandle } from "./comparisonTools";
+import { mountLearningPanel, type LearningPanelHandle } from "./learningPanel";
+import { emitEvent } from "./eventEmitter";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -450,26 +452,27 @@ function buildCoreList(): void {
     const btn = document.createElement("button");
     btn.className = "core-btn";
     btn.innerHTML = `<span class="core-icon">${def.icon}</span><span>${def.label}</span>`;
-    btn.addEventListener("click", () => {
-      pushUndo();
-      const core = def.create();
-      const params: Record<string, unknown> = {};
-      for (const p of def.params) {
-        params[p.key] = p.default;
-      }
-      stackState = addStackItem(stackState, {
-        core: def.name,
-        params,
-        opacity: 1,
-        blend: "normal",
-        mask: null,
-        enabled: true,
-      });
-      rebuildStack();
-      rebuildInspector();
-      render();
-      scheduleSave();
-    });
+     btn.addEventListener("click", () => {
+       pushUndo();
+       const core = def.create();
+       const params: Record<string, unknown> = {};
+       for (const p of def.params) {
+         params[p.key] = p.default;
+       }
+       stackState = addStackItem(stackState, {
+         core: def.name,
+         params,
+         opacity: 1,
+         blend: "normal",
+         mask: null,
+         enabled: true,
+       });
+       rebuildStack();
+       rebuildInspector();
+       render();
+       scheduleSave();
+       emitEvent("stack_created", { core_type: def.name });
+     });
     coreList.appendChild(btn);
   }
 }
@@ -955,6 +958,7 @@ function exportPreset(): void {
   a.download = "layers-preset.json";
   a.click();
   URL.revokeObjectURL(url);
+  emitEvent("preset_saved", {});
 }
 
 function importPreset(): void {
@@ -1233,17 +1237,46 @@ function initStage06(): void {
   });
   toolbarActions.insertBefore(btnPresets, btnThemeEl);
 
-  // ── Import Photo toolbar button ────────────────────────────────────────
-  const btnImportPhoto = document.createElement("button");
-  btnImportPhoto.className = "btn";
-  btnImportPhoto.textContent = "📷 Photo";
-  btnImportPhoto.title = "Import a photo from your camera or library";
-  btnImportPhoto.addEventListener("click", () => {
-    void importPhotoFromCamera();
-  });
-  toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
+   // ── Import Photo toolbar button ────────────────────────────────────────
+   const btnImportPhoto = document.createElement("button");
+   btnImportPhoto.className = "btn";
+   btnImportPhoto.textContent = "📷 Photo";
+   btnImportPhoto.title = "Import a photo from your camera or library";
+   btnImportPhoto.addEventListener("click", () => {
+     void importPhotoFromCamera();
+   });
+   toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
 
-  // ── AI toolbar button ──────────────────────────────────────────────────
+   // ── Learning toolbar button ────────────────────────────────────────────
+   const btnLearn = document.createElement("button");
+   btnLearn.className = "btn";
+   btnLearn.id = "btn-learn";
+   btnLearn.textContent = "📊 Learning";
+   btnLearn.title = "Open learning panel";
+   btnLearn.addEventListener("click", () => {
+     const existing = document.getElementById("learning-overlay");
+     if (existing) {
+       existing.remove();
+       return;
+     }
+     const mount = document.createElement("div");
+     mount.id = "learning-overlay-mount";
+     document.body.appendChild(mount);
+     const handle = mountLearningPanel(mount, {
+       getFeatureVector: () => {
+         // Try to get features from AI panel if available
+         const aiPanelMount = document.getElementById("ai-panel-mount");
+         if (aiPanelMount && aiPanelMount.firstChild) {
+           // This is a simplified approach - in a real app we'd have better state sharing
+           return null;
+         }
+         return null;
+       }
+     });
+   });
+   toolbarActions.insertBefore(btnLearn, btnThemeEl);
+
+   // ── AI toolbar button ──────────────────────────────────────────────────
   const btnAI = document.createElement("button");
   btnAI.className = "btn";
   btnAI.textContent = "🤖 AI";
@@ -1257,20 +1290,21 @@ function initStage06(): void {
     const mount = document.createElement("div");
     mount.id = "ai-panel-mount";
     document.body.appendChild(mount);
-    const handle = mountAIPanel(mount, {
-      getCurrentStack: () => stackState,
-      applyStack: (items: any[]) => {
-        pushUndo();
-        stackState = {
-          items: items,
-          selectedId: items[0]?.id ?? null,
-        };
-        rebuildStack();
-        rebuildInspector();
-        render();
-        scheduleSave();
-      },
-    });
+     const handle = mountAIPanel(mount, {
+       getCurrentStack: () => stackState,
+       applyStack: (items: any[]) => {
+         pushUndo();
+         stackState = {
+           items: items,
+           selectedId: items[0]?.id ?? null,
+         };
+         rebuildStack();
+         rebuildInspector();
+         render();
+         scheduleSave();
+         emitEvent("stack_applied", {});
+       },
+     });
     void handle.refreshHealth();
   });
   toolbarActions.insertBefore(btnAI, btnThemeEl);
@@ -1327,6 +1361,7 @@ async function importPhotoFromCamera(): Promise<void> {
       // (for toDataURL + getContext('2d')), so normalise by blitting into one.
       sourceCanvas = toHTMLCanvas(source.canvas, source.width, source.height);
       render();
+      emitEvent("photo_imported", {});
     }
   } catch (e) {
     alert(`Could not load image: ${e instanceof Error ? e.message : String(e)}`);
