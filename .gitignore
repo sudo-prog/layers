@@ -19,3 +19,5 @@ tests/golden-infra/output/
 tests/golden-infra/fixtures-cores/output/
 *.tsbuildinfo
 .hermes_result.json
+services/ai/data/
+graphify-out/
