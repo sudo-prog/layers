@@ -63,7 +63,8 @@ class PrivacyRules:
     )
     NO_RAW_USER_IDS: str = (
         "Raw user identifiers are never stored. Events and consent records "
-        "use SHA-256 hashes of the user ID with a fixed application salt."
+        "use SHA-256 hashes of the user ID with an application salt "
+        "sourced from the LAYERS_ANON_SALT environment variable."
     )
     ONLY_FEATURE_VECTORS_AND_METADATA: str = (
         "The event log contains only anonymized feature vectors and stack "

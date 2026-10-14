@@ -12,11 +12,12 @@
 |------|----------|--------|
 | Token storage & handling | **Medium** | Issue found |
 | Client-side token exposure | **Medium** | Issue found |
-| Content Security Policy | **High** | Not implemented |
+| Content Security Policy | **High** | **FIXED** — CSP headers added to index.html + vite.config.ts |
 | SSRF (URL import) | **None** | Not applicable — no URL fetching found |
-| Auth on AI service endpoints | **Medium** | No authentication |
+| Auth on AI service endpoints | **Medium** | **FIXED** — Bearer token middleware added (skips /v1/health) |
 | Input validation | **Low** | Minor gaps |
-| Anonymization strength | **Medium** | Weak salt |
+| Anonymization strength | **Medium** | Weak salt — **OPEN** |
+| GitHub token exposure | **Medium** | **FIXED** — `public readonly token` → `private readonly _token` + getter |
 
 ---
 
@@ -137,13 +138,13 @@ This salt is hardcoded in the source code. Anyone with access to the repository 
 
 | # | Priority | Finding | Recommendation |
 |---|----------|---------|----------------|
-| 1 | High | No CSP anywhere | Add CSP headers via Vite config or meta tag. Start with `default-src 'self'` and tighten. |
-| 2 | Medium | No auth on AI service | Add API key or token middleware if the service is ever exposed beyond localhost. |
-| 3 | Medium | `public readonly token` | Change to `private readonly` in `GitHubSyncProvider`. |
-| 4 | Medium | Hardcoded anonymization salt | Source salt from environment variable or secrets manager. |
-| 5 | Medium | Immich client could run in browser | Document that `packages/sync` is server-side only, or add runtime environment checks. |
-| 6 | Low | No file type validation on upload | Add MIME type and magic-byte validation for image uploads. |
-| 7 | Low | No rate limiting | Add rate limiting for compute-intensive endpoints. |
+| 1 | High | No CSP anywhere | **FIXED** — CSP headers added to index.html meta + vite.config.ts server.headers |
+| 2 | Medium | No auth on AI service | **FIXED** — Bearer token middleware added (skips /v1/health) |
+| 3 | Medium | `public readonly token` | **FIXED** — Changed to `private readonly _token` + getter |
+| 4 | Medium | Hardcoded anonymization salt | **OPEN** — Source salt from environment variable or secrets manager |
+| 5 | Medium | Immich client could run in browser | **OPEN** — Document that `packages/sync` is server-side only |
+| 6 | Low | No file type validation on upload | **OPEN** — Add MIME type and magic-byte validation for image uploads |
+| 7 | Low | No rate limiting | **OPEN** — Add rate limiting for compute-intensive endpoints |
 
 ---
 

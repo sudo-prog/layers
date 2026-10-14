@@ -5,6 +5,11 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "127.0.0.1",
+    headers: {
+      "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+    },
     proxy: {
       "/v1": {
         target: "http://127.0.0.1:8123",

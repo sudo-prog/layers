@@ -86,7 +86,7 @@ export class GitHubSyncProvider implements SyncProvider {
   public readonly owner: string;
   public readonly repo: string;
   public readonly branch: string;
-  public readonly token: string;
+  private readonly _token: string;
   private readonly debounceMs: number;
 
   private queue: SyncQueue[] = [];
@@ -103,11 +103,16 @@ export class GitHubSyncProvider implements SyncProvider {
     this.owner = opts.owner;
     this.repo = opts.repo;
     this.branch = opts.branch ?? 'main';
-    this.token = opts.token ?? '';
+    this._token = opts.token ?? '';
     this.debounceMs = opts.debounceMs ?? 2000;
     console.debug(
       `[GitHubSyncProvider] initialized for ${this.owner}/${this.repo}@${this.branch}`,
     );
+  }
+
+  /** Token is never exposed. Use the getter for test/verification only. */
+  get token(): string {
+    return this._token;
   }
 
   private enqueue(operation: SyncOperation, payload: unknown): void {
@@ -272,7 +277,7 @@ export class GitHubSyncProvider implements SyncProvider {
 
   private async fetchWithRetry(url: string, options: RequestInit = {}, retries = 3): Promise<Response> {
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${this.token}`,
+      'Authorization': `Bearer ${this._token}`,
       'Accept': 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {}),

@@ -180,6 +180,53 @@ app = FastAPI(
     title="LAYERS AI Service", version="0.1.0", lifespan=lifespan
 )
 
+# ---------------------------------------------------------------------------
+# Auth middleware — all endpoints require a bearer token.
+# The token is read from the LAYERS_AI_TOKEN env var (default: "dev-token").
+# ---------------------------------------------------------------------------
+
+import secrets as _secrets
+from fastapi import Request, Response
+
+_AI_TOKEN = os.environ.get("LAYERS_AI_TOKEN", "dev-token")
+
+
+# ---------------------------------------------------------------------------
+# Simple in-memory rate limiter (no new dependencies).
+# 60 requests per minute per IP for compute-heavy endpoints.
+# ---------------------------------------------------------------------------
+
+import time as _time
+from collections import defaultdict
+
+_rate_buckets: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT = 60  # requests
+_RATE_WINDOW = 60  # seconds
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if request.url.path == "/v1/health":
+        return await call_next(request)
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return Response(status_code=401, content="Missing bearer token")
+    token = auth[7:]
+    if not _secrets.compare_digest(token, _AI_TOKEN):
+        return Response(status_code=403, content="Invalid token")
+    # Rate limiting for compute-heavy endpoints
+    if request.url.path.startswith(("/v1/features", "/v1/jobs", "/v1/stacks")):
+        client_ip = request.client.host if request.client else "unknown"
+        now = _time.time()
+        bucket = _rate_buckets[client_ip]
+        # Remove old entries
+        cutoff = now - _RATE_WINDOW
+        _rate_buckets[client_ip] = [t for t in bucket if t > cutoff]
+        if len(_rate_buckets[client_ip]) >= _RATE_LIMIT:
+            return Response(status_code=429, content="Rate limit exceeded")
+        _rate_buckets[client_ip].append(now)
+    return await call_next(request)
+
 # Stage 1.5: mount the mock AI (VLM) router for regenerate / suggest / re-optimize.
 app.include_router(vlm_router)
 
@@ -234,14 +281,23 @@ def get_job(job_id: str) -> JobResponse:
     return _to_job_response(job)
 
 
+# Allowed MIME types for image upload
+ALLOWED_IMAGE_TYPES: frozenset[str] = frozenset({"image/png", "image/jpeg", "image/webp", "image/gif"})
+MAX_IMAGE_SIZE: int = 50 * 1024 * 1024  # 50 MB
+
+
 @app.post("/v1/images/upload", response_model=ImageUploadResponse)
 async def upload_image(file: UploadFile = File(...)) -> ImageUploadResponse:
     """Upload an image file. Returns the image_id and stored path."""
+    content = await file.read()
+    if len(content) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail="Image too large (max 50 MB)")
+    mime = file.content_type or "application/octet-stream"
+    if mime not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported image type: {mime}")
     image_id = str(uuid.uuid4())
     file_extension = Path(file.filename).suffix if file.filename else ".png"
     stored_path = IMAGE_DIR / f"{image_id}{file_extension}"
-
-    content = await file.read()
     stored_path.write_bytes(content)
 
     return ImageUploadResponse(
