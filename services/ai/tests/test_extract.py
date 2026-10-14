@@ -22,7 +22,7 @@ def test_extract_features() -> None:
     image_bytes = _make_test_image_bytes()
     encoded = base64.b64encode(image_bytes).decode("ascii")
 
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.post(
         "/v1/features/extract",
         json={"image_data": encoded},
@@ -48,7 +48,7 @@ def test_extract_features() -> None:
 
 def test_extract_features_invalid_base64() -> None:
     """POST /v1/features/extract with invalid base64 should return 400."""
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.post(
         "/v1/features/extract",
         json={"image_data": "not valid base64!!!"},

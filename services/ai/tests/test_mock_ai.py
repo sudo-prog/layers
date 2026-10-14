@@ -33,7 +33,7 @@ def base_features() -> FeatureVector:
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    return TestClient(app, headers={"Authorization": "Bearer dev-token"})
 
 
 def _make_layer(core: str, params: dict | None = None) -> dict:
