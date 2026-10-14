@@ -16,6 +16,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
+**Phase:** 2.3 (Performance & reliability) — **IN PROGRESS** (PR #12 f3ee646: pass-rebuild decoupling, error boundary)
+**Phase:** 2.4 (Accessibility) — **IN PROGRESS** (PR #12 f3ee646: WCAG 2.2 AA — focus, 44px targets, ARIA dialogs, Escape, reduced-motion, safe-area)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
