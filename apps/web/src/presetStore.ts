@@ -39,6 +39,7 @@ interface PresetV1Data {
   thumbnail?: string | null;
   createdAt: string;
   updatedAt: string;
+  visibility: "private" | "unlisted" | "public";
   category: string;
 }
 
@@ -52,11 +53,15 @@ export interface PresetRecord {
   createdAt: string;
   updatedAt: string;
   thumbnail?: string;
+  visibility: "private" | "unlisted" | "public";
+  category?: string;
 }
 
 export interface SavePresetMeta {
   description?: string;
   tags?: string[];
+  visibility?: "private" | "unlisted" | "public";
+  category?: string;
 }
 
 export class PresetStoreError extends Error {
@@ -70,12 +75,35 @@ function presetIdForName(name: string): string {
   return `layers-preset:${name.trim().toLowerCase()}`;
 }
 
-function recordFromDoc(doc: Document): PresetRecord | null {
-  const data = doc.data as Record<string, unknown>;
+const VISIBILITIES = ["private", "unlisted", "public"] as const;
+type Visibility = (typeof VISIBILITIES)[number];
+
+/**
+ * Normalise a stored record into a valid PresetRecord.
+ *
+ * Stage 2.2 migration contract: presets saved before `visibility` existed
+ * have no such field. A missing or unrecognised value MUST default to
+ * "private" — a legacy preset must never silently become shareable.
+ */
+function normaliseRecord(data: Record<string, unknown>): PresetRecord | null {
   if (!data || typeof data !== "object" || !("name" in data) || !("stack" in data)) {
     return null;
   }
-  return data as unknown as PresetRecord;
+  const rawVisibility = data.visibility;
+  const visibility: Visibility =
+    typeof rawVisibility === "string" &&
+    (VISIBILITIES as readonly string[]).includes(rawVisibility)
+      ? (rawVisibility as Visibility)
+      : "private";
+
+  const record = data as unknown as PresetRecord;
+  record.visibility = visibility;
+  record.category = typeof data.category === "string" ? data.category : undefined;
+  return record;
+}
+
+function recordFromDoc(doc: Document): PresetRecord | null {
+  return normaliseRecord(doc.data as Record<string, unknown>);
 }
 
 function buildV1Preset(
@@ -201,6 +229,9 @@ export class PresetStore {
       createdAt: v1.createdAt,
       updatedAt: v1.updatedAt,
       thumbnail: v1.thumbnail ?? undefined,
+      // Stage 2.2: visibility + category. Default is PRIVATE — never publish implicitly.
+      visibility: meta?.visibility ?? "private",
+      category: meta?.category,
     };
 
     await this.provider.save({
@@ -236,6 +267,79 @@ export class PresetStore {
     if (!doc) return null;
     const record = recordFromDoc(doc);
     return record ? record.stack : null;
+  }
+
+  /**
+   * Patch an existing preset's mutable metadata (name, description, tags,
+   * category, visibility). The stack itself is left untouched — use
+   * `savePreset` to replace the effect stack.
+   */
+  async updatePreset(
+    id: string,
+    patch: Partial<Pick<PresetRecord, "name" | "description" | "tags" | "category" | "visibility">>,
+  ): Promise<PresetRecord> {
+    if (!this._available) {
+      throw new PresetStoreError("Preset store is not available (IndexedDB unavailable)");
+    }
+    const doc = await this.provider.restore(id);
+    if (!doc) throw new PresetStoreError(`Preset not found: ${id}`);
+    const record = recordFromDoc(doc);
+    if (!record) throw new PresetStoreError(`Preset not found: ${id}`);
+
+    if (patch.name !== undefined) {
+      const trimmed = patch.name.trim();
+      if (trimmed.length === 0) throw new PresetStoreError("Preset name cannot be empty");
+      record.name = trimmed;
+    }
+    if (patch.description !== undefined) record.description = patch.description;
+    if (patch.tags !== undefined) record.tags = [...patch.tags];
+    if (patch.category !== undefined) record.category = patch.category;
+    if (patch.visibility !== undefined) {
+      if (!(VISIBILITIES as readonly string[]).includes(patch.visibility)) {
+        throw new PresetStoreError(`Invalid visibility: ${patch.visibility}`);
+      }
+      record.visibility = patch.visibility;
+    }
+    record.updatedAt = new Date().toISOString();
+
+    await this.provider.save({
+      id: record.id,
+      version: "1.0.0",
+      data: record as unknown as Record<string, unknown>,
+      updatedAt: record.updatedAt,
+    });
+    return record;
+  }
+
+  /** Convenience wrapper for the sharing flag. */
+  async setVisibility(id: string, visibility: Visibility): Promise<PresetRecord> {
+    return this.updatePreset(id, { visibility });
+  }
+
+  /**
+   * Search and filter presets.
+   *
+   * `query` is a case-insensitive substring match against name, description
+   * and tags. `filters` narrows by exact tag, category and visibility.
+   */
+  async searchPresets(
+    query = "",
+    filters?: { tags?: string[]; category?: string; visibility?: Visibility },
+  ): Promise<PresetRecord[]> {
+    const all = await this.listPresets();
+    const q = query.trim().toLowerCase();
+
+    return all.filter((r) => {
+      if (filters?.visibility && r.visibility !== filters.visibility) return false;
+      if (filters?.category && r.category !== filters.category) return false;
+      if (filters?.tags && filters.tags.length > 0) {
+        const have = new Set(r.tags.map((t) => t.toLowerCase()));
+        if (!filters.tags.every((t) => have.has(t.toLowerCase()))) return false;
+      }
+      if (!q) return true;
+      const hay = [r.name, r.description ?? "", ...r.tags].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
   }
 
   async deletePreset(id: string): Promise<void> {
@@ -276,7 +380,9 @@ export class PresetStore {
       thumbnail: record.thumbnail ?? null,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
-      category: "style",
+      category: record.category ?? "style",
+      // Preserve the sharing flag on export so a round-trip keeps it.
+      visibility: record.visibility,
     };
     return canonicalizePreset(v1 as never);
   }
@@ -327,6 +433,10 @@ export class PresetStore {
       createdAt: v1.createdAt,
       updatedAt: v1.updatedAt,
       thumbnail: v1.thumbnail ?? undefined,
+      // Imported presets always default to private — a file in the wild must
+      // never publish itself onto a machine without the user choosing so.
+      visibility: "private",
+      category: v1.category ?? "style",
     };
 
     await this.provider.save({

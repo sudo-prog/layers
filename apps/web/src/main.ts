@@ -43,7 +43,9 @@ import { handleKeyboard, getShortcuts, CORE_KEYS, type KeyboardHandlers } from "
 import { createMaskBrush, type MaskBrush } from "./maskBrush";
 import { createVectorEditor, type VectorEditor } from "./vectorEditor";
 import { presetStore } from "./presetStore";
+import { mountLibraryPanel, type LibraryPanelHandle } from "./libraryPanel";
 import { mountPresetGrid } from "./presetGrid";
+import { presetIdFromHash } from "./presetShare";
 import { openCamera, loadImageAsSource } from "./imageImport";
 import { mountAIPanel, type AIPanelHandle } from "./aiPanel";
 import { mountReviewScreen, type ReviewScreenHandle } from "./reviewScreen";
@@ -1317,6 +1319,21 @@ function initStage06(): void {
   });
   toolbarActions.insertBefore(btnPresets, btnThemeEl);
 
+  // ── Library toolbar button (Stage 2.2) ────────────────────────────────
+  const btnLibrary = document.createElement("button");
+  btnLibrary.className = "btn";
+  btnLibrary.textContent = "📚 Library";
+  btnLibrary.title = "Search, share and manage presets";
+  btnLibrary.addEventListener("click", () => {
+    const existing = document.getElementById("library-overlay-mount");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    openLibraryPanel();
+  });
+  toolbarActions.insertBefore(btnLibrary, btnThemeEl);
+
    // ── Import Photo toolbar button ────────────────────────────────────────
    const btnImportPhoto = document.createElement("button");
    btnImportPhoto.className = "btn";
@@ -1429,6 +1446,70 @@ async function openPresetPanel(): Promise<void> {
   });
 }
 
+/**
+ * Stage 2.2 — Library overlay.
+ *
+ * `library-overlay-mount` is the contract used by the Escape handler in the
+ * overlay-dismissal list; it must be the id of the element that gets removed
+ * on close.
+ */
+async function openLibraryPanel(): Promise<void> {
+  const mount = document.createElement("div");
+  mount.id = "library-overlay-mount";
+
+  const overlay = document.createElement("div");
+  overlay.className = "library-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Preset library");
+
+  const modal = document.createElement("div");
+  modal.className = "library-modal";
+  overlay.appendChild(modal);
+  mount.appendChild(overlay);
+  document.body.appendChild(mount);
+
+  await mountLibraryPanel(modal, {
+    onApply: (stack) => {
+      pushUndo();
+      stackState = stack;
+      rebuildStack();
+      rebuildInspector();
+      rebuildPasses();
+      scheduleSave();
+      emitEvent("preset_applied", {});
+      mount.remove();
+    },
+    getCurrentStack: () => stackState,
+  });
+}
+
+/**
+ * Stage 2.2 — honour a `#/preset/<id>` deep link on load.
+ *
+ * Loads the referenced preset into the editor and clears the hash so a
+ * refresh does not re-apply it.
+ */
+async function applyPresetFromHash(): Promise<void> {
+  const id = presetIdFromHash(window.location.hash);
+  if (!id) return;
+  try {
+    const stack = await presetStore.loadPreset(id);
+    if (stack) {
+      pushUndo();
+      stackState = stack;
+      rebuildStack();
+      rebuildInspector();
+      rebuildPasses();
+      scheduleSave();
+    }
+  } catch (e) {
+    console.warn("Could not open preset from link:", e);
+  } finally {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+}
+
 async function importPhotoFromCamera(): Promise<void> {
   const file = await openCamera();
   if (!file) return;
@@ -1474,6 +1555,7 @@ async function init(): Promise<void> {
      ".review-overlay",
      ".compare-overlay",
      ".learning-overlay",
+     "#library-overlay-mount",
      "#vector-panel",
    ];
    document.addEventListener("keydown", (e) => {
@@ -1503,6 +1585,15 @@ async function init(): Promise<void> {
        }
      }
    });
+
+   // Initialise the preset store BEFORE any panel mounts it. Without this the
+   // store reports unavailable and both the Presets and Library panels fail
+   // silently (save/load/list all no-op).
+   try {
+     await presetStore.init();
+   } catch (e) {
+     console.warn("Preset store unavailable:", e);
+   }
 
    initRenderer();
    buildCoreList();
@@ -1556,6 +1647,10 @@ async function init(): Promise<void> {
   initVectorEditor();
   initHelpOverlay();
   initStage06();
+
+  // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
+  // the store is initialised so the id can be resolved.
+  void applyPresetFromHash();
 
    // Start render loop
    function loop(): void {
