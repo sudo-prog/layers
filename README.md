@@ -15,7 +15,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 0.6 (Mobile PWA) — **COMPLETE**
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
-**Phase:** 1.6 (Learning store) — **IN PROGRESS** (BE prep done: retrieval weighting, acceptance dashboard)
+**Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
