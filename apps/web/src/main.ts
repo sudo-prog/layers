@@ -46,6 +46,8 @@ import { presetStore } from "./presetStore";
 import { mountPresetGrid } from "./presetGrid";
 import { openCamera, loadImageAsSource } from "./imageImport";
 import { mountAIPanel, type AIPanelHandle } from "./aiPanel";
+import { mountReviewScreen, type ReviewScreenHandle } from "./reviewScreen";
+import { mountComparisonTools, type ComparisonToolsHandle } from "./comparisonTools";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -204,6 +206,28 @@ const CORE_DEFS: CoreDef[] = [
 
 let stackState: StackState = createStackState();
 let renderer: Renderer | null = null;
+let sourceCanvas: HTMLCanvasElement | null = null;
+/** Stack state saved while a single layer is isolated for preview. */
+let preIsolateStack: StackState | null = null;
+
+/**
+ * Normalise any 2D-drawable canvas (including OffscreenCanvas) into a real
+ * HTMLCanvasElement, which the review/compare tools need for `toDataURL()`
+ * and `getContext('2d')`. OffscreenCanvas lacks both.
+ */
+function toHTMLCanvas(
+  src: OffscreenCanvas | HTMLCanvasElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = width;
+  out.height = height;
+  const ctx = out.getContext("2d");
+  if (ctx) ctx.drawImage(src as CanvasImageSource, 0, 0, width, height);
+  return out;
+}
+
 let theme: "light" | "dark" = "light";
 let undoStack: StackState[] = [];
 let redoStack: StackState[] = [];
@@ -374,6 +398,13 @@ function initRenderer(): void {
 
   sctx.fillStyle = "rgba(0,0,0,0.2)";
   sctx.fillRect(100, 100, 150, 150);
+
+  // Store the source canvas for later use
+  sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = 512;
+  sourceCanvas.height = 512;
+  const sourceCtx = sourceCanvas.getContext("2d")!;
+  sourceCtx.drawImage(src, 0, 0);
 
   renderer.uploadSource(src, 512, 512);
 }
@@ -1109,6 +1140,84 @@ function initStage06(): void {
   // Find the theme button to insert before it (keeps the existing layout).
   const btnThemeEl = document.getElementById("btn-theme");
 
+  // ── Review toolbar button ──────────────────────────────────────────────
+  const btnReview = document.createElement("button");
+  btnReview.className = "btn";
+  btnReview.id = "btn-review";
+  btnReview.textContent = "📋 Review";
+  btnReview.title = "Review source vs reconstruction";
+  btnReview.addEventListener("click", () => {
+    const existing = document.getElementById("review-overlay");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const mount = document.createElement("div");
+    mount.id = "review-overlay-mount";
+    document.body.appendChild(mount);
+    const handle = mountReviewScreen(mount, {
+      getCurrentStack: () => stackState,
+      getRenderer: () => renderer,
+      getSourceCanvas: () => sourceCanvas,
+      getCanvas: () => canvas,
+      onAction: (action) => {
+        if (action === "close") {
+          const existing = document.getElementById("review-overlay");
+          if (existing) existing.remove();
+        }
+      },
+    });
+  });
+  toolbarActions.insertBefore(btnReview, btnThemeEl);
+
+  // ── Compare toolbar button ─────────────────────────────────────────────
+  const btnCompare = document.createElement("button");
+  btnCompare.className = "btn";
+  btnCompare.id = "btn-compare";
+  btnCompare.textContent = "⚖ Compare";
+  btnCompare.title = "Compare source vs reconstruction";
+  btnCompare.addEventListener("click", () => {
+    const existing = document.getElementById("compare-overlay");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const mount = document.createElement("div");
+    mount.id = "compare-overlay-mount";
+    document.body.appendChild(mount);
+    const handle = mountComparisonTools(mount, {
+      getCurrentStack: () => stackState,
+      getRenderer: () => renderer,
+      getSourceCanvas: () => sourceCanvas,
+      getCanvas: () => canvas,
+      onIsolate: (itemId) => {
+        // Temporarily render only the given item (or restore the full stack
+        // when null). The pre-isolation stack is kept in a module-level slot so
+        // the restore is not clobbered by a re-capture of the isolated state.
+        if (itemId === null) {
+          if (preIsolateStack) {
+            stackState = preIsolateStack;
+            preIsolateStack = null;
+          }
+        } else {
+          if (!preIsolateStack) preIsolateStack = stackState;
+          stackState = {
+            ...preIsolateStack,
+            items: preIsolateStack.items.map((it) => ({ ...it, enabled: it.id === itemId })),
+          };
+        }
+        render();
+      },
+      onAction: (action) => {
+        if (action === "close") {
+          const existing = document.getElementById("compare-overlay");
+          if (existing) existing.remove();
+        }
+      },
+    });
+  });
+  toolbarActions.insertBefore(btnCompare, btnThemeEl);
+
   // ── Presets toolbar button ─────────────────────────────────────────────
   const btnPresets = document.createElement("button");
   btnPresets.className = "btn";
@@ -1213,6 +1322,10 @@ async function importPhotoFromCamera(): Promise<void> {
     const source = await loadImageAsSource(file);
     if (renderer) {
       renderer.uploadSource(source.canvas, source.width, source.height);
+      // Update the stored source canvas. `loadImageAsSource` may return an
+      // OffscreenCanvas; the review/compare tools need a real HTMLCanvasElement
+      // (for toDataURL + getContext('2d')), so normalise by blitting into one.
+      sourceCanvas = toHTMLCanvas(source.canvas, source.width, source.height);
       render();
     }
   } catch (e) {
