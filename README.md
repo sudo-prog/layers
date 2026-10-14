@@ -16,9 +16,10 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
-**Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7: search, tags, categories, visibility flags, deep links, import/export)
-**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (PR #12 f3ee646: per-frame pass recompilation eliminated + error boundary; device matrix, shader cache, adaptive quality, WebGPU parity NOT done)
-**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (PR #12 f3ee646: WCAG 2.2 AA FE half done — focus, 44px targets, ARIA dialogs, Escape, reduced-motion, safe-area; axe-core run, BE security review, privacy review NOT done)
+**Phase:** 2.1 (Smarter AI) — **PARTIAL** (classical fallback done; ranker + simplification in progress)
+**Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7 + thumbnails with real rendered previews)
+**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (shader compile cache + adaptive quality done; device matrix + soak test need real hardware)
+**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (security review done + 3 high/medium findings fixed; privacy review done; axe-core run pending — would add dep)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -86,10 +87,11 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - pnpm test: 17/17 turbo tasks successful
 
 ### Deferred / open work (not claimed complete)
-- **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), shader compile cache / baked LUTs, adaptive quality + 60-min soak, WebGPU parity — all need real hardware or are unstarted
-- **Stage 2.4:** axe-core automated a11y run (would add a dependency), BE security review (tokens, CSP, SSRF on URL import), privacy review + data-flow diagram
-- **Stage 2.2:** real device-to-device preset sync verification; thumbnails currently use a deterministic gradient placeholder rather than rendered previews
-- **Stages 2.1 / 2.5:** not started (smarter AI, beta & v1.0 launch)
+- **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), 60-min soak test — need real hardware; WebGPU parity — unstarted
+- **Stage 2.4:** axe-core automated a11y run (would add a dependency — brief forbade new deps); security review ✅ done (3 high/medium findings fixed); privacy review ✅ done
+- **Stage 2.2:** real device-to-device preset sync verification (needs Mac FE + phone) — thumbnails ✅ now use real rendered previews
+- **Stage 2.1:** classical fallback ✅ done; learned ranker + simplification pass — in progress
+- **Stage 2.5:** launch checklist ✅ + rollback drill ✅ + docs site ✅ done; closed beta (100 users) + staged rollout + rollback drill execution — pending
 
 ### Commits
 - 15+ commits on main (2026-10-07 → 2026-10-14)

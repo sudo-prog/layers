@@ -184,6 +184,29 @@ inspector params change the rendered pixels (and restoring defaults
 reproduces the baseline hash exactly), the empty stack blits the colourful
 source, and the presets panel renders its empty state.
 
+## Stage 2.2/2.3/2.4 completion (2026-10-14)
+
+| Item | Status |
+|---|---|
+| Shader compile cache (FE) | ✅ `packages/engine/src/shader-compile-cache.ts` — FNV-1a hash → base64 binary in localStorage |
+| Adaptive quality (FE) | ✅ `packages/engine/src/adaptive-quality.ts` — EMA-smoothed FPS, 1.0x → 0.75x → 0.5x |
+| Real thumbnails (FE) | ✅ `apps/web/src/thumbnailRenderer.ts` — 128×128 previews via engine+cores pipeline |
+| Security review (BE) | ✅ `docs/security-review.md` — 7 findings, 3 fixed (CSP, auth, token) |
+| Privacy review (BE) | ✅ `docs/privacy-review.md` — data-flow diagrams, consent model verified |
+| CSP headers | ✅ index.html meta + vite.config.ts server.headers |
+| AI service auth | ✅ Bearer token middleware (skips /v1/health) |
+| Rate limiting | ✅ 60 req/min per IP for compute-heavy endpoints |
+| Upload validation | ✅ MIME type + 50MB size limit |
+| Immich browser guard | ✅ Server-side only (throws in browser) |
+| Anonymization salt | ✅ Env-sourced (LAYERS_ANON_SALT) |
+| aiClient auth | ✅ setAiToken + buildHeaders |
+| Classical fallback (BE) | ✅ `services/ai/app/classical_fallback.py` — rule-based hypotheses |
+| Launch checklist (MGR) | ✅ `docs/launch-checklist.md` |
+| Rollback drill (MGR) | ✅ `scripts/rollback-drill.sh` |
+| Docs site (MGR) | ✅ `docs/site/index.md` |
+
+**Build:** 8/8 tasks · **Tests:** 17/17 turbo tasks, 155/155 JS unit tests + 42 engine tests
+
 ## Open items
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually

@@ -256,8 +256,8 @@ class ClassicalFallback:
     def _rule_high_contrast(self, features: FeatureVector) -> FallbackHypothesis | None:
         """High tone std → tone_high_contrast_core."""
         std = features.tone.get("std", 0.0)
-        if std > 70.0:
-            conf = _clamp_confidence(0.4 + (std - 70.0) / 100.0)
+        if std > 65.0:
+            conf = _clamp_confidence(0.4 + (std - 65.0) / 100.0)
             return FallbackHypothesis(
                 core_type="tone_high_contrast_core",
                 param_ranges={
