@@ -207,6 +207,27 @@ source, and the presets panel renders its empty state.
 
 **Build:** 8/8 tasks · **Tests:** 17/17 turbo tasks, 155/155 JS unit tests + 42 engine tests
 
+## Cross-core composition tests (2026-10-15)
+
+| Item | Status |
+|---|---|
+| All 7 cores compile pairwise without conflicts | ✅ 49 pairs tested |
+| Each core has a unique fragment shader | ✅ 7/7 unique |
+| 7-core stack compiles on shared GL context | ✅ |
+| Disabling a core does not affect others | ✅ |
+| Param changes do not cross-contaminate | ✅ |
+| Uniform naming convention (uTexture/uOpacity/uResolution) | ✅ 7/7 |
+| Pass count for full 7-core stack | ✅ 11 passes (2+2+1+1+2+1+2) |
+
+## Bundle size audit (2026-10-15)
+
+| Component | Gzipped | Gate | Status |
+|---|---|---|---|
+| Engine + 7 cores | 26.8 KB | ≤ 150 KB | ✅ |
+| Web app JS | 84.1 KB | — | ✅ |
+| Web app CSS | 4.9 KB | — | ✅ |
+| Web app total (JS+CSS) | 89.0 KB | ≤ 250 KB mobile | ✅ |
+
 ## Open items
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually
@@ -214,6 +235,8 @@ source, and the presets panel renders its empty state.
 - Per-core `ms/frame` in isolation (the table above reports engine-level
   configs; core-level attribution is not yet measured).
 - `tests/visual/` and `tests/perf/` harnesses.
-- Cross-core composition tests (stacks of >1 core together).
 - Real-hardware perf gate (reference phone, 8 passes @ 1536px ≥ 30 fps).
-- **Stage 0.6:** Mobile PWA (Workbox, manifest, offline cache, preset grid).
+- Device matrix (3 phones, iPad, 3 laptops) — needs real hardware.
+- 60-min soak test — needs real hardware.
+- WebGPU parity tests — detection + context done, full renderer pending.
+- axe-core automated a11y run — blocked by no-new-deps constraint.
