@@ -14,3 +14,13 @@ export {
 } from "./pass.js";
 export { BlendPass, type BlendMode } from "./blend.js";
 export { Renderer, type RendererOptions } from "./renderer.js";
+export {
+  ShaderCompileCache,
+  computeShaderHash,
+  base64ToArrayBuffer,
+  type ShaderCacheEntry,
+} from "./shader-compile-cache.js";
+export {
+  AdaptiveQuality,
+  type AdaptiveQualityOptions,
+} from "./adaptive-quality.js";

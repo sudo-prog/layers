@@ -34,22 +34,22 @@ const DEFAULT_OPTIONS: Required<ContextOptions> = {
 export class GLContext {
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
-  private options: Required<ContextOptions>;
+  private _opts: Required<ContextOptions>;
   private _lost = false;
   private _onLostCallbacks: Array<() => void> = [];
   private _onRestoredCallbacks: Array<() => void> = [];
 
   constructor(canvas: HTMLCanvasElement, options: ContextOptions = {}) {
     this.canvas = canvas;
-    this.options = { ...DEFAULT_OPTIONS, ...options };
-    this.canvas.width = this.options.width;
-    this.canvas.height = this.options.height;
+    this._opts = { ...DEFAULT_OPTIONS, ...options };
+    this.canvas.width = this._opts.width;
+    this.canvas.height = this._opts.height;
 
     const gl = this.canvas.getContext("webgl2", {
-      preserveDrawingBuffer: this.options.preserveDrawingBuffer,
-      alpha: this.options.alpha,
-      antialias: this.options.antialias,
-      premultipliedAlpha: this.options.premultipliedAlpha,
+      preserveDrawingBuffer: this._opts.preserveDrawingBuffer,
+      alpha: this._opts.alpha,
+      antialias: this._opts.antialias,
+      premultipliedAlpha: this._opts.premultipliedAlpha,
     });
 
     if (!gl) {
@@ -62,6 +62,10 @@ export class GLContext {
 
   get context(): WebGL2RenderingContext {
     return this.gl;
+  }
+
+  get options(): Required<ContextOptions> {
+    return { ...this._opts };
   }
 
   get width(): number {
@@ -85,8 +89,8 @@ export class GLContext {
   }
 
   resize(width: number, height: number): void {
-    this.options.width = width;
-    this.options.height = height;
+    this._opts.width = width;
+    this._opts.height = height;
     this.canvas.width = width;
     this.canvas.height = height;
     this.gl.viewport(0, 0, width, height);
@@ -103,10 +107,10 @@ export class GLContext {
       this._lost = false;
       // Re-create context attributes
       const gl = this.canvas.getContext("webgl2", {
-        preserveDrawingBuffer: this.options.preserveDrawingBuffer,
-        alpha: this.options.alpha,
-        antialias: this.options.antialias,
-        premultipliedAlpha: this.options.premultipliedAlpha,
+        preserveDrawingBuffer: this._opts.preserveDrawingBuffer,
+        alpha: this._opts.alpha,
+        antialias: this._opts.antialias,
+        premultipliedAlpha: this._opts.premultipliedAlpha,
       });
       if (gl) {
         this.gl = gl;

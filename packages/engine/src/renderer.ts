@@ -9,15 +9,25 @@
  * Performance: pass programs and the blit program are compiled ONCE and
  * cached. `compile()` on a Pass is only called when the program has not been
  * cached yet, so the per-frame hot path performs zero shader compilation.
+ *
+ * Features:
+ * - Persistent shader compile cache (localStorage) — survives page reloads
+ * - Adaptive quality — monitors FPS and adjusts render resolution
  */
 
 import { GLContext, type ContextOptions } from "./context.js";
 import { PingPongFBO } from "./fbo.js";
 import type { Pass, PassParams } from "./pass.js";
 import { createQuadVAO } from "./pass.js";
+import { ShaderCompileCache, computeShaderHash, base64ToArrayBuffer } from "./shader-compile-cache.js";
+import { AdaptiveQuality, type AdaptiveQualityOptions } from "./adaptive-quality.js";
 
 export interface RendererOptions extends ContextOptions {
   passes?: Pass[];
+  /** Enable persistent shader cache (default: true) */
+  shaderCache?: boolean;
+  /** Options for adaptive quality. Pass undefined for defaults. */
+  adaptiveQualityOptions?: AdaptiveQualityOptions;
 }
 
 const DEFAULT_RENDERER_OPTIONS: ContextOptions = {
@@ -62,8 +72,24 @@ export class Renderer {
   /** Lazily-created, long-lived blit program (never deleted per frame). */
   private _blitProgram: WebGLProgram | null = null;
 
+  /** Persistent shader compile cache (localStorage-backed). */
+  private _shaderCache: ShaderCompileCache;
+  /** Whether to use the persistent shader cache. */
+  private _useShaderCache: boolean;
+
+  /** Adaptive quality controller (null if not enabled). */
+  private _adaptiveQuality: AdaptiveQuality | null = null;
+
   constructor(canvas: HTMLCanvasElement, options: RendererOptions = {}) {
     const opts = { ...DEFAULT_RENDERER_OPTIONS, ...options };
+    this._useShaderCache = options.shaderCache !== false;
+    this._shaderCache = new ShaderCompileCache();
+
+    this._adaptiveQuality = new AdaptiveQuality(options.adaptiveQualityOptions);
+    this._adaptiveQuality.onScaleChange = (newScale, oldScale) => {
+      this._onResolutionScaleChange(newScale, oldScale);
+    };
+
     this.ctx = new GLContext(canvas, opts);
     this.fbo = new PingPongFBO(this.ctx);
     this.fbo.init(this.ctx.width, this.ctx.height);
@@ -82,6 +108,16 @@ export class Renderer {
 
   get passes(): readonly Pass[] {
     return this._passes;
+  }
+
+  /** The persistent shader compile cache instance. */
+  get shaderCache(): ShaderCompileCache {
+    return this._shaderCache;
+  }
+
+  /** The adaptive quality controller (null if not enabled). */
+  get adaptiveQuality(): AdaptiveQuality | null {
+    return this._adaptiveQuality;
   }
 
   addPass(pass: Pass): void {
@@ -136,11 +172,16 @@ export class Renderer {
     }
   }
 
-  render(time?: number, opacityMap?: Map<string, number>): void {
+  render(time?: number, opacityMap?: Map<string, number>, dt?: number): void {
     const gl = this.ctx.context;
     const t = time ?? (performance.now() - this._startTime) / 1000;
 
     if (!this._sourceTexture) return;
+
+    // Feed frame delta to adaptive quality
+    if (this._adaptiveQuality && dt !== undefined) {
+      this._adaptiveQuality.frame(dt);
+    }
 
     // Bind source texture
     gl.activeTexture(gl.TEXTURE0);
@@ -216,9 +257,90 @@ export class Renderer {
     const cached = this._programCache.get(pass.id);
     if (cached) return cached;
 
+    // Try persistent shader cache first
+    if (this._useShaderCache) {
+      const program = this._loadProgramFromCache(gl, pass);
+      if (program) {
+        this._programCache.set(pass.id, program);
+        return program;
+      }
+    }
+
+    // Fall back to compilation
     const program = pass.compile(gl);
-    if (program) this._programCache.set(pass.id, program);
+    if (program) {
+      this._programCache.set(pass.id, program);
+      // Store in persistent cache for next session
+      if (this._useShaderCache) {
+        this._storeProgramInCache(gl, pass, program);
+      }
+    }
     return program;
+  }
+
+  private _loadProgramFromCache(
+    gl: WebGL2RenderingContext,
+    pass: Pass
+  ): WebGLProgram | null {
+    try {
+      const vs = pass.getVertexShader();
+      const fs = pass.getFragmentShader();
+      const hash = computeShaderHash(vs, fs);
+      const entry = this._shaderCache.get(hash);
+      if (!entry) return null;
+
+      const program = gl.createProgram();
+      if (!program) return null;
+
+      const binary = base64ToArrayBuffer(entry.binary);
+      const ok = gl.programBinary(program, entry.binaryFormat, binary);
+
+      if (!ok) {
+        gl.deleteProgram(program);
+        return null;
+      }
+
+      // Bind uTexture to unit 0 once
+      gl.useProgram(program);
+      gl.uniform1i(gl.getUniformLocation(program, "uTexture"), 0);
+
+      return program;
+    } catch {
+      return null;
+    }
+  }
+
+  private _storeProgramInCache(
+    gl: WebGL2RenderingContext,
+    pass: Pass,
+    program: WebGLProgram
+  ): void {
+    try {
+      const vs = pass.getVertexShader();
+      const fs = pass.getFragmentShader();
+      const hash = computeShaderHash(vs, fs);
+
+      const length = gl.getProgramParameter(program, gl.PROGRAM_BINARY_LENGTH) as number;
+      if (!length || length <= 0) return;
+
+      const binary = gl.getProgramBinary(program, length);
+      const format = gl.getParameter(gl.PROGRAM_BINARY_FORMATS)[0] as number;
+
+      this._shaderCache.set(hash, binary, format);
+    } catch {
+      // Cache storage failed — non-fatal
+    }
+  }
+
+  private _onResolutionScaleChange(newScale: number, oldScale: number): void {
+    // Resize the FBO to match the new resolution scale
+    const baseWidth = this.ctx.options.width;
+    const baseHeight = this.ctx.options.height;
+    const newWidth = Math.round(baseWidth * newScale);
+    const newHeight = Math.round(baseHeight * newScale);
+
+    this.fbo.init(newWidth, newHeight);
+    this.ctx.resize(newWidth, newHeight);
   }
 
   private _getBlitProgram(gl: WebGL2RenderingContext): WebGLProgram | null {

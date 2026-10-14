@@ -217,6 +217,37 @@ describe("mountPresetGrid", () => {
     handle.destroy();
   });
 
+  it("renders a thumbnail image when the preset has a thumbnail", async () => {
+    const record = makeRecord("WithThumb", 1);
+    record.thumbnail = "data:image/png;base64,abc123";
+    storeMock.listPresets.mockResolvedValue([record]);
+    handle = await mountPresetGrid(container, {
+      onApply: () => {},
+      getCurrentStack: () => ({ items: [], selectedId: null }),
+    });
+
+    const img = container.querySelector(".preset-card-thumb") as HTMLImageElement;
+    expect(img).not.toBeNull();
+    expect(img.src).toContain("data:image/png;base64");
+    handle.destroy();
+  });
+
+  it("renders a gradient placeholder when the preset has no thumbnail", async () => {
+    const record = makeRecord("NoThumb", 1);
+    // record.thumbnail is undefined (legacy preset)
+    storeMock.listPresets.mockResolvedValue([record]);
+    handle = await mountPresetGrid(container, {
+      onApply: () => {},
+      getCurrentStack: () => ({ items: [], selectedId: null }),
+    });
+
+    const img = container.querySelector(".preset-card-thumb") as HTMLImageElement;
+    expect(img).not.toBeNull();
+    // Gradient placeholder is an SVG data URL.
+    expect(img.src).toContain("data:image/svg+xml");
+    handle.destroy();
+  });
+
   it("destroy() clears the container", async () => {
     storeMock.listPresets.mockResolvedValue([makeRecord("X", 1)]);
     handle = await mountPresetGrid(container, {

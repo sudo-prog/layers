@@ -820,6 +820,14 @@ body {
   outline-offset: 2px;
 }
 
+.preset-card-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+}
+
 .preset-card-name {
   font-weight: var(--text-lg-weight);
   font-size: var(--text-sm-size);
