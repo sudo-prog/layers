@@ -1,0 +1,43 @@
+url: http://10.0.2.2:3001/
+---
+# LAYERS mobile interface — real Android device (Pixel 6, 1080x2400)
+# 10.0.2.2 is the Android emulator's alias for the host's 127.0.0.1
+
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+- takeScreenshot: 01-canvas-default
+
+# Tab bar must be present at phone width
+- assertVisible: ".*Canvas.*"
+- assertVisible: ".*Cores.*"
+- assertVisible: ".*Stack.*"
+- assertVisible: ".*Presets.*"
+
+# Tap Cores — the cores panel slides in
+- tapOn: ".*Cores.*"
+- extendedWaitUntil:
+    visible: ".*Pattern/Dither.*"
+    timeout: 15000
+- assertVisible: ".*Noise/Grain.*"
+- assertVisible: ".*Blur/Convolution.*"
+- takeScreenshot: 02-cores-panel
+
+# Tap Stack — stack panel slides in
+- tapOn: ".*Stack.*"
+- extendedWaitUntil:
+    visible: ".*Select a core to edit.*"
+    timeout: 15000
+- takeScreenshot: 03-stack-panel
+
+# Tap Canvas — back to the canvas
+- tapOn: ".*Canvas.*"
+- takeScreenshot: 04-back-to-canvas
+
+# Tap Presets — preset panel opens
+- tapOn: ".*Presets.*"
+- extendedWaitUntil:
+    visible: ".*Save current stack.*"
+    timeout: 15000
+- takeScreenshot: 05-presets-panel

@@ -1947,3 +1947,137 @@ body {
   .library-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .library-card-actions { flex-direction: column; }
 }
+
+/* ── Mobile Tab Bar (below 768px) ─────────────────────────────────────── */
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* Show tab bar */
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(49px + var(--sab));
+    padding-bottom: var(--sab);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+  }
+
+  .mobile-tabbar-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 150ms;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .mobile-tabbar-btn.active {
+    color: var(--accent);
+  }
+
+  .mobile-tabbar-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  /* Workspace becomes relative for panel overlays */
+  .workspace {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Canvas area fills the workspace */
+  .canvas-area {
+    position: absolute;
+    inset: 0;
+    padding-bottom: calc(49px + var(--sab));
+  }
+
+  /* Panels become full-screen overlays */
+  .panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(49px + var(--sab));
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    background: var(--bg-primary);
+    transform: translateX(100%);
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .panel.active {
+    transform: translateX(0);
+  }
+
+  /* Hide sync status on mobile */
+  .sync-status {
+    display: none;
+  }
+
+  /* Toolbar: make actions scrollable */
+  .toolbar-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .toolbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Adjust canvas for mobile */
+  #gl-canvas {
+    max-height: calc(100dvh - 49px - var(--sab) - 60px);
+  }
+
+  /* Make core rows read as tappable list rows, not bare text */
+  .core-list {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+  }
+
+  .core-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    border-radius: 10px;
+    font-size: var(--text-base-size);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .core-btn + .core-btn {
+    margin-top: var(--space-1);
+  }
+
+  .core-icon {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-lg-size);
+  }
+
+  /* Panels get a title bar that reads as a mobile header */
+  .panel-title {
+    padding: var(--space-4);
+    font-size: var(--text-base-size);
+  }
+
+  /* Preset panel already handles mobile via its own media query */
+}

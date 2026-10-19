@@ -72,7 +72,16 @@ import {
   wireKeyboardShortcuts,
   wireOverlayDismissal,
 } from "./event-wiring";
-import { renderFrame, startLoop } from "./animation-loop";
+import { initMobileNav } from "./mobile-nav";
+import { renderFrame, startLoop, setFrameHook } from "./animation-loop";
+import {
+  initDebugSession,
+  injectDebugToolbar,
+  trackFrame,
+  trackLongTask,
+  isDebugEnabled,
+  logDebugEvent,
+} from "./debugSession";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
@@ -979,10 +988,25 @@ async function init(): Promise<void> {
    initVectorEditor();
    initHelpOverlay();
    initStage06();
+   initMobileNav();
 
    // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
    // the store is initialised so the id can be resolved.
    void applyPresetFromHash();
+
+   // Start debug session (gated by ?debug=1)
+   initDebugSession();
+   if (isDebugEnabled()) {
+     injectDebugToolbar();
+     setFrameHook((delta: number) => {
+       trackFrame();
+       if (delta > 50) trackLongTask(delta);
+     });
+     logDebugEvent("render_loop_started", {
+       passCount: estimatePasses(getEnabledItems(state.stack)),
+       coreCount: state.stack.items.length,
+     });
+   }
 
    // Start render loop
    startLoop();
