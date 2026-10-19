@@ -123,7 +123,7 @@ def test_multiscale_endpoint():
     image_bytes = _make_test_image_bytes()
     encoded = base64.b64encode(image_bytes).decode("ascii")
 
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.post(
         "/v1/features/extract-multiscale",
         json={"image_data": encoded},
@@ -146,7 +146,7 @@ def test_multiscale_endpoint_custom_levels():
     image_bytes = _make_test_image_bytes()
     encoded = base64.b64encode(image_bytes).decode("ascii")
 
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.post(
         "/v1/features/extract-multiscale?levels=2",
         json={"image_data": encoded},
@@ -160,7 +160,7 @@ def test_multiscale_endpoint_custom_levels():
 
 def test_multiscale_endpoint_invalid_base64():
     """POST /v1/features/extract-multiscale with invalid base64 should return 400."""
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.post(
         "/v1/features/extract-multiscale",
         json={"image_data": "not valid base64!!!"},

@@ -28,6 +28,7 @@ __all__ = [
     "pareto_frontier",
     "prune_layer",
     "prune_stack",
+    "suggest_simpler_cores",
 ]
 
 
@@ -249,3 +250,127 @@ def prune_stack(
         "layers_before": original_len,
         "layers_after": len(pruned_stack),
     }
+
+
+# ---------------------------------------------------------------------------
+# Simplification pass
+# ---------------------------------------------------------------------------
+
+# Map from expensive core types to cheaper alternatives with param converters.
+# Each entry: original_core_type -> list of (alternative_core_type, param_fn)
+# where param_fn takes the original params dict and returns a new params dict.
+
+def _simplify_gaussian_to_blur(params: dict[str, Any]) -> dict[str, Any]:
+    """Convert gaussian-blur params to blur params."""
+    return {"radius": params.get("radius", 1.0)}
+
+
+def _simplify_bevel_to_color_adjust(params: dict[str, Any]) -> dict[str, Any]:
+    """Convert bevel-emboss params to color-adjust params."""
+    return {"brightness": 0.0, "contrast": params.get("depth", 0.5) * 0.2}
+
+
+def _simplify_dither_to_blur(params: dict[str, Any]) -> dict[str, Any]:
+    """Convert pattern-dither params to blur params."""
+    return {"radius": params.get("scale", 1.0)}
+
+
+def _simplify_grain_to_color_adjust(params: dict[str, Any]) -> dict[str, Any]:
+    """Convert noise-grain params to color-adjust params."""
+    return {"brightness": params.get("intensity", 0.3) * 0.1}
+
+
+def _simplify_displacement_to_blur(params: dict[str, Any]) -> dict[str, Any]:
+    """Convert displacement params to blur params."""
+    return {"radius": params.get("scale", 1.0)}
+
+
+_SIMPLIFICATION_MAP: dict[str, list[tuple[str, Any]]] = {
+    "gaussian-blur": [("blur", _simplify_gaussian_to_blur)],
+    "bevel-emboss": [("color-adjust", _simplify_bevel_to_color_adjust)],
+    "pattern-dither": [("blur", _simplify_dither_to_blur)],
+    "noise-grain": [("color-adjust", _simplify_grain_to_color_adjust)],
+    "displacement": [("blur", _simplify_displacement_to_blur)],
+}
+
+
+def suggest_simpler_cores(
+    stack: list[dict[str, Any]],
+    features: FeatureVector,
+    fidelity_tolerance: float = 0.02,
+    min_savings: int = 1,
+) -> list[dict[str, Any]]:
+    """Suggest cheaper alternatives for expensive cores in a stack.
+
+    For each layer in *stack* whose core type has a known cheaper alternative
+    (see ``_SIMPLIFICATION_MAP``), this function builds a trial stack where
+    that layer is replaced with the cheaper core and measures the proxy
+    fidelity delta.  If the delta is within *fidelity_tolerance* and the
+    pass savings is at least *min_savings*, the suggestion is returned.
+
+    Args:
+        stack: The effect-stack to analyse.
+        features: Target :class:`FeatureVector` for proxy fidelity.
+        fidelity_tolerance: Maximum allowed drop in proxy fidelity (``[0, 1]``).
+        min_savings: Minimum pass savings required (default 1).
+
+    Returns:
+        A list of suggestion dicts sorted by ``savings`` descending, each with
+        keys: ``original_core``, ``alternative_core``, ``original_passes``,
+        ``alternative_passes``, ``savings``, ``fidelity_delta``, ``layer_index``,
+        ``alternative_params``.
+    """
+    if len(stack) <= 1:
+        return []
+
+    from copy import deepcopy
+    from app.search import _core_pass_cost, _proxy_fidelity, _stack_passes
+
+    original_passes = _stack_passes(stack)
+    original_fidelity = _proxy_fidelity(stack, features)
+    suggestions: list[dict[str, Any]] = []
+
+    for idx, layer in enumerate(stack):
+        orig_core = layer.get("core", "")
+        orig_passes = _core_pass_cost(orig_core)
+        if orig_core not in _SIMPLIFICATION_MAP:
+            continue
+
+        for alt_core, param_fn in _SIMPLIFICATION_MAP[orig_core]:
+            alt_passes = _core_pass_cost(alt_core)
+            savings = orig_passes - alt_passes
+            if savings < min_savings:
+                continue
+
+            # Build trial stack with the alternative core.
+            trial = deepcopy(stack)
+            alt_params = param_fn(layer.get("params", {}))
+            trial[idx] = {
+                "core": alt_core,
+                "params": alt_params,
+                "opacity": layer.get("opacity", 1.0),
+                "blend": layer.get("blend", "normal"),
+                "mask": layer.get("mask", None),
+                "enabled": layer.get("enabled", True),
+            }
+
+            trial_fidelity = _proxy_fidelity(trial, features)
+            fidelity_delta = original_fidelity - trial_fidelity
+
+            # Only accept if fidelity drop is within tolerance
+            # (negative delta = improvement, always accept).
+            if fidelity_delta <= fidelity_tolerance:
+                suggestions.append({
+                    "original_core": orig_core,
+                    "alternative_core": alt_core,
+                    "original_passes": orig_passes,
+                    "alternative_passes": alt_passes,
+                    "savings": savings,
+                    "fidelity_delta": round(fidelity_delta, 6),
+                    "layer_index": idx,
+                    "alternative_params": alt_params,
+                })
+
+    # Sort by savings descending.
+    suggestions.sort(key=lambda s: (-s["savings"], s["layer_index"]))
+    return suggestions

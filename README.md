@@ -4,7 +4,7 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Project Status (2026-10-14)
+## Project Status (2026-10-19)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
@@ -16,9 +16,11 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 1.4 (Stack search & optimization) — **COMPLETE** (gate PASS: latency 10.6ms, mobile 100%, pruning 57.1%)
 **Phase:** 1.5 (Review & refine UI) — **COMPLETE** (PR #9 merged 73f8cef: review screen + split-view/onion-skin/diff-map/isolate)
 **Phase:** 1.6 (Learning store) — **COMPLETE** (PR #10 merged 0637478: opt-in consent, event log, acceptance dashboard, retrieval)
-**Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7: search, tags, categories, visibility flags, deep links, import/export)
-**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (PR #12 f3ee646: per-frame pass recompilation eliminated + error boundary; device matrix, shader cache, adaptive quality, WebGPU parity NOT done)
-**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (PR #12 f3ee646: WCAG 2.2 AA FE half done — focus, 44px targets, ARIA dialogs, Escape, reduced-motion, safe-area; axe-core run, BE security review, privacy review NOT done)
+**Phase:** 2.1 (Smarter AI) — **COMPLETE** (classical fallback + learned ranker + simplification pass; 57 new Python tests)
+**Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7 + thumbnails with real rendered previews)
+**Phase:** 2.3 (Performance & reliability) — **PARTIAL** (shader compile cache + adaptive quality + WebGPU parity done; device matrix + soak test need real hardware)
+**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (security review done + all 7 findings fixed; privacy review done + all Medium findings resolved; axe-core run pending — would add dep)
+**Phase:** 2.5 (Beta & v1.0 launch) — **PARTIAL** (launch checklist + rollback drill script + docs site done; closed beta + staged rollout pending — private personal use until out of beta)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -40,17 +42,17 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - services/learning: README ✅
 
 ### Frontend (FE) — Stage 0.2/0.3/0.4 foundation + web app
-- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. 13 tests.
-- `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 33 tests.
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. **Shader compile cache** (localStorage) + **adaptive quality** (EMA FPS monitor) + **WebGPU parity** (detection + context). 54 tests.
+- `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 40 tests (33 unit + 7 cross-core composition).
 - `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
 - `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
 - `@layers/schema` — JSON Schema validation (AJV) for contracts. Schemas inlined as TypeScript constants — browser-compatible (no fs/path). Preset v1 schema with v0→v1 migration. 54 tests.
-- `@layers/sync` — Browser-compatible SyncProvider (Web Crypto API, no node:crypto), IndexedDBProvider for persistence. 23 tests.
-- `@layers/web` — **Web editor app** (Vite + TypeScript): 7 core buttons, stack panel, inspector, undo/redo, export/import JSON, light/dark theme, live WebGL2 rendering, IndexedDB persistence, sync status UI.
+- `@layers/sync` — Browser-compatible SyncProvider (Web Crypto API, no node:crypto), IndexedDBProvider for persistence. 46 tests.
+- `@layers/web` — **Web editor app** (Vite + TypeScript): 7 core buttons, stack panel, inspector, undo/redo, export/import JSON, light/dark theme, live WebGL2 rendering, IndexedDB persistence, sync status UI, review screen, learning store, library, comparison tools, AI panel, error boundary, consent, real thumbnails. 155 tests.
 - `tests/e2e/` — Live browser verification (Playwright + SwiftShader WebGL2): context creation, GLSL compilation for all 7 cores, multi-pass render pixel audit, context-loss, resize, readPixels-synced FPS benchmark. 13 checks.
 - `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
 - `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
-- `docs/EFFICIENCY-LEDGER.md` — Pass/param/look/ms accounting + Simplification Gate verdict.
+- `docs/EFFICIENCY-LEDGER.md` — Pass/param/look/ms accounting + Simplification Gate verdict + bundle size audit.
 
 **Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
@@ -61,12 +63,13 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - T-M-004: Graphite license/trademark/repo strategy ✅
 - T-M-005: Core 8 Relief v0
 
-### CI Jobs (5)
+### CI Jobs (6)
 1. lint-typecheck-test
 2. license-check (cross-checks against docs/licenses.md)
 3. conflict-files (sync-conflict + .env detection)
 4. ownership-check (CODEOWNERS enforcement)
-5. golden-image (Playwright + Chromium + SwiftShader)
+5. python-test (257 tests, FastAPI + classical fallback + ranker + simplification)
+6. golden-image (Playwright + Chromium + SwiftShader)
 
 ### Key Decisions
 - Graphite: reference-only (no fork, dual MIT/Apache-2.0)
@@ -74,10 +77,14 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - GSAP: OK for now, "Prohibited Uses" clause flagged
 - Ownership: pre-commit hook + CI script enforce CODEOWNERS
 - Turborepo 2.0: `pipeline` renamed to `tasks`
+- CSP: production-only headers (dev mode needs eval for Vite HMR)
+- AI service auth: Bearer token middleware (skips /v1/health)
+- Rate limiting: 60 req/min per IP for compute-heavy endpoints
+- Anonymization salt: env-sourced (LAYERS_ANON_SALT)
 
-### Tests
-- **319/319 JS unit tests passing** (8 packages: web 142, schema 54, sync 46, cores 33, engine 13, stack 11, vector 11, ui 9)
-- Python tests: run on the ThinkPad (`services/ai`, `.venv`) — not verifiable from the Mac
+### Tests (verified 2026-10-19)
+- **326/326 JS unit tests passing** (8 packages: web 155, schema 54, sync 46, engine 54, cores 40, stack 11, vector 11, ui 9)
+- **257/257 Python tests passing** (19 test files: classical fallback, ranker, simplification, events, retrieval, mock AI, search, extract, health, multiscale)
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)
 - **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
@@ -85,17 +92,26 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - pnpm build: 8/8 tasks successful
 - pnpm test: 17/17 turbo tasks successful
 
+### Bundle Size
+| Component | Gzipped | Gate | Status |
+|---|---|---|---|
+| Engine + 7 cores | 26.8 KB | ≤ 150 KB | ✅ |
+| Web app JS | 84.1 KB | — | ✅ |
+| Web app CSS | 4.9 KB | — | ✅ |
+| Web app total | 89.0 KB | ≤ 250 KB mobile | ✅ |
+
 ### Deferred / open work (not claimed complete)
-- **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), shader compile cache / baked LUTs, adaptive quality + 60-min soak, WebGPU parity — all need real hardware or are unstarted
-- **Stage 2.4:** axe-core automated a11y run (would add a dependency), BE security review (tokens, CSP, SSRF on URL import), privacy review + data-flow diagram
-- **Stage 2.2:** real device-to-device preset sync verification; thumbnails currently use a deterministic gradient placeholder rather than rendered previews
-- **Stages 2.1 / 2.5:** not started (smarter AI, beta & v1.0 launch)
+- **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), 60-min soak test — need real hardware; WebGPU full renderer — detection + context done
+- **Stage 2.4:** axe-core automated a11y run (would add a dependency — brief forbade new deps); manual a11y audit pending
+- **Stage 2.2:** real device-to-device preset sync verification (needs Mac FE + phone)
+- **Stage 2.5:** closed beta (100 users), staged rollout, rollback drill execution — pending (private personal use until out of beta)
 
 ### Commits
-- 15+ commits on main (2026-10-07 → 2026-10-14)
+- 20+ commits on main (2026-10-07 → 2026-10-19)
 - Merged PRs: #9 (Stage 1.5), #10 (Stage 1.6), #12 (Stages 2.3/2.4), #14 (Stage 2.2)
 
 ### Project Location
-- **Code:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS/`
-- **Vault:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS-Vault/`
-- Synced with ThinkPad via Syncthing (5 folders)
+- **Code (ThinkPad):** `/home/thinkpad/Data/20_Projects/20.34_LAYERS/`
+- **Code (Mac):** `~/Data/20_Projects/20.34_LAYERS/`
+- **Vault:** `~/Data/20_Projects/20.34_LAYERS-Vault/`
+- Synced via Syncthing (5 folders)

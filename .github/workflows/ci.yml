@@ -118,6 +118,26 @@ jobs:
       - name: Check ownership
         run: bash .github/scripts/ownership-check.sh
 
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd services/ai
+          pip install -r requirements.txt
+          pip install pytest httpx2 Pillow python-multipart
+      - name: Run Python tests
+        run: |
+          cd services/ai
+          python -m pytest tests/ -v
+        env:
+          LAYERS_AI_TOKEN: dev-token
+
   golden-image:
     runs-on: ubuntu-latest
     steps:

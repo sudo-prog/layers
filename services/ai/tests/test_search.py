@@ -313,7 +313,7 @@ class TestEndpoints:
 
     def test_search_endpoint_200(self, base_feature_vector: FeatureVector):
         """POST /v1/stacks/search returns 200 with candidates list."""
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
         response = client.post(
             "/v1/stacks/search",
             json={
@@ -330,7 +330,7 @@ class TestEndpoints:
 
     def test_optimize_endpoint_200(self, base_feature_vector: FeatureVector):
         """POST /v1/stacks/optimize returns 200 with optimized_stack and score."""
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
         stack = [
             _make_layer("color_warm_core", {"rgb": [220, 80, 40]}),
             _make_layer("tone_balanced_core", {"mean": 120.0, "std": 50.0}),
@@ -352,7 +352,7 @@ class TestEndpoints:
 
     def test_prune_endpoint_200(self, base_feature_vector: FeatureVector):
         """POST /v1/stacks/prune returns 200 with report containing layers_removed_pct."""
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
         stack = [
             _make_layer("color_warm_core", {"rgb": [220, 80, 40]}),
             _make_layer("tone_balanced_core", {"mean": 120.0, "std": 50.0}),

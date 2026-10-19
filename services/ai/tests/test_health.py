@@ -7,7 +7,7 @@ from app.main import app
 
 def test_health_returns_ok() -> None:
     """GET /v1/health should return 200 with status='ok'."""
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.get("/v1/health")
     assert response.status_code == 200
     data = response.json()
@@ -16,7 +16,7 @@ def test_health_returns_ok() -> None:
 
 def test_health_returns_model() -> None:
     """GET /v1/health should include a model field."""
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer dev-token"})
     response = client.get("/v1/health")
     assert response.status_code == 200
     data = response.json()

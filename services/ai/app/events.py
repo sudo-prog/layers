@@ -32,9 +32,8 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data", "events")
 EVENTS_FILE_NAME = "events.jsonl"
 
 # Application-level salt for user-id anonymisation.
-# In a production deployment this would be sourced from a secrets manager;
-# for v1 it is a fixed value stored alongside the codebase.
-_ANON_SALT: str = "layers-anon-v1"
+# Sourced from the LAYERS_ANON_SALT env var; falls back to a dev default.
+_ANON_SALT: str = os.environ.get("LAYERS_ANON_SALT", "layers-anon-v1-dev")
 
 # Canonical set of permitted event types.
 VALID_EVENT_TYPES: tuple[str, ...] = (

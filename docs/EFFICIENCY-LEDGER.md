@@ -184,13 +184,65 @@ inspector params change the rendered pixels (and restoring defaults
 reproduces the baseline hash exactly), the empty stack blits the colourful
 source, and the presets panel renders its empty state.
 
-## Open items
+## Stage 2.2/2.3/2.4 completion (2026-10-14)
+
+| Item | Status |
+|---|---|
+| Shader compile cache (FE) | ✅ `packages/engine/src/shader-compile-cache.ts` — FNV-1a hash → base64 binary in localStorage |
+| Adaptive quality (FE) | ✅ `packages/engine/src/adaptive-quality.ts` — EMA-smoothed FPS, 1.0x → 0.75x → 0.5x |
+| Real thumbnails (FE) | ✅ `apps/web/src/thumbnailRenderer.ts` — 128×128 previews via engine+cores pipeline |
+| Security review (BE) | ✅ `docs/security-review.md` — 7 findings, 3 fixed (CSP, auth, token) |
+| Privacy review (BE) | ✅ `docs/privacy-review.md` — data-flow diagrams, consent model verified |
+| CSP headers | ✅ index.html meta + vite.config.ts server.headers |
+| AI service auth | ✅ Bearer token middleware (skips /v1/health) |
+| Rate limiting | ✅ 60 req/min per IP for compute-heavy endpoints |
+| Upload validation | ✅ MIME type + 50MB size limit |
+| Immich browser guard | ✅ Server-side only (throws in browser) |
+| Anonymization salt | ✅ Env-sourced (LAYERS_ANON_SALT) |
+| aiClient auth | ✅ setAiToken + buildHeaders |
+| Classical fallback (BE) | ✅ `services/ai/app/classical_fallback.py` — rule-based hypotheses |
+| Launch checklist (MGR) | ✅ `docs/launch-checklist.md` |
+| Rollback drill (MGR) | ✅ `scripts/rollback-drill.sh` |
+| Docs site (MGR) | ✅ `docs/site/index.md` |
+
+**Build:** 8/8 tasks · **Tests:** 17/17 turbo tasks, 155/155 JS unit tests + 42 engine tests
+
+## Cross-core composition tests (2026-10-15)
+
+| Item | Status |
+|---|---|
+| All 7 cores compile pairwise without conflicts | ✅ 49 pairs tested |
+| Each core has a unique fragment shader | ✅ 7/7 unique |
+| 7-core stack compiles on shared GL context | ✅ |
+| Disabling a core does not affect others | ✅ |
+| Param changes do not cross-contaminate | ✅ |
+| Uniform naming convention (uTexture/uOpacity/uResolution) | ✅ 7/7 |
+| Pass count for full 7-core stack | ✅ 11 passes (2+2+1+1+2+1+2) |
+
+## Bundle size audit (2026-10-15)
+
+| Component | Gzipped | Gate | Status |
+|---|---|---|---|
+| Engine + 7 cores | 26.8 KB | ≤ 150 KB | ✅ |
+| Web app JS | 84.1 KB | — | ✅ |
+| Web app CSS | 4.9 KB | — | ✅ |
+| Web app total (JS+CSS) | 89.0 KB | ≤ 250 KB mobile | ✅ |
+
+## Open items (2026-10-19)
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually
   distinct (`tests/golden-infra/scripts/cores-looks.js`, wired into CI).
 - Per-core `ms/frame` in isolation (the table above reports engine-level
   configs; core-level attribution is not yet measured).
 - `tests/visual/` and `tests/perf/` harnesses.
-- Cross-core composition tests (stacks of >1 core together).
 - Real-hardware perf gate (reference phone, 8 passes @ 1536px ≥ 30 fps).
-- **Stage 0.6:** Mobile PWA (Workbox, manifest, offline cache, preset grid).
+- Device matrix (3 phones, iPad, 3 laptops) — needs real hardware.
+- 60-min soak test — needs real hardware.
+- WebGPU parity tests — detection + context done, full renderer pending.
+- axe-core automated a11y run — blocked by no-new-deps constraint.
+- **Security review:** All 7 findings fixed (verified 2026-10-19). See `docs/security-review.md`.
+- **Privacy review:** All Medium findings resolved (verified 2026-10-19). See `docs/privacy-review.md`.
+- **Launch checklist:** Updated 2026-10-19 with actual status. See `docs/launch-checklist.md`.
+- **Documentation:** User guide + troubleshooting guide written.
+- **Rollback drill:** Script exists (`scripts/rollback-drill.sh`), not yet rehearsed.
+- **Beta cohort:** Deferred — private personal use until out of beta.
