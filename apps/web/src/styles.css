@@ -132,6 +132,15 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* Wrap the row as a unit when space runs out — never break a label. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Toolbar buttons keep their natural width; the row wraps instead of the
+   buttons shrinking until their labels break. */
+.toolbar-actions .btn {
+  flex: 0 0 auto;
 }
 
 .divider {
@@ -149,13 +158,93 @@ body {
    color: var(--text-primary);
    font-size: var(--text-sm-size);
    cursor: pointer;
-   transition: all var(--duration-fast) var(--duration-fast-easing);
+   transition: background var(--duration-fast) var(--duration-fast-easing),
+               border-color var(--duration-fast) var(--duration-fast-easing),
+               color var(--duration-fast) var(--duration-fast-easing);
+   /* Labels stay intact on one line; the toolbar row wraps as a whole rather
+      than breaking words. Mobile hides labels entirely (icon-only). */
    white-space: nowrap;
+   text-align: center;
+   line-height: 1.25;
    min-height: 44px;
    min-width: 44px;
    display: inline-flex;
    align-items: center;
    justify-content: center;
+   gap: var(--space-2);
+}
+
+/* Icon + label composite inside a button */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.btn-label {
+  min-width: 0;
+}
+
+/* ── Toolbar overflow ─────────────────────────────────────────────────────
+   Icon-only is the default (see app-ui-density: "icons over text" for toolbar
+   controls). 15 icon buttons need ~880px, so above 900px every action sits
+   inline; below that the secondary actions move into the "More" sheet
+   (see toolbar.ts) rather than being clipped or scrolled off-screen.
+   Text labels appear only on very wide viewports. */
+.btn-more {
+  display: none;
+}
+
+/* Icon-only below 1800px: labels are visually hidden, aria-label + title carry
+   the name. 15 icon buttons fit ~880px; labelled ones need ~1780px. */
+@media (max-width: 1799px) {
+  .toolbar-actions .btn .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (min-width: 1800px) {
+  .btn-more {
+    display: none;
+  }
+
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 999px) {
+  .btn-more {
+    display: inline-flex;
+  }
+
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: none;
+  }
+}
+
+/* Divider inside the toolbar-actions row */
+.toolbar-actions > .divider {
+  flex: 0 0 auto;
 }
 
 .btn:hover:not(:disabled) {
@@ -1991,8 +2080,20 @@ body {
   }
 
   .mobile-tabbar-icon {
-    font-size: 20px;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+  }
+
+  .mobile-tabbar-icon .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .mobile-tabbar-label {
+    font-size: 10px;
+    line-height: 1.1;
   }
 
   /* Workspace becomes relative for panel overlays */
@@ -2079,5 +2180,130 @@ body {
     font-size: var(--text-base-size);
   }
 
-  /* Preset panel already handles mobile via its own media query */
+  /* ── Toolbar: icon-only primaries + a "More" sheet ──────────────────────
+     A text toolbar cannot fit 15 controls in ~390px. Primary actions become
+     icon-only; secondary actions move into the bottom sheet (see toolbar.ts).
+     No horizontal scrolling — every control is reachable. */
+  .toolbar {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .toolbar-actions {
+    overflow: visible;
+    gap: var(--space-1);
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  /* Icon-only: the label is visually hidden but stays in the a11y tree via
+     the button's aria-label. (Also handled by the 900px rule above.) */
+  .toolbar-actions .btn {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-actions .btn .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Secondary actions live in the sheet, not the bar */
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: none;
+  }
+
+  .btn-more {
+    display: inline-flex;
+  }
+
+  .preset-panel {
+    bottom: 0;
+  }
+}
+
+/* ── Mobile overflow sheet ─────────────────────────────────────────────── */
+.more-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--duration-fast-easing);
+  z-index: 200;
+}
+
+.more-sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.more-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 201;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--sab));
+  transform: translateY(100%);
+  transition: transform var(--duration-normal) var(--duration-normal-easing);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
+  /* The grid can exceed the viewport on short screens — scroll instead of
+     clipping the last row. */
+  max-height: 72dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.more-sheet.open {
+  transform: translateY(0);
+}
+
+.more-sheet-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xs-size);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.more-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.more-sheet-grid .btn {
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 72px;
+  padding: var(--space-2);
+  border-radius: 10px;
+  font-size: var(--text-xs-size);
+}
+
+.more-sheet-grid .btn .icon {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 400px) {
+  .more-sheet-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-sheet,
+  .more-sheet-backdrop,
+  .panel {
+    transition: none;
+  }
 }

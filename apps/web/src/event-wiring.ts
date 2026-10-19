@@ -81,6 +81,7 @@ import {
   openLibraryPanel,
   importPhotoFromCamera,
 } from "./main";
+import { createToolbarButton, initToolbarOverflow } from "./toolbar";
 
 export function initMaskBrush(): void {
   // Sync mask canvas size with GL canvas
@@ -293,15 +294,27 @@ export function initStage06(): void {
   const toolbarActions = document.querySelector(".toolbar-actions");
   if (!toolbarActions) return;
 
-  // Find the theme button to insert before it (keeps the existing layout).
-  const btnThemeEl = document.getElementById("btn-theme");
+  // Secondary actions are inserted before the divider that precedes the theme
+  // button, keeping the desktop order: … Vector Save Clear | Theme.
+  const dividerBeforeTheme = document.querySelectorAll<HTMLElement>(".toolbar-actions > .divider");
+  const anchor = dividerBeforeTheme[dividerBeforeTheme.length - 1] ?? null;
 
-  // ── Review toolbar button ──────────────────────────────────────────────
-  const btnReview = document.createElement("button");
-  btnReview.className = "btn";
-  btnReview.id = "btn-review";
-  btnReview.textContent = "📋 Review";
-  btnReview.title = "Review source vs reconstruction";
+  const insert = (btn: HTMLElement) => {
+    if (anchor && anchor.parentNode === toolbarActions) {
+      toolbarActions.insertBefore(btn, anchor);
+    } else {
+      toolbarActions.appendChild(btn);
+    }
+  };
+
+  // ── Review ─────────────────────────────────────────────────────────────
+  const btnReview = createToolbarButton({
+    id: "btn-review",
+    icon: "review",
+    label: "Review",
+    title: "Review source vs reconstruction",
+    secondary: true,
+  });
   btnReview.addEventListener("click", () => {
     const existing = document.getElementById("review-overlay");
     if (existing) {
@@ -311,27 +324,28 @@ export function initStage06(): void {
     const mount = document.createElement("div");
     mount.id = "review-overlay-mount";
     document.body.appendChild(mount);
-    const handle = mountReviewScreen(mount, {
+    mountReviewScreen(mount, {
       getCurrentStack: () => state.stack,
       getRenderer: () => state.renderer,
       getSourceCanvas: () => state.sourceCanvas,
       getCanvas: () => canvas,
       onAction: (action) => {
         if (action === "close") {
-          const existing = document.getElementById("review-overlay");
-          if (existing) existing.remove();
+          document.getElementById("review-overlay")?.remove();
         }
       },
     });
   });
-  toolbarActions.insertBefore(btnReview, btnThemeEl);
+  insert(btnReview);
 
-  // ── Compare toolbar button ─────────────────────────────────────────────
-  const btnCompare = document.createElement("button");
-  btnCompare.className = "btn";
-  btnCompare.id = "btn-compare";
-  btnCompare.textContent = "⚖ Compare";
-  btnCompare.title = "Compare source vs reconstruction";
+  // ── Compare ────────────────────────────────────────────────────────────
+  const btnCompare = createToolbarButton({
+    id: "btn-compare",
+    icon: "compare",
+    label: "Compare",
+    title: "Compare source vs reconstruction",
+    secondary: true,
+  });
   btnCompare.addEventListener("click", () => {
     const existing = document.getElementById("compare-overlay");
     if (existing) {
@@ -341,7 +355,7 @@ export function initStage06(): void {
     const mount = document.createElement("div");
     mount.id = "compare-overlay-mount";
     document.body.appendChild(mount);
-    const handle = mountComparisonTools(mount, {
+    mountComparisonTools(mount, {
       getCurrentStack: () => state.stack,
       getRenderer: () => state.renderer,
       getSourceCanvas: () => state.sourceCanvas,
@@ -369,19 +383,20 @@ export function initStage06(): void {
       },
       onAction: (action) => {
         if (action === "close") {
-          const existing = document.getElementById("compare-overlay");
-          if (existing) existing.remove();
+          document.getElementById("compare-overlay")?.remove();
         }
       },
     });
   });
-  toolbarActions.insertBefore(btnCompare, btnThemeEl);
+  insert(btnCompare);
 
-  // ── Presets toolbar button ─────────────────────────────────────────────
-  const btnPresets = document.createElement("button");
-  btnPresets.className = "btn";
-  btnPresets.textContent = "★ Presets";
-  btnPresets.title = "Browse and apply saved presets";
+  // ── Presets ────────────────────────────────────────────────────────────
+  const btnPresets = createToolbarButton({
+    icon: "presets",
+    label: "Presets",
+    title: "Browse and apply saved presets",
+    secondary: true,
+  });
   btnPresets.addEventListener("click", () => {
     const existing = document.getElementById("preset-panel");
     if (existing) {
@@ -390,13 +405,15 @@ export function initStage06(): void {
     }
     openPresetPanel();
   });
-  toolbarActions.insertBefore(btnPresets, btnThemeEl);
+  insert(btnPresets);
 
-  // ── Library toolbar button (Stage 2.2) ────────────────────────────────
-  const btnLibrary = document.createElement("button");
-  btnLibrary.className = "btn";
-  btnLibrary.textContent = "📚 Library";
-  btnLibrary.title = "Search, share and manage presets";
+  // ── Library (Stage 2.2) ────────────────────────────────────────────────
+  const btnLibrary = createToolbarButton({
+    icon: "library",
+    label: "Library",
+    title: "Search, share and manage presets",
+    secondary: true,
+  });
   btnLibrary.addEventListener("click", () => {
     const existing = document.getElementById("library-overlay-mount");
     if (existing) {
@@ -405,24 +422,28 @@ export function initStage06(): void {
     }
     openLibraryPanel();
   });
-  toolbarActions.insertBefore(btnLibrary, btnThemeEl);
+  insert(btnLibrary);
 
-  // ── Import Photo toolbar button ────────────────────────────────────────
-  const btnImportPhoto = document.createElement("button");
-  btnImportPhoto.className = "btn";
-  btnImportPhoto.textContent = "📷 Photo";
-  btnImportPhoto.title = "Import a photo from your camera or library";
+  // ── Import Photo ───────────────────────────────────────────────────────
+  const btnImportPhoto = createToolbarButton({
+    icon: "photo",
+    label: "Photo",
+    title: "Import a photo from your camera or library",
+    secondary: true,
+  });
   btnImportPhoto.addEventListener("click", () => {
     void importPhotoFromCamera();
   });
-  toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
+  insert(btnImportPhoto);
 
-  // ── Learning toolbar button ────────────────────────────────────────────
-  const btnLearn = document.createElement("button");
-  btnLearn.className = "btn";
-  btnLearn.id = "btn-learn";
-  btnLearn.textContent = "📊 Learning";
-  btnLearn.title = "Open learning panel";
+  // ── Learning ───────────────────────────────────────────────────────────
+  const btnLearn = createToolbarButton({
+    id: "btn-learn",
+    icon: "learning",
+    label: "Learning",
+    title: "Open learning panel",
+    secondary: true,
+  });
   btnLearn.addEventListener("click", () => {
     const existing = document.getElementById("learning-overlay");
     if (existing) {
@@ -432,25 +453,19 @@ export function initStage06(): void {
     const mount = document.createElement("div");
     mount.id = "learning-overlay-mount";
     document.body.appendChild(mount);
-    const handle = mountLearningPanel(mount, {
-      getFeatureVector: () => {
-        // Try to get features from AI panel if available
-        const aiPanelMount = document.getElementById("ai-panel-mount");
-        if (aiPanelMount && aiPanelMount.firstChild) {
-          // This is a simplified approach - in a real app we'd have better state sharing
-          return null;
-        }
-        return null;
-      },
+    mountLearningPanel(mount, {
+      getFeatureVector: () => null,
     });
   });
-  toolbarActions.insertBefore(btnLearn, btnThemeEl);
+  insert(btnLearn);
 
-  // ── AI toolbar button ──────────────────────────────────────────────────
-  const btnAI = document.createElement("button");
-  btnAI.className = "btn";
-  btnAI.textContent = "🤖 AI";
-  btnAI.title = "AI Assistant — extract features, search/optimize/prune stacks";
+  // ── AI ─────────────────────────────────────────────────────────────────
+  const btnAI = createToolbarButton({
+    icon: "ai",
+    label: "AI",
+    title: "AI Assistant — extract features, search/optimize/prune stacks",
+    secondary: true,
+  });
   btnAI.addEventListener("click", () => {
     const existing = document.getElementById("ai-panel-mount");
     if (existing) {
@@ -477,7 +492,10 @@ export function initStage06(): void {
     });
     void handle.refreshHealth();
   });
-  toolbarActions.insertBefore(btnAI, btnThemeEl);
+  insert(btnAI);
+
+  // Now that every secondary button exists, place them for the current viewport.
+  initToolbarOverflow();
 }
 
 export function wireToolbarButtons(): void {

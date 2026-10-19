@@ -73,6 +73,7 @@ import {
   wireOverlayDismissal,
 } from "./event-wiring";
 import { initMobileNav } from "./mobile-nav";
+import { decorateTabBar, setButtonContent } from "./toolbar";
 import { renderFrame, startLoop, setFrameHook } from "./animation-loop";
 import {
   initDebugSession,
@@ -693,7 +694,12 @@ export function rebuildInspector(): void {
 export function toggleTheme(): void {
   state.theme = state.theme === "light" ? "dark" : "light";
   applyTheme(state.theme);
-  btnTheme.textContent = state.theme === "light" ? "🌙 Dark" : "☀️ Light";
+  setButtonContent(
+    btnTheme,
+    state.theme === "light" ? "theme" : "theme",
+    state.theme === "light" ? "Dark" : "Light",
+  );
+  btnTheme.title = state.theme === "light" ? "Switch to dark theme" : "Switch to light theme";
 }
 
 // ── Mask brush ─────────────────────────────────────────────────────────────
@@ -988,6 +994,7 @@ async function init(): Promise<void> {
    initVectorEditor();
    initHelpOverlay();
    initStage06();
+   decorateTabBar();
    initMobileNav();
 
    // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
