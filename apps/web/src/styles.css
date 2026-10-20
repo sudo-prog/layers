@@ -289,7 +289,9 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--text-primary);
+  /* Dark grey on light, light grey on dark — --text-secondary resolves to
+     #555555 / #aaaaaa, so the dot never goes pure black or pure white. */
+  background: var(--text-secondary);
   transform: translateY(-50%);
   transition: left var(--duration-normal) var(--duration-normal-easing),
               background var(--duration-fast) var(--duration-fast-easing);
