@@ -19,6 +19,13 @@
     <header class="toolbar">
       <h1 class="logo">LAYERS</h1>
       <div class="toolbar-actions">
+        <!-- Light/dark switch: leftmost in the actions group, styled like the
+             other buttons -->
+        <button id="btn-theme" class="theme-switch" role="switch" aria-checked="false" aria-label="Dark theme" title="Toggle dark theme">
+          <span class="theme-switch-knob" aria-hidden="true"></span>
+        </button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+
         <!-- Primary actions: always visible, icon-only below 768px -->
         <button id="btn-undo" class="btn" data-icon="undo" title="Undo (Ctrl+Z)" disabled aria-label="Undo"></button>
         <button id="btn-redo" class="btn" data-icon="redo" title="Redo (Ctrl+Y)" disabled aria-label="Redo"></button>
@@ -31,12 +38,6 @@
         <button id="btn-clear" class="btn btn-secondary" data-icon="clear" title="Clear IndexedDB" aria-label="Clear saved state"></button>
         <!-- Mobile-only overflow trigger -->
         <button id="btn-more" class="btn btn-more" data-icon="more" title="More actions" aria-label="More actions" aria-expanded="false" aria-controls="more-sheet"></button>
-
-        <!-- Light/dark switch: always visible, far right -->
-        <span class="toolbar-sep" aria-hidden="true"></span>
-        <button id="btn-theme" class="theme-switch" role="switch" aria-checked="false" aria-label="Dark theme" title="Toggle dark theme">
-          <span class="theme-switch-knob" aria-hidden="true"></span>
-        </button>
       </div>
     </header>
 

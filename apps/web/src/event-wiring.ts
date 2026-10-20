@@ -295,7 +295,7 @@ export function initStage06(): void {
   if (!toolbarActions) return;
 
   // Secondary actions are inserted before the "More" trigger, keeping the order:
-  // Undo Redo · Export … AI · More · Theme-switch.
+  // Theme-switch · Undo Redo · Export … AI · More.
   const anchor = document.getElementById("btn-more");
 
   const insert = (btn: HTMLElement) => {

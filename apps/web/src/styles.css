@@ -258,17 +258,18 @@ body {
 }
 
 /* ── Light/dark switch ────────────────────────────────────────────────────
-   Capsule track ~2:1, knob = track height so it overlaps the border slightly.
-   Inverts with the theme: light = white track + dark knob on the left;
-   dark = dark track + white knob on the right. */
+   Smaller than the icon buttons (44x26 vs 44x44) and using the same surface
+   treatment as them, so it reads as part of the toolbar group. The knob sits on
+   the track; track/knob colours invert with the theme. */
 .theme-switch {
   position: relative;
   flex: 0 0 auto;
-  width: 52px;
-  height: 28px;
+  width: 40px;
+  height: 22px;
   padding: 0;
-  border: 1.5px solid var(--text-primary);
+  border: 1px solid var(--border);
   border-radius: 999px;
+  /* Same surface tokens as .btn so it reads as part of the toolbar group. */
   background: var(--bg-primary);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -277,12 +278,16 @@ body {
               border-color var(--duration-fast) var(--duration-fast-easing);
 }
 
+.theme-switch:hover {
+  border-color: var(--accent);
+}
+
 .theme-switch-knob {
   position: absolute;
   top: 50%;
-  left: -1.5px;
-  width: 28px;
-  height: 28px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--text-primary);
   transform: translateY(-50%);
@@ -291,7 +296,7 @@ body {
 }
 
 [data-theme="dark"] .theme-switch-knob {
-  left: calc(100% - 28px + 1.5px);
+  left: calc(100% - 16px - 3px);
 }
 
 /* Touch devices get a 44px-tall hit area without enlarging the visual switch. */
