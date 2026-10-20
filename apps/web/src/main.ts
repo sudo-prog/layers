@@ -73,7 +73,7 @@ import {
   wireOverlayDismissal,
 } from "./event-wiring";
 import { initMobileNav } from "./mobile-nav";
-import { decorateTabBar, setButtonContent } from "./toolbar";
+import { decorateTabBar } from "./toolbar";
 import { renderFrame, startLoop, setFrameHook } from "./animation-loop";
 import {
   initDebugSession,
@@ -694,12 +694,21 @@ export function rebuildInspector(): void {
 export function toggleTheme(): void {
   state.theme = state.theme === "light" ? "dark" : "light";
   applyTheme(state.theme);
-  setButtonContent(
-    btnTheme,
-    state.theme === "light" ? "theme" : "theme",
-    state.theme === "light" ? "Dark" : "Light",
-  );
-  btnTheme.title = state.theme === "light" ? "Switch to dark theme" : "Switch to light theme";
+  syncThemeSwitch();
+}
+
+/**
+ * Reflect the current theme on the light/dark switch.
+ *
+ * The switch is a `role="switch"` button: `aria-checked` carries the state for
+ * assistive tech, and the knob position is driven purely by the `data-theme`
+ * attribute on <html>, so CSS and ARIA can never disagree.
+ */
+export function syncThemeSwitch(): void {
+  const on = state.theme === "dark";
+  btnTheme.setAttribute("aria-checked", on ? "true" : "false");
+  btnTheme.setAttribute("aria-label", on ? "Light theme" : "Dark theme");
+  btnTheme.title = on ? "Switch to light theme" : "Switch to dark theme";
 }
 
 // ── Mask brush ─────────────────────────────────────────────────────────────
@@ -996,6 +1005,10 @@ async function init(): Promise<void> {
    initStage06();
    decorateTabBar();
    initMobileNav();
+
+   // Reflect the restored theme on the switch (the theme itself is applied by
+   // applyTheme, which sets data-theme on <html>).
+   syncThemeSwitch();
 
    // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
    // the store is initialised so the id can be resolved.

@@ -29,11 +29,14 @@
         <button id="btn-vector" class="btn btn-secondary" data-icon="vector" title="Vector Editor" aria-label="Vector editor"></button>
         <button id="btn-save" class="btn btn-secondary" data-icon="save" title="Save to IndexedDB" aria-label="Save"></button>
         <button id="btn-clear" class="btn btn-secondary" data-icon="clear" title="Clear IndexedDB" aria-label="Clear saved state"></button>
-        <span class="divider btn-secondary"></span>
-        <button id="btn-theme" class="btn btn-secondary" data-icon="theme" title="Toggle theme" aria-label="Toggle theme"></button>
-
         <!-- Mobile-only overflow trigger -->
         <button id="btn-more" class="btn btn-more" data-icon="more" title="More actions" aria-label="More actions" aria-expanded="false" aria-controls="more-sheet"></button>
+
+        <!-- Light/dark switch: always visible, far right -->
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="btn-theme" class="theme-switch" role="switch" aria-checked="false" aria-label="Dark theme" title="Toggle dark theme">
+          <span class="theme-switch-knob" aria-hidden="true"></span>
+        </button>
       </div>
     </header>
 

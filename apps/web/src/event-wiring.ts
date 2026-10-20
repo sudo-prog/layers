@@ -294,10 +294,9 @@ export function initStage06(): void {
   const toolbarActions = document.querySelector(".toolbar-actions");
   if (!toolbarActions) return;
 
-  // Secondary actions are inserted before the divider that precedes the theme
-  // button, keeping the desktop order: … Vector Save Clear | Theme.
-  const dividerBeforeTheme = document.querySelectorAll<HTMLElement>(".toolbar-actions > .divider");
-  const anchor = dividerBeforeTheme[dividerBeforeTheme.length - 1] ?? null;
+  // Secondary actions are inserted before the "More" trigger, keeping the order:
+  // Undo Redo · Export … AI · More · Theme-switch.
+  const anchor = document.getElementById("btn-more");
 
   const insert = (btn: HTMLElement) => {
     if (anchor && anchor.parentNode === toolbarActions) {

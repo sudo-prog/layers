@@ -29,7 +29,6 @@ const PATHS: Record<string, string> = {
   learning:
     '<path d="M5 20v-6"/><path d="M12 20V4"/><path d="M19 20v-9"/><path d="M3 20h18"/>',
   ai: '<path d="M11 4l1.6 4.4L17 10l-4.4 1.6L11 16l-1.6-4.4L5 10l4.4-1.6z"/><path d="M18 15l.9 2.1 2.1.9-2.1.9L18 21l-.9-2.1-2.1-.9 2.1-.9z"/>',
-  theme: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   canvas:
     '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15.5 8 10l4 4 3.5-3.5L21 16"/>',
