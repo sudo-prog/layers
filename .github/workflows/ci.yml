@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     outputs:
       js: ${{ steps.diff.outputs.js }}
       python: ${{ steps.diff.outputs.python }}
@@ -113,7 +113,7 @@ jobs:
   lint-typecheck-test:
     needs: changes
     if: needs.changes.outputs.js == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -148,7 +148,7 @@ jobs:
   license-check:
     needs: changes
     if: needs.changes.outputs.licenses == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -199,7 +199,7 @@ jobs:
 
   # Cheap and always relevant — never gated.
   conflict-files:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Check for sync-conflict files
@@ -219,7 +219,7 @@ jobs:
 
   # Cheap and always relevant — never gated.
   ownership-check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -230,7 +230,7 @@ jobs:
   python-test:
     needs: changes
     if: needs.changes.outputs.python == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -252,7 +252,7 @@ jobs:
   golden-image:
     needs: changes
     if: needs.changes.outputs.golden == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -269,7 +269,7 @@ jobs:
         run: |
           cd tests/golden-infra
           pnpm install
-          npx playwright install chromium --with-deps
+          npx playwright install chromium
       - name: Run golden-image tests (legacy fixtures)
         run: |
           cd tests/golden-infra
