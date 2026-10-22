@@ -1,0 +1,261 @@
+[
+ {
+  "file": "shaders.com__demo-avatar.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__demo-avatar.jpg",
+  "dims": "80x80",
+  "bytes": 1565,
+  "what": "User avatar sample (80x80)"
+ },
+ {
+  "file": "shaders.com__design-editor-full-ui.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__design-editor-full-ui.jpg",
+  "dims": "2720x1444",
+  "bytes": 127968,
+  "what": "The design editor, full UI \u2014 the primary reference image (2720x1444)"
+ },
+ {
+  "file": "shaders.com__home__feature-canvas.webp",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__home__feature-canvas.webp",
+  "dims": "1121x732",
+  "bytes": 33220,
+  "what": "Homepage: infinite canvas feature (1121x732)"
+ },
+ {
+  "file": "shaders.com__home__feature-components.webp",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__home__feature-components.webp",
+  "dims": "1288x794",
+  "bytes": 53726,
+  "what": "Homepage: component stacking feature (1288x794)"
+ },
+ {
+  "file": "shaders.com__home__feature-interactive.webp",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__home__feature-interactive.webp",
+  "dims": "1113x717",
+  "bytes": 49788,
+  "what": "Homepage: interactivity feature (1113x717)"
+ },
+ {
+  "file": "shaders.com__icon.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__icon.png",
+  "dims": "800x800",
+  "bytes": 107058,
+  "what": "App icon (800x800)"
+ },
+ {
+  "file": "shaders.com__logo.svg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__logo.svg",
+  "dims": "(unreadable)",
+  "bytes": 8458,
+  "what": "Logo (vector)"
+ },
+ {
+  "file": "shaders.com__mcp__background.webp",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__mcp__background.webp",
+  "dims": "2840x1362",
+  "bytes": 21566,
+  "what": "MCP docs: hero background (2840x1362)"
+ },
+ {
+  "file": "shaders.com__mcp__interactive.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__mcp__interactive.png",
+  "dims": "684x792",
+  "bytes": 13161,
+  "what": "MCP docs: interactive example (684x792)"
+ },
+ {
+  "file": "shaders.com__mcp__mockup.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__mcp__mockup.jpg",
+  "dims": "2840x1360",
+  "bytes": 127468,
+  "what": "MCP docs: landing page + Claude Code terminal (2840x1360)"
+ },
+ {
+  "file": "shaders.com__mcp__sdf.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__mcp__sdf.png",
+  "dims": "684x792",
+  "bytes": 12822,
+  "what": "MCP docs: SDF generation from SVG (684x792)"
+ },
+ {
+  "file": "shaders.com__mcp__search.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__mcp__search.png",
+  "dims": "722x722",
+  "bytes": 40737,
+  "what": "MCP docs: library search example (722x722)"
+ },
+ {
+  "file": "shaders.com__og-image.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__og-image.jpg",
+  "dims": "3414x1708",
+  "bytes": 671367,
+  "what": "Site og:image \u2014 3414x1708"
+ },
+ {
+  "file": "shaders.com__pro__hero-phone.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__pro__hero-phone.jpg",
+  "dims": "1200x674",
+  "bytes": 34395,
+  "what": "Pro page: phone mockup (1200x674)"
+ },
+ {
+  "file": "shaders.com__product__hero-mobile.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__product__hero-mobile.jpg",
+  "dims": "1620x861",
+  "bytes": 81456,
+  "what": "Product page: mobile hero (1620x861)"
+ },
+ {
+  "file": "shaders.com__sections__docket-hero.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__docket-hero.jpg",
+  "dims": "1280x820",
+  "bytes": 69752,
+  "what": "Pro Sections: Docket hero (1280x820)"
+ },
+ {
+  "file": "shaders.com__sections__glitch-rays-hero.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__glitch-rays-hero.jpg",
+  "dims": "1280x800",
+  "bytes": 47905,
+  "what": "Pro Sections: Glitch Rays hero (1280x800)"
+ },
+ {
+  "file": "shaders.com__sections__grid-shift-hero.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__grid-shift-hero.jpg",
+  "dims": "1280x780",
+  "bytes": 167857,
+  "what": "Pro Sections: Grid Shift hero (1280x780)"
+ },
+ {
+  "file": "shaders.com__sections__irradiance-logo-hero.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__irradiance-logo-hero.jpg",
+  "dims": "1280x800",
+  "bytes": 72225,
+  "what": "Pro Sections: Irradiance Logo hero (1280x800)"
+ },
+ {
+  "file": "shaders.com__sections__launch-teaser.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__launch-teaser.jpg",
+  "dims": "1280x760",
+  "bytes": 51886,
+  "what": "Pro Sections: Launch Teaser (1280x760)"
+ },
+ {
+  "file": "shaders.com__sections__polyhedron-footer.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__polyhedron-footer.jpg",
+  "dims": "1280x900",
+  "bytes": 72460,
+  "what": "Pro Sections: Polyhedron Footer (1280x900)"
+ },
+ {
+  "file": "shaders.com__sections__voxel-logo-cta.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__sections__voxel-logo-cta.jpg",
+  "dims": "1280x760",
+  "bytes": 186477,
+  "what": "Pro Sections: Voxel Logo CTA (1280x760)"
+ },
+ {
+  "file": "shaders.com__testimonial__hugo.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__testimonial__hugo.jpg",
+  "dims": "460x460",
+  "bytes": 8873,
+  "what": "Testimonial: Hugo Richard (460x460)"
+ },
+ {
+  "file": "shaders.com__testimonial__serko.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__testimonial__serko.jpg",
+  "dims": "400x400",
+  "bytes": 23604,
+  "what": "Testimonial: SerKo (400x400)"
+ },
+ {
+  "file": "shaders.com__testimonial__wesbos.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__testimonial__wesbos.jpg",
+  "dims": "400x400",
+  "bytes": 29818,
+  "what": "Testimonial: Wes Bos (400x400)"
+ },
+ {
+  "file": "shaders.com__updates-cli__cli-hero.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-cli__cli-hero.png",
+  "dims": "2478x1556",
+  "bytes": 678209,
+  "what": "Sep 28 announcement: Introducing the Shaders CLI (2478x1556)"
+ },
+ {
+  "file": "shaders.com__updates-cli__cli-install.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-cli__cli-install.jpg",
+  "dims": "1920x1080",
+  "bytes": 128376,
+  "what": "CLI announcement: npx shaders install in a terminal (1920x1080)"
+ },
+ {
+  "file": "shaders.com__updates-cli__cli-open.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-cli__cli-open.jpg",
+  "dims": "1920x1080",
+  "bytes": 96630,
+  "what": "CLI announcement: npx shaders open in the editor (1920x1080)"
+ },
+ {
+  "file": "shaders.com__updates-oss__open-source.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-oss__open-source.png",
+  "dims": "1522x855",
+  "bytes": 2359773,
+  "what": "Oct 6 announcement: Shaders goes open source (1522x855, 2.3MB)"
+ },
+ {
+  "file": "shaders.com__updates-sections__sections.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-sections__sections.png",
+  "dims": "1920x1440",
+  "bytes": 2754692,
+  "what": "Jul 20 announcement: Introducing Sections (1920x1440, 2.7MB)"
+ },
+ {
+  "file": "shaders.com__updates-v3__design-editor.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-v3__design-editor.jpg",
+  "dims": "2720x1444",
+  "bytes": 127968,
+  "what": "v3 announcement: 'Meet your new design canvas' (2720x1444)"
+ },
+ {
+  "file": "shaders.com__updates-v3__shape-effects.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-v3__shape-effects.jpg",
+  "dims": "1920x1080",
+  "bytes": 198995,
+  "what": "v3 announcement: 3D shape effects and text layers (1920x1080)"
+ },
+ {
+  "file": "shaders.com__updates-v3__typegpu.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-v3__typegpu.jpg",
+  "dims": "1920x1080",
+  "bytes": 84319,
+  "what": "v3 announcement: TypeGPU render engine (1920x1080)"
+ },
+ {
+  "file": "shaders.com__updates-v3__v3-website.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/research-shots/shaders.com__updates-v3__v3-website.jpg",
+  "dims": "1920x1080",
+  "bytes": 115013,
+  "what": "v3 announcement: redesigned website and dashboard (1920x1080)"
+ },
+ {
+  "file": "designtools_shaders_og.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/blogshots/designtools_shaders_og.png",
+  "dims": "1200x630",
+  "bytes": 45918,
+  "what": "designtools.fyi review page og:image"
+ },
+ {
+  "file": "dudarik_shaders-mcp_og.jpg",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/blogshots/dudarik_shaders-mcp_og.jpg",
+  "dims": "1200x600",
+  "bytes": 37726,
+  "what": "dudarik.com MCP article og:image"
+ },
+ {
+  "file": "openreplay_shaders_hero.png",
+  "path": "/Users/AIR2K/.hermes/cache/scratch/layers-ui/blogshots/openreplay_shaders_hero.png",
+  "dims": "2400x1350",
+  "bytes": 746289,
+  "what": "openreplay.com WebGPU article hero (2400x1350)"
+ }
+]
