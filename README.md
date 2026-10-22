@@ -4,7 +4,23 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
-## Project Status (2026-10-15)
+> **⚠️ Course Correction (2026-10-19):** The original implementation was the "do more with less" mobile prototype — NOT the full desktop/iPad vision. The 7-core renderer is production-ready; document model, UI, and AI pipeline need rebuilding. See `docs/Course-Correction.md` (vault) for details.
+>
+> **✅ Desktop surface added (2026-10-21):** `apps/LAYERS_DESKTOP` is the full-canvas shader editor — a shader tree, a layer stack, a full-bleed canvas the panels glass over, and a props panel, with multiple shaders coexisting as frames. It reuses `packages/engine`, `packages/cores` and `packages/stack` unchanged; only the shell is new. Runs on `:3003`. See `apps/LAYERS_DESKTOP/README.md`.
+
+## Apps
+
+| App | Port | What it is |
+|--|--|--|
+| `apps/web` | 3000 | The mobile prototype — single stack, phone-first, PWA. |
+| `apps/LAYERS_DESKTOP` | 3003 | The desktop editor — shader tree, multi-shader canvas, props panel. |
+
+Both share the same engine, cores and stack model. The desktop app exists because
+the mobile shell is built around one stack and a bottom tab bar; the desktop
+surface is built around a layer tree and a full-canvas workspace.
+
+
+## Project Status (2026-10-19)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
@@ -19,8 +35,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 **Phase:** 2.1 (Smarter AI) — **COMPLETE** (classical fallback + learned ranker + simplification pass; 57 new Python tests)
 **Phase:** 2.2 (Sharing & library) — **COMPLETE** (PR #14 d4d44a7 + thumbnails with real rendered previews)
 **Phase:** 2.3 (Performance & reliability) — **PARTIAL** (shader compile cache + adaptive quality + WebGPU parity done; device matrix + soak test need real hardware)
-**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (security review done + 3 high/medium findings fixed; privacy review done; axe-core run pending — would add dep)
-**Phase:** 2.5 (Beta & v1.0 launch) — **PARTIAL** (launch checklist + rollback drill + docs site done; closed beta + staged rollout pending)
+**Phase:** 2.4 (Accessibility, security, compliance) — **PARTIAL** (security review done + all 7 findings fixed; privacy review done + all Medium findings resolved; axe-core run pending — would add dep)
+**Phase:** 2.5 (Beta & v1.0 launch) — **PARTIAL** (launch checklist + rollback drill script + docs site done; closed beta + staged rollout pending — private personal use until out of beta)
 
 ### Backend (BE)
 - T-BE-001: Private GitHub repos + protections ✅
@@ -82,7 +98,7 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 - Rate limiting: 60 req/min per IP for compute-heavy endpoints
 - Anonymization salt: env-sourced (LAYERS_ANON_SALT)
 
-### Tests
+### Tests (verified 2026-10-19)
 - **326/326 JS unit tests passing** (8 packages: web 155, schema 54, sync 46, engine 54, cores 40, stack 11, vector 11, ui 9)
 - **257/257 Python tests passing** (19 test files: classical fallback, ranker, simplification, events, retrieval, mock AI, search, extract, health, multiscale)
 - 3/3 golden-image fixtures passing (legacy)
@@ -102,15 +118,16 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 
 ### Deferred / open work (not claimed complete)
 - **Stage 2.3:** device lab matrix (3 phones, iPad, 3 laptops), 60-min soak test — need real hardware; WebGPU full renderer — detection + context done
-- **Stage 2.4:** axe-core automated a11y run (would add a dependency — brief forbade new deps)
+- **Stage 2.4:** axe-core automated a11y run (would add a dependency — brief forbade new deps); manual a11y audit pending
 - **Stage 2.2:** real device-to-device preset sync verification (needs Mac FE + phone)
-- **Stage 2.5:** closed beta (100 users), staged rollout, rollback drill execution — pending
+- **Stage 2.5:** closed beta (100 users), staged rollout, rollback drill execution — pending (private personal use until out of beta)
 
 ### Commits
-- 20+ commits on main (2026-10-07 → 2026-10-15)
+- 20+ commits on main (2026-10-07 → 2026-10-19)
 - Merged PRs: #9 (Stage 1.5), #10 (Stage 1.6), #12 (Stages 2.3/2.4), #14 (Stage 2.2)
 
 ### Project Location
-- **Code:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS/`
-- **Vault:** `/Users/AIR2K/Data/20_Projects/20.34_LAYERS-Vault/`
-- Synced with ThinkPad via Syncthing (5 folders)
+- **Code (ThinkPad):** `/home/thinkpad/Data/20_Projects/20.34_LAYERS/`
+- **Code (Mac):** `~/Data/20_Projects/20.34_LAYERS/`
+- **Vault:** `~/Data/20_Projects/20.34_LAYERS-Vault/`
+- Synced via Syncthing (5 folders)
