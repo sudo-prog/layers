@@ -98,6 +98,16 @@ export class BlurCore implements Pass {
     this._params = { ...this._params, ...params };
   }
 
+  /**
+   * Merge new params in without rebuilding the pass.
+   *
+   * The dynamic-prop driver resolves driven params to numbers once per frame
+   * and pushes them here, so a driven core is not re-instantiated every frame.
+   */
+  setParams(params: Partial<BlurParams>): void {
+    this._params = { ...this._params, ...params };
+  }
+
   getFragmentShader(): string {
     return BLUR_FRAGMENT;
   }

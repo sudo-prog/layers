@@ -24,3 +24,21 @@ export {
   AdaptiveQuality,
   type AdaptiveQualityOptions,
 } from "./adaptive-quality.js";
+export {
+  createDynamicDriver,
+  hasDynamicProps,
+  isDynamicProp,
+  applyCurve,
+  applyReach,
+  pingPong,
+  sawtooth,
+  ease,
+  clamp01,
+  lerp,
+  type DynamicProp,
+  type DynamicDriver,
+  type DriverInput,
+  type DriverStackItem,
+  type DriverOptions,
+  type EasingName,
+} from "./dynamic-driver.js";

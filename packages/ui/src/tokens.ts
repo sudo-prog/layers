@@ -30,20 +30,69 @@ export interface MotionToken {
 }
 
 // ── Color tokens ─────────────────────────────────────────────────────────────
+//
+// "Graphite" ramp: a cool, desaturated dark scale for the dark theme, with a
+// restrained studio blue accent. The light theme is the pre-existing neutral
+// scale, kept so the theme switch still means something.
+//
+// The dark values are tuned for a TRANSLUCENT panel: the panels are ~80% opaque
+// with a backdrop blur, so the effective backdrop is a blend of the panel fill
+// and whatever the canvas shows through. `graphite-*` values were chosen dark
+// enough that white text keeps >7:1 contrast even over a pure-white canvas at
+// that alpha (measured — see docs/design-graphite.md).
 
 export const colorTokens: ColorToken[] = [
-  { name: "bg-primary", light: "#ffffff", dark: "#0a0a0a" },
-  { name: "bg-secondary", light: "#f5f5f5", dark: "#141414" },
-  { name: "bg-tertiary", light: "#e8e8e8", dark: "#1e1e1e" },
-  { name: "text-primary", light: "#0a0a0a", dark: "#ffffff" },
-  { name: "text-secondary", light: "#555555", dark: "#aaaaaa" },
-  { name: "text-tertiary", light: "#888888", dark: "#666666" },
-  { name: "accent", light: "#0066ff", dark: "#4d9fff" },
-  { name: "accent-hover", light: "#0052cc", dark: "#80bfff" },
-  { name: "success", light: "#00aa44", dark: "#44cc77" },
-  { name: "warning", light: "#ff8800", dark: "#ffaa44" },
-  { name: "error", light: "#dd2200", dark: "#ff5544" },
-  { name: "border", light: "#d4d4d4", dark: "#333333" },
+  { name: "bg-primary", light: "#ffffff", dark: "#0a0b0d" },
+  { name: "bg-secondary", light: "#f5f5f5", dark: "#101215" },
+  { name: "bg-tertiary", light: "#e8e8e8", dark: "#16191d" },
+  { name: "bg-raised", light: "#ffffff", dark: "#1c2026" },
+  { name: "text-primary", light: "#0a0a0a", dark: "#f2f4f7" },
+  { name: "text-secondary", light: "#555555", dark: "#9aa3af" },
+  // Tertiary is used for section headers and metadata. It was #6b7280, which
+  // fails AA on a dark panel at ANY panel alpha — even a fully opaque #101215
+  // panel only reaches 3.88:1, because the colour itself is too dark for
+  // small text on a dark ground. Lightened to #8b95a3, which holds 4.75:1 over
+  // a pure-white canvas at the panel alpha below (measured).
+  { name: "text-tertiary", light: "#6f6f6f", dark: "#8b95a3" },
+  { name: "accent", light: "#0066ff", dark: "#7aa2ff" },
+  { name: "accent-hover", light: "#0052cc", dark: "#9ab8ff" },
+  { name: "success", light: "#00aa44", dark: "#4ade80" },
+  { name: "warning", light: "#ff8800", dark: "#fbbf24" },
+  { name: "error", light: "#dd2200", dark: "#f87171" },
+  { name: "border", light: "#d4d4d4", dark: "#262b33" },
+  { name: "border-strong", light: "#b8b8b8", dark: "#363c46" },
+];
+
+/**
+ * Translucency, expressed as alpha channels rather than colours.
+ *
+ * Kept as separate tokens so the glass can be tuned in one place. A panel uses
+ * `--panel-alpha` over `--bg-secondary`; the effective colour is what the
+ * contrast measurements in docs/design-graphite.md are taken against.
+ */
+export const glassTokens: { name: string; light: string; dark: string }[] = [
+  // Panels. The canvas behind can be pure white, so the panel has to darken its
+  // own backdrop or no alpha can keep text legible: at 0.82 over white the
+  // effective panel is rgb(59,61,63), where `text-tertiary` falls to 3.60:1.
+  //
+  // The fix is `brightness()` in the backdrop filter — it darkens the canvas
+  // BEFORE the panel composites over it, so a lower alpha still clears AA and
+  // the glass stays visibly translucent. Measured: alpha 0.74 with
+  // brightness(0.45) gives rgb(38,40,42) over white (tertiary 4.88:1) and
+  // rgb(12,13,16) over black — a 5.2x luminance difference between the two, so
+  // the translucency is actually visible. See docs/design-graphite.md.
+  { name: "panel-alpha", light: "0.88", dark: "0.74" },
+  // The top toolbar sits over content the whole time; slightly heavier.
+  { name: "chrome-alpha", light: "0.92", dark: "0.80" },
+  // Hover/active washes inside a panel.
+  { name: "wash-alpha", light: "0.05", dark: "0.06" },
+  // Backdrop blur radius, in px. Higher than a normal glass because the canvas
+  // is high-frequency (dither patterns, grain) and a soft blur reads better.
+  { name: "glass-blur", light: "20px", dark: "32px" },
+  { name: "glass-saturate", light: "1.15", dark: "1.25" },
+  // Darkens the backdrop before compositing. Load-bearing for contrast over a
+  // bright canvas — see the panel-alpha note above.
+  { name: "glass-brightness", light: "1", dark: "0.45" },
 ];
 
 // ── Spacing tokens (4px base) ────────────────────────────────────────────────
@@ -92,6 +141,31 @@ export function generateCSSVariables(theme: "light" | "dark"): string {
   for (const c of colorTokens) {
     lines.push(`  --${c.name}: ${theme === "light" ? c.light : c.dark};`);
   }
+
+  // Glass / translucency
+  for (const g of glassTokens) {
+    lines.push(`  --${g.name}: ${theme === "light" ? g.light : g.dark};`);
+  }
+
+  // Translucent panel surfaces, derived from the ramp + alpha so the two can
+  // never drift apart. `rgb(... / a)` keeps the channel values readable in
+  // devtools rather than collapsing to a single magic rgba().
+  const bgSecondary = colorTokens.find((c) => c.name === "bg-secondary")!;
+  const bgPrimary = colorTokens.find((c) => c.name === "bg-primary")!;
+  const bgTertiary = colorTokens.find((c) => c.name === "bg-tertiary")!;
+  const pick = (t: ColorToken) => (theme === "light" ? t.light : t.dark);
+  const rgb = (hex: string) => {
+    const h = hex.replace("#", "");
+    return `${parseInt(h.slice(0, 2), 16)} ${parseInt(h.slice(2, 4), 16)} ${parseInt(h.slice(4, 6), 16)}`;
+  };
+  const panelAlpha = glassTokens.find((g) => g.name === "panel-alpha")!;
+  const chromeAlpha = glassTokens.find((g) => g.name === "chrome-alpha")!;
+  const a = theme === "light" ? panelAlpha.light : panelAlpha.dark;
+  const ca = theme === "light" ? chromeAlpha.light : chromeAlpha.dark;
+
+  lines.push(`  --surface-panel: rgb(${rgb(pick(bgSecondary))} / ${a});`);
+  lines.push(`  --surface-chrome: rgb(${rgb(pick(bgPrimary))} / ${ca});`);
+  lines.push(`  --surface-raised: rgb(${rgb(pick(bgTertiary))} / ${a});`);
 
   // Spacing
   for (const s of spacingTokens) {
