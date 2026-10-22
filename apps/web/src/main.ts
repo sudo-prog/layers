@@ -7,6 +7,13 @@
 
 import { Renderer } from "@layers/engine";
 import {
+  createDynamicDriver,
+  hasDynamicProps,
+  isDynamicProp,
+  type DynamicDriver,
+  type DynamicProp,
+} from "@layers/engine";
+import {
   PatternDitherCore,
   NoiseGrainCore,
   BlurCore,
@@ -37,6 +44,9 @@ import {
   type StackItem,
 } from "@layers/stack";
 import { applyTheme } from "@layers/ui";
+import { iconSvg } from "./icons";
+import { buildPropsPanel } from "./propsPanel";
+import { mountInsertToolbar } from "./insertPanel";
 import { validateEffectStack } from "@layers/schema";
 import { persistence } from "./persistence";
 import { CORE_KEYS } from "./keyboard";
@@ -54,6 +64,7 @@ import {
   coreList,
   stackList,
   inspector,
+  insertHost,
   btnTheme,
   btnUndo,
   btnRedo,
@@ -76,6 +87,13 @@ import { initMobileNav } from "./mobile-nav";
 import { decorateTabBar } from "./toolbar";
 import { renderFrame, startLoop, setFrameHook } from "./animation-loop";
 import {
+  clearRegistrations,
+  invalidateDriver,
+  registerPass,
+  resetDrivers,
+  tickDrivers,
+} from "./dynamicLoop";
+import {
   initDebugSession,
   injectDebugToolbar,
   trackFrame,
@@ -86,15 +104,18 @@ import {
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
-interface CoreDef {
+export interface CoreDef {
   name: string;
   label: string;
-  icon: string;
+  /** Icon key from ./icons — inline SVG, never an emoji. */
+  iconName: string;
+  /** One-line description shown at the top of the component's prop section. */
+  blurb: string;
   create: (params?: any) => any;
   params: ParamDef[];
 }
 
-interface ParamDef {
+export interface ParamDef {
   key: string;
   label:  string;
   type: "slider" | "select" | "color" | "toggle";
@@ -109,7 +130,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "pattern-dither",
     label: "Pattern/Dither",
-    icon: "◉",
+    iconName: "cores",
+    blurb: "Halftone patterns and ordered dithering — simplex, dot and wave bases with selectable Bayer matrices.",
     create: (p?: any) => new PatternDitherCore(p),
     params: [
       { key: "shape", label: "Shape", type: "select", options: [
@@ -133,7 +155,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "noise-grain",
     label: "Noise/Grain",
-    icon: "▒",
+    iconName: "texture",
+    blurb: "Procedural noise and film grain. Stack octaves and blend mono or colour grain.",
     create: (p?: any) => new NoiseGrainCore(p),
     params: [
       { key: "scale", label: "Scale", type: "slider", min: 1, max: 100, step: 1, default: 20 },
@@ -145,7 +168,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "blur",
     label: "Blur/Convolution",
-    icon: "◎",
+    iconName: "blur",
+    blurb: "Convolution blur with directional, radial and edge-handling controls.",
     create: (p?: any) => new BlurCore(p),
     params: [
       { key: "radius", label: "Radius", type: "slider", min: 0.5, max: 20, step: 0.5, default: 2 },
@@ -166,7 +190,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "color-blend",
     label: "Color/Blend",
-    icon: "◐",
+    iconName: "adjust",
+    blurb: "Hue rotation, saturation and brightness, with a per-layer blend mode.",
     create: (p?: any) => new ColorBlendCore(p),
     params: [
       { key: "hueShift", label: "Hue Shift", type: "slider", min: -180, max: 180, step: 1, default: 0 },
@@ -185,7 +210,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "displacement",
     label: "Displacement",
-    icon: "≋",
+    iconName: "distort",
+    blurb: "Displace the frame along a map — liquid, fluted, wave or heat distortion.",
     create: (p?: any) => new DisplacementCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 50, step: 0.5, default: 5 },
@@ -207,7 +233,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "lighting",
     label: "Lighting",
-    icon: "☀",
+    iconName: "light",
+    blurb: "Directional light, glow, haze and vignette applied as a layer.",
     create: (p?: any) => new LightingCore(p),
     params: [
       { key: "offsetX", label: "Offset X", type: "slider", min: -100, max: 100, step: 1, default: 0 },
@@ -226,7 +253,8 @@ export const CORE_DEFS: CoreDef[] = [
   {
     name: "outline",
     label: "Outline/Edge",
-    icon: "✎",
+iconName: "edge",
+    blurb: "Edge detection and ink outline with roughness and bleed.",
     create: (p?: any) => new OutlineCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 3, step: 0.01, default: 1 },
@@ -267,7 +295,13 @@ function toHexColor(value: unknown, fallback: unknown): string {
   return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
 }
 
-/** Convert a stack item's params into the shape the core constructor expects. */
+/**
+ * Convert a stack item's params into the shape the core constructor expects.
+ *
+ * A driven prop is stored as an object, so `Number(raw)` would be `NaN` and the
+ * effect would silently render nothing. Driven keys are skipped here and filled
+ * in per frame by `applyDrivenParams()` from the dynamic driver instead.
+ */
 function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Record<string, unknown> {
    const out: Record<string, unknown> = {};
    for (const p of def.params) {
@@ -275,7 +309,8 @@ function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Rec
      if (p.type === "color") {
        out[p.key] = toRgbArray(raw) ?? toRgbArray(p.default) ?? [0, 0, 0];
      } else if (p.type === "slider") {
-       out[p.key] = Number(raw);
+       // A driven prop resolves through the driver; never coerce it here.
+       out[p.key] = isDynamicProp(raw) ? undefined : Number(raw);
      } else {
        out[p.key] = raw;
      }
@@ -382,6 +417,9 @@ export function rebuildPasses(): void {
      state.renderer.removePass(pass.id);
    }
 
+   // The pass→core map is rebuilt alongside the passes themselves.
+   clearRegistrations();
+
    // Add enabled stack items as passes
    const enabled = getEnabledItems(state.stack);
    for (const item of enabled) {
@@ -392,7 +430,13 @@ export function rebuildPasses(): void {
      // _params object, so assigning core[key] directly has no effect.
      const core = def.create(buildCoreParams(def, item.params));
      state.renderer.addPass(core);
+     // Register it so the dynamic driver can push resolved values into it.
+     registerPass(core as unknown as { setParams?: (p: Record<string, unknown>) => void }, item.id, item.core);
    }
+
+   // The set of driven props may have changed; force a driver rebuild and drop
+   // any smoothing state that belonged to the previous stack.
+   invalidateDriver();
 
    state.renderer.warmUp();
 }
@@ -419,6 +463,7 @@ export function doUndo(): void {
    rebuildStack();
    rebuildInspector();
    rebuildPasses();
+   resetDrivers();
    scheduleSave();
 }
 
@@ -430,6 +475,7 @@ export function doRedo(): void {
    rebuildStack();
    rebuildInspector();
    rebuildPasses();
+   resetDrivers();
    scheduleSave();
 }
 
@@ -440,7 +486,7 @@ function buildCoreList(): void {
   for (const def of CORE_DEFS) {
     const btn = document.createElement("button");
     btn.className = "core-btn";
-    btn.innerHTML = `<span class="core-icon">${def.icon}</span><span>${def.label}</span>`;
+    btn.innerHTML = `<span class="core-icon">${iconSvg(def.iconName)}</span><span>${def.label}</span>`;
      btn.addEventListener("click", () => {
        pushUndo();
         const core = def.create();
@@ -527,167 +573,91 @@ export function rebuildStack(): void {
 }
 
 // ── Inspector UI ───────────────────────────────────────────────────────────
+//
+// The properties panel lives in ./propsPanel. It owns its own DOM; this
+// function only resolves which layer is selected and hands over the handlers.
+// Keeping it here means every existing call site (rebuildInspector) keeps
+// working unchanged.
+
+/**
+ * Re-syncs one rendered param row after its value changed.
+ *
+ * The panel is not rebuilt on a param change — doing so would tear down the
+ * dynamic-prop editor the user has open. Instead the row's own `__resync` hook
+ * (attached by propsPanel) re-reads the stored value and refreshes its control
+ * and affordance in place.
+ */
+function resyncParamRow(itemId: string, key: string): void {
+  const node = inspector.querySelector<HTMLElement>(
+    `.param[data-param="${CSS.escape(key)}"][data-item="${CSS.escape(itemId)}"]`,
+  );
+  const resync = (node as HTMLElement & { __resync?: () => void } | null)?.__resync;
+  if (resync) resync();
+}
 
 export function rebuildInspector(): void {
   const selected = state.stack.items.find((i) => i.id === state.stack.selectedId);
   if (!selected) {
-    inspector.innerHTML = `<p class="inspector-empty">Select a core to edit its parameters</p>`;
+    inspector.innerHTML = `<p class="inspector-empty">Select a layer to edit its properties</p>`;
     return;
   }
 
   const def = CORE_DEFS.find((d) => d.name === selected.core);
   if (!def) {
-    inspector.innerHTML = `<p class="inspector-empty">Unknown core: ${selected.core}</p>`;
+    inspector.innerHTML = `<p class="inspector-empty">Unknown layer type: ${selected.core}</p>`;
     return;
   }
 
-  let html = `<h3 class="inspector-title">${def.label}</h3>`;
-
-  for (const param of def.params) {
-    const val = selected.params[param.key] ?? param.default;
-    html += `<div class="param-group">`;
-    html += `<label class="param-label">${param.label}`;
-
-    if (param.type === "slider") {
-      const numVal = Number(val);
-      html += `<span class="param-value">${numVal}</span>`;
-      html += `<input type="range" class="param-slider" data-key="${param.key}" `;
-      html += `min="${param.min}" max="${param.max}" step="${param.step}" value="${numVal}">`;
-    } else if (param.type === "select") {
-      html += `<select class="param-select" data-key="${param.key}">`;
-      for (const opt of param.options!) {
-        const sel = opt.value === val ? " selected" : "";
-        html += `<option value="${opt.value}"${sel}>${opt.label}</option>`;
+  buildPropsPanel(inspector, selected, def, {
+    // A param change must NOT re-render the panel: doing so tears down the
+    // dynamic-prop editor the user has open, discarding the mode they just
+    // picked. Persist, then re-sync only the affected value in place.
+    setParam: (key, value) => {
+      pushUndo();
+      // Read the live item: `selected` is captured when the panel was built, so
+      // spreading its params here would silently revert any param another
+      // control changed in the meantime.
+      const live = state.stack.items.find((i) => i.id === selected.id);
+      if (!live) return;
+      state.stack = updateStackItem(state.stack, live.id, {
+        params: { ...live.params, [key]: value },
+      });
+      resyncParamRow(live.id, key);
+      rebuildPasses();
+      scheduleSave();
+    },
+    // Structural changes (reorder, remove, visibility) DO need a full rebuild.
+    setItem: (patch) => {
+      pushUndo();
+      if (patch.__move === "up") {
+        state.stack = moveStackItem(state.stack, selected.id, "up");
+      } else if (patch.__move === "down") {
+        state.stack = moveStackItem(state.stack, selected.id, "down");
+      } else if (patch.__remove) {
+        state.stack = removeStackItem(state.stack, selected.id);
+      } else {
+        state.stack = updateStackItem(state.stack, selected.id, patch);
       }
-      html += `</select>`;
-    } else if (param.type === "color") {
-      // Colors are stored as hex strings in the stack (so the picker and
-      // IndexedDB round-trip correctly) and converted to [r,g,b] on the way
-      // into the core, which divides by 255.
-      const hexVal = toHexColor(val, param.default);
-      html += `<div class="param-color">`;
-      html += `<input type="color" data-key="${param.key}" value="${hexVal}">`;
-      html += `<span>${hexVal}</span>`;
-      html += `</div>`;
-    } else if (param.type === "toggle") {
-      const checked = val ? " checked" : "";
-      html += `<input type="checkbox" data-key="${param.key}"${checked} style="width:18px;height:18px;cursor:pointer;">`;
-    }
-
-    html += `</label></div>`;
-  }
-
-  // Opacity slider
-  html += `<div class="param-group">`;
-  html += `<label class="param-label">Opacity`;
-  html += `<span class="param-value">${selected.opacity}</span>`;
-  html += `<input type="range" class="param-slider" data-key="__opacity" min="0" max="1" step="0.01" value="${selected.opacity}">`;
-  html += `</label></div>`;
-
-  // Blend mode
-  html += `<div class="param-group">`;
-  html += `<label class="param-label">Blend Mode`;
-  html += `<select class="param-select" data-key="__blend">`;
-  const blendModes = ["normal", "multiply", "screen", "overlay", "soft-light", "hard-light", "color-dodge", "color-burn", "darken", "lighten", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
-  for (const bm of blendModes) {
-    const sel = bm === selected.blend ? " selected" : "";
-    html += `<option value="${bm}"${sel}>${bm}</option>`;
-  }
-  html += `</select></label></div>`;
-
-  // Move up/down
-  html += `<div class="param-group" style="display:flex;gap:8px;">`;
-  html += `<button class="btn" data-key="__moveUp" style="flex:1;">↑ Move Up</button>`;
-  html += `<button class="btn" data-key="__moveDown" style="flex:1;">↓ Move Down</button>`;
-  html += `</div>`;
-
-  inspector.innerHTML = html;
-
-  // Add mask button when item is selected
-  const maskBtn = document.createElement("button");
-  maskBtn.id = "btn-mask";
-  maskBtn.className = "btn";
-  maskBtn.style.width = "100%";
-  maskBtn.style.marginTop = "8px";
-  maskBtn.textContent = "🎭 Edit Mask";
-  maskBtn.addEventListener("click", () => {
-    const sel = state.stack.items.find((i) => i.id === state.stack.selectedId);
-    if (!sel) return;
-    maskOverlay.classList.remove("hidden");
-    maskOverlay.classList.add("visible");
-    maskCanvas.classList.remove("hidden");
-    if (sel.mask) {
-      maskBrush.loadMaskData(sel.mask).then(() => {});
-    } else {
-      maskBrush.clear();
-    }
-  });
-  inspector.appendChild(maskBtn);
-
-  // Wire up events
-  inspector.querySelectorAll("[data-key]").forEach((el) => {
-    const key = (el as HTMLElement).dataset.key!;
-
-    if (el instanceof HTMLInputElement && el.type === "range") {
-      el.addEventListener("input", () => {
-        const numVal = parseFloat(el.value);
-        (el as HTMLElement).parentElement!.querySelector(".param-value")!.textContent = String(numVal);
-        pushUndo();
-         if (key === "__opacity") {
-           state.stack = updateStackItem(state.stack, selected.id, { opacity: numVal });
-         } else {
-           const newParams = { ...selected.params, [key]: numVal };
-           state.stack = updateStackItem(state.stack, selected.id, { params: newParams });
-         }
-        rebuildPasses();
-        scheduleSave();
-      });
-    } else if (el instanceof HTMLSelectElement) {
-      el.addEventListener("change", () => {
-        pushUndo();
-         if (key === "__blend") {
-           state.stack = updateStackItem(state.stack, selected.id, { blend: el.value });
-         } else {
-           const newParams = { ...selected.params, [key]: el.value };
-           state.stack = updateStackItem(state.stack, selected.id, { params: newParams });
-         }
-        rebuildPasses();
-        scheduleSave();
-      });
-    } else if (el instanceof HTMLInputElement && el.type === "color") {
-       el.addEventListener("input", () => {
-         const val = el.value;
-         (el as HTMLElement).parentElement!.querySelector("span")!.textContent = val;
-         pushUndo();
-         // Store the hex string; render() converts it to [r,g,b] for the core.
-         const newParams = { ...selected.params, [key]: val };
-         state.stack = updateStackItem(state.stack, selected.id, { params: newParams });
-         rebuildPasses();
-         scheduleSave();
-       });
-    } else if (el instanceof HTMLInputElement && el.type === "checkbox") {
-       el.addEventListener("change", () => {
-         pushUndo();
-         const newParams = { ...selected.params, [key]: el.checked };
-         state.stack = updateStackItem(state.stack, selected.id, { params: newParams });
-         rebuildPasses();
-         scheduleSave();
-       });
-    } else if (el instanceof HTMLButtonElement) {
-      el.addEventListener("click", () => {
-        pushUndo();
-         if (key === "__moveUp") {
-           state.stack = moveStackItem(state.stack, selected.id, "up");
-         } else if (key === "__moveDown") {
-           state.stack = moveStackItem(state.stack, selected.id, "down");
-         }
-        rebuildStack();
-        rebuildPasses();
-        scheduleSave();
-      });
-    }
+      rebuildStack();
+      rebuildInspector();
+      rebuildPasses();
+      scheduleSave();
+    },
+    editMask: () => {
+      maskOverlay.classList.remove("hidden");
+      maskOverlay.classList.add("visible");
+      maskCanvas.classList.remove("hidden");
+      if (selected.mask) {
+        maskBrush.loadMaskData(selected.mask).then(() => {});
+      } else {
+        maskBrush.clear();
+      }
+    },
+    allItems: () => state.stack.items,
+    refresh: () => rebuildInspector(),
   });
 }
+
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 
@@ -989,6 +959,29 @@ async function init(): Promise<void> {
 
    initRenderer();
    buildCoreList();
+   mountInsertToolbar(insertHost, CORE_DEFS, {
+     addCore: (coreName) => {
+       const def = CORE_DEFS.find((d) => d.name === coreName);
+       if (!def) return;
+       pushUndo();
+       const params: Record<string, unknown> = {};
+       for (const prm of def.params) params[prm.key] = prm.default;
+       state.stack = addStackItem(state.stack, {
+         core: def.name,
+         params,
+         opacity: 1,
+         blend: "normal",
+         mask: null,
+         enabled: true,
+       });
+       rebuildStack();
+       rebuildInspector();
+       rebuildPasses();
+       scheduleSave();
+       emitEvent("stack_created", { core_type: def.name });
+     },
+     close: () => {},
+   });
    rebuildStack();
    rebuildInspector();
    rebuildPasses();

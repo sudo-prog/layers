@@ -1,0 +1,1077 @@
+/* ============================================================================
+   LAYERS — Properties panel, control primitives, insert toolbar
+   ============================================================================
+   Design language, matched to the reference editor and then pushed further:
+
+   · Dark-first surfaces stepped by background, not shadow. Borders are
+     structural only — they separate regions, they never fake elevation.
+   · 4px rhythm. Prop rows are 32px, controls 28px, section headers 32px.
+   · Controls are 28px tall with 44px hit areas via padding, so nothing is
+     hard to hit while the visual stays dense.
+   · Inline SVG icons only, all `currentColor`, one 1.75px stroke weight.
+   · `tabular-nums` on every value readout so live numbers don't jitter.
+   ========================================================================== */
+
+/* ── Control primitives ─────────────────────────────────────────────────── */
+
+.ctl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  /* `min-width: 0` on the flex item: a bare flex item will not shrink below
+     its content's min-content width, which is what pushed the grid track out. */
+  min-width: 0;
+}
+
+.ctl-label {
+  flex: 0 0 84px;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line-height);
+  color: var(--text-tertiary);
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctl-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Two controls sharing a row — but only when the panel is wide enough.
+   Measured: a 299px panel fits one labelled slider comfortably and two only by
+   clipping them (inspector scrollWidth 662 vs clientWidth 293). The reference
+   editor also puts one prop per row. */
+.ctl-grid {
+  display: grid;
+  /* `minmax(0, 1fr)`, not `1fr`: a bare `1fr` track will not shrink below its
+     content's min-content width, so a row of fixed-width controls pushed the
+     grid to 301px inside a 293px panel. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+/* Without this the track can still be forced wider than its container by a
+   child's min-content size — measured as a 301px track inside a 245px grid. */
+.ctl-grid > * {
+  min-width: 0;
+}
+
+/* Two columns once the PANEL is wide enough — a container query, because the
+   breakpoint that matters is the panel's width, not the viewport's. A 1280px
+   viewport with a 299px panel has no room for two labelled controls. */
+.panel-right {
+  container-type: inline-size;
+  container-name: props;
+}
+
+/* ── Two-column layout ────────────────────────────────────────────────────
+   Two labelled controls need ~430px of PANEL width, not viewport width — a
+   container query, because the panel is 300px on desktop and full-screen on a
+   phone, and both of those are wrong for two columns.
+
+   Measured: a 300px panel clipped outright (inspector scrollWidth 326 vs
+   clientWidth 293), and at a 500px full-screen panel the two-column label
+   override made labels wrap, because there the row is column-direction and the
+   same flex basis is a HEIGHT rather than a width.
+
+   So: the label-basis override applies only when the row is horizontal, and the
+   steppers/unit toggle — 40px of a ~140px column — drop out when two controls
+   share a row. */
+.panel-right {
+  container-type: inline-size;
+  container-name: props;
+}
+
+@container props (min-width: 430px) {
+  .ctl-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-1) var(--space-2);
+  }
+
+  .ctl-grid .ctl-step,
+  .ctl-grid .ctl-unit {
+    display: none;
+  }
+
+  .ctl-grid .ctl-value {
+    flex-basis: 30px;
+    width: 30px;
+  }
+
+  /* In a two-column grid each column is ~140px, so the label column tightens
+     from 84px to 52px.
+
+     Wrapped in the same viewport condition as the mobile layout: at 500px both
+     this container query and the `max-width: 767px` query match, and there the
+     row is column-direction — where this basis is a HEIGHT, not a width, and
+     made labels wrap to three lines. */
+  @media (min-width: 768px) {
+    .ctl-grid .ctl-label {
+      flex: 0 0 52px;
+    }
+  }
+}
+
+
+/* ── Range slider ───────────────────────────────────────────────────────── */
+
+.ctl-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.ctl-slider input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 28px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.ctl-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.ctl-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  border: 2px solid var(--bg-secondary);
+  box-shadow: 0 0 0 1px var(--border);
+  transition: transform var(--duration-fast) var(--duration-fast-easing);
+}
+
+.ctl-slider input[type="range"]:hover::-webkit-slider-thumb,
+.ctl-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.18);
+}
+
+.ctl-slider input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.ctl-slider input[type="range"]::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  border: 2px solid var(--bg-secondary);
+}
+
+.ctl-step {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--duration-fast-easing),
+    border-color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.ctl-step .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.ctl-step:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.ctl-value {
+  /* Fixed width keeps the slider from being pushed out by long values, and
+     tabular-nums stops the digit column from jittering as it updates. */
+  flex: 0 0 38px;
+  width: 38px;
+  text-align: right;
+  font-size: var(--text-xs-size);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+
+.ctl-unit {
+  /* Must be allowed to shrink: as `flex: 0 0 auto` it held its width and the
+     slider pushed it past the panel edge instead of giving up space. */
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 0;
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ctl-unit:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+/* ── Text + number inputs ───────────────────────────────────────────────── */
+
+.ctl-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--text-xs-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctl-input.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.ctl-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Colour swatch ──────────────────────────────────────────────────────── */
+
+.ctl-color {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+/* The native colour input is invisible but keeps its native picker; the label
+   draws the swatch. Opacity 0 + absolute keeps the whole label clickable. */
+.ctl-swatch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--swatch, #000);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.ctl-swatch::after {
+  /* Checkerboard behind transparent colours so alpha is legible. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(45deg, var(--border) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--border) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--border) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--border) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  z-index: -1;
+}
+
+.ctl-swatch input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ctl-hex {
+  font-size: var(--text-xs-size);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* ── Segmented control ──────────────────────────────────────────────────── */
+
+.seg {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* A segmented control that declares a per-option minimum (`--seg-min`) cannot
+   always fit its options in one row, and a horizontally-scrolled control hides
+   options — worse than a taller one. So it becomes an auto-fit grid: as many
+   columns as the minimum allows, wrapping to a second row rather than
+   ellipsising. No container query is needed because the grid sizes itself
+   against whatever track it is given.
+
+   Measured for `Object Fit` in a 300px panel (153px track, `--seg-min` 69px):
+   one row needs 284px, so the grid resolves to 2 columns and the control is 2
+   rows tall — 54px instead of the 116px a naive 4-row stack produced. */
+.seg[style*="--seg-min"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--seg-min), 1fr));
+  gap: 2px;
+  overflow-x: visible;
+}
+
+.seg[style*="--seg-min"] .seg-btn {
+  /* Each cell is at least `--seg-min` wide, so the label always fits. */
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 26px;
+}
+
+.seg[style*="--seg-min"] .seg-label {
+  /* The cell is sized to the label, so nothing should ever clip. If it does,
+     that is a real layout bug and should be visible rather than hidden. */
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Forced single-column stacking, for callers that know better than auto-fit. */
+.seg.is-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seg.is-stacked .seg-btn {
+  flex: 0 0 auto;
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+}
+
+.seg.is-stacked .seg-label {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.seg::-webkit-scrollbar {
+  display: none;
+}
+
+.seg-btn {
+  /* `1 0 auto` refused to shrink, so a four-option segmented control in a
+     299px panel overflowed by 36px. Basis 0 + shrink lets it fit. */
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs-size);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--duration-fast-easing),
+    color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.seg-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seg-btn:hover {
+  color: var(--text-primary);
+}
+
+.seg-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.seg-icon .icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Select ─────────────────────────────────────────────────────────────── */
+
+.ctl-select-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ctl-select-wrap::after {
+  content: "";
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -4px;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.ctl-select {
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--space-6) 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--text-xs-size);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ctl-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ctl-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* ── Switch ─────────────────────────────────────────────────────────────── */
+
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--duration-fast-easing),
+    border-color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--duration-fast-easing),
+    background var(--duration-fast) var(--duration-fast-easing);
+}
+
+.switch.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch.is-on .switch-knob {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* ── Icon-only button ───────────────────────────────────────────────────── */
+
+.icon-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--duration-fast-easing),
+    background var(--duration-fast) var(--duration-fast-easing);
+}
+
+.icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.icon-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Property sections ──────────────────────────────────────────────────── */
+
+.prop-section {
+  border-bottom: 1px solid var(--border);
+}
+
+.prop-section-head {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.prop-section-head:hover {
+  color: var(--text-primary);
+}
+
+.prop-section-icon .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+}
+
+.prop-section-title {
+  flex: 1;
+  text-align: left;
+}
+
+.prop-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.prop-section-chevron .icon {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--duration-fast) var(--duration-fast-easing);
+}
+
+.prop-section.is-closed .prop-section-chevron .icon {
+  transform: rotate(-90deg);
+}
+
+.prop-section-body {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* Let the grid shrink inside the section rather than forcing the panel
+     wider than the viewport. */
+  min-width: 0;
+}
+
+.prop-section.is-closed .prop-section-body {
+  display: none;
+}
+
+.prop-note {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-line-height);
+  color: var(--text-tertiary);
+  padding-bottom: var(--space-1);
+}
+
+/* ── Param row + dynamic affordance ─────────────────────────────────────── */
+
+.param {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.param-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.param-body > .ctl {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The "make value dynamic" control. Active state is colour + a filled track,
+   never a layout shift. */
+.dyn-btn {
+  flex: 0 0 auto;
+  /* Fixed width sized for the longest mode word (`cursor`) so the button does
+     not resize as the driver mode changes and the label never ellipsises.
+     37px text + 8px padding + 13px icon + 4px gap + 2px border = 64px. */
+  width: 64px;
+  height: 22px;
+  padding: 0 3px;
+  gap: 3px;
+  justify-content: center;
+}
+
+.dyn-btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  /* Never truncate the mode word — the width above is sized for the longest. */
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.dyn-btn.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.dyn-editor {
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Panel header ───────────────────────────────────────────────────────── */
+
+.props-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  z-index: 2;
+}
+
+.props-head-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.props-head-icon .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+.props-head-name {
+  font-size: var(--text-sm-size);
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Shared button helpers ──────────────────────────────────────────────── */
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.btn-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+.btn-danger {
+  color: var(--error);
+}
+
+.btn-danger:hover {
+  border-color: var(--error);
+}
+
+/* ── Insert toolbar + picker ────────────────────────────────────────────── */
+
+.insert-host {
+  position: absolute;
+  /* The host lives inside `.canvas-area`, which is full-bleed: it extends
+     `--panel-left-w` to the LEFT and `--panel-right-w` to the RIGHT of the
+     viewport. That asymmetry means the area's own centre is NOT the viewport
+     centre — but it IS the centre of the visible canvas between the panels.
+
+     Measured at 1440: area spans -300..1540 (width 1840), area centre = 920 in
+     area coords; the visible canvas spans 260..1140, whose centre is also 920.
+     So plain `50%` is already correct, and an offset by the panel-width
+     difference double-counts the asymmetry and pushes the bar 20px off. */
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.insert-host > * {
+  pointer-events: auto;
+}
+
+.insert-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.28);
+}
+
+.insert-btn {
+  width: auto;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--duration-fast-easing),
+    background var(--duration-fast) var(--duration-fast-easing);
+}
+
+.insert-btn .icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.insert-btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.insert-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.insert-btn.is-active {
+  color: #fff;
+  background: var(--accent);
+}
+
+/* Picker panel */
+.picker {
+  width: min(460px, calc(100vw - 48px));
+  max-height: min(440px, 70vh);
+  display: none;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.4);
+  overflow: hidden;
+}
+
+.picker.is-open {
+  display: flex;
+}
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.picker-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs-size);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.picker-title .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.picker-search {
+  height: 30px;
+  margin: var(--space-2) var(--space-3) 0;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--text-sm-size);
+}
+
+.picker-search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.picker-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.picker-grid {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--space-1);
+  align-content: start;
+  overflow-y: auto;
+}
+
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--duration-fast-easing),
+    color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.picker-card:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.picker-card-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.picker-card-name {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picker-empty {
+  grid-column: 1 / -1;
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs-size);
+  color: var(--text-tertiary);
+}
+
+.picker-count {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ── Core list: emoji → SVG icon ────────────────────────────────────────── */
+
+.core-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+.core-btn:hover .core-icon,
+.core-btn.active .core-icon {
+  color: currentColor;
+}
+
+.core-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+
+/* ── Responsive: the props panel must stay usable on a narrow viewport ─────
+   Below 1100px the two-up grid collapses to one column rather than crushing
+   both controls. That is expressed as a container query in the section above
+   (`@container props (min-width: 430px)`), because the constraint is the PANEL's
+   width, not the viewport's.
+
+   NOTE: this query used to also tighten `.ctl-label` to 68px. That was wrong on
+   two counts: the panel is 300px at 1024px AND at 1280px, so the viewport is the
+   wrong axis; and 68px is narrower than the longest label in the panel
+   (`Mask Channel`, 79px), so `Mask Source` and `Mask Channel` ellipsised at
+   1024/768 but not at 1280. The label column is now sized for the longest label
+   at every width. Measured — see docs/properties-panel.md §6. */
+@media (max-width: 1099px) {
+  .ctl-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Label above the control, not beside it. A fixed label column plus a
+     min-width control is what made labels wrap mid-word at phone widths. */
+  .ctl {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    min-height: 0;
+  }
+
+  .ctl-label {
+    flex: 0 0 auto;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .ctl-body {
+    min-width: 0;
+  }
+
+  /* Drop the stepper pair on phones: the range input plus value is enough, and
+     those 40px were the difference between fitting and overflowing. */
+  .ctl-step {
+    display: none;
+  }
+
+  .ctl-value {
+    flex-basis: 34px;
+    width: 34px;
+  }
+
+  .insert-host {
+    bottom: var(--space-2);
+    left: var(--space-2);
+    right: var(--space-2);
+    transform: none;
+    justify-content: center;
+  }
+
+  .insert-bar {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .picker {
+    width: auto;
+    max-height: 60vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctl-step,
+  .ctl-unit,
+  .seg-btn,
+  .switch,
+  .switch-knob,
+  .icon-btn,
+  .insert-btn,
+  .picker-card,
+  .prop-section-head,
+  .ctl-slider input[type="range"]::-webkit-slider-thumb {
+    transition: none;
+  }
+}
+
+/* ── Screen-reader-only text ──────────────────────────────────────────────
+   Visually hidden, still exposed to the accessibility tree. Used where a
+   control is icon-only and would otherwise be an unnamed node. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

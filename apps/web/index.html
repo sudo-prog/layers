@@ -13,6 +13,9 @@
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/src/styles.css" />
+  <link rel="stylesheet" href="/src/props.css" />
+  <!-- Graphite glass surface layer — must come last so it wins on source order. -->
+  <link rel="stylesheet" href="/src/graphite.css" />
 </head>
 <body>
   <div id="app">
@@ -44,6 +47,7 @@
     <main class="workspace">
       <aside class="panel panel-left">
         <h2 class="panel-title">Cores</h2>
+        <!-- "Cores" is the layer primitive; the add-layer toolbar names them. -->
         <div id="core-list" class="core-list"></div>
       </aside>
 
@@ -66,6 +70,7 @@
           <span id="pass-count">0 passes</span>
           <span id="fps-display"></span>
         </div>
+        <div id="insert-host" class="insert-host"></div>
       </section>
 
       <aside class="panel panel-right">

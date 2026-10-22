@@ -26,6 +26,7 @@ export const syncIndicator = $<HTMLSpanElement>(".sync-indicator");
 export const syncText = $<HTMLSpanElement>("#sync-text");
 export const maskCanvas = $<HTMLCanvasElement>("#mask-canvas");
 export const maskOverlay = $<HTMLDivElement>("#mask-overlay");
+export const insertHost = $<HTMLDivElement>("#insert-host");
 export const vectorPanel = $<HTMLDivElement>("#vector-panel");
 export const vectorSvg = $<SVGSVGElement>("#vector-svg");
 export const btnVector = $<HTMLButtonElement>("#btn-vector");

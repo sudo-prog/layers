@@ -13,6 +13,10 @@
     --warning: #ff8800;
     --error: #dd2200;
     --border: #d4d4d4;
+  /* Panel widths as tokens: the full-bleed canvas and the insert bar both need
+     to know them, and hardcoding the numbers in three places let them drift. */
+  --panel-left-w: 260px;
+  --panel-right-w: 300px;
     /* Safe area variables */
     --sat: 0px; /* safe-area-inset-top */
     --sar: 0px; /* safe-area-inset-right */
@@ -65,18 +69,31 @@
 }
 
 [data-theme="dark"] {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #141414;
-  --bg-tertiary: #1e1e1e;
-  --text-primary: #ffffff;
-  --text-secondary: #aaaaaa;
-  --text-tertiary: #666666;
-  --accent: #4d9fff;
-  --accent-hover: #80bfff;
-  --success: #44cc77;
-  --warning: #ffaa44;
-  --error: #ff5544;
-  --border: #333333;
+  --bg-primary: #0a0b0d;
+  --bg-secondary: #101215;
+  --bg-tertiary: #16191d;
+  --bg-raised: #1c2026;
+  --text-primary: #f2f4f7;
+  --text-secondary: #9aa3af;
+  --text-tertiary: #8b95a3;
+  --accent: #7aa2ff;
+  --accent-hover: #9ab8ff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --border: #262b33;
+  --border-strong: #363c46;
+  /* Glass: the alphas live here too so a theme switch without the JS token
+     generator (a static preview, a test) still gets the right surface.
+     0.92 is the measured floor for AA text over a pure-white canvas. */
+  --panel-alpha: 0.74;
+  --chrome-alpha: 0.80;
+  --glass-blur: 32px;
+  --glass-saturate: 1.25;
+  --glass-brightness: 0.45;
+  --surface-panel: rgb(16 18 21 / 0.74);
+  --surface-chrome: rgb(10 11 13 / 0.80);
+  --surface-raised: rgb(22 25 29 / 0.74);
 }
 
 * {
@@ -339,22 +356,29 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  /* Establishes the stacking context the full-bleed canvas sits in. */
+  position: relative;
 }
 
 .panel {
-  width: 260px;
-  background: var(--bg-secondary);
+  width: var(--panel-left-w);
+  background: var(--surface-panel);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
+  /* The panels float ABOVE the canvas, which runs full-bleed underneath them.
+     Without this the canvas is a flex sibling, nothing ever passes behind a
+     panel, and the glass has nothing to blur — it reads as a solid slab. */
+  position: relative;
+  z-index: 2;
 }
 
 .panel-right {
   border-right: none;
   border-left: 1px solid var(--border);
-  width: 300px;
+  width: var(--panel-right-w);
 }
 
 .panel-title {
@@ -420,6 +444,25 @@ body {
   background: var(--bg-primary);
   position: relative;
   padding: var(--space-4);
+  /* Full-bleed: the stage runs under both panels so the glass has something to
+     blur. The panels paint over it at z-index 2. */
+  margin: 0 calc(-1 * (var(--panel-left-w) + var(--panel-right-w)));
+  z-index: 0;
+}
+
+/* Below the mobile breakpoint the panels are full-screen overlays, so there is
+   nothing to bleed under. Reset the negative margins there or the canvas is
+   pushed off-screen. */
+@media (max-width: 767px) {
+  .canvas-area {
+    margin: 0;
+  }
+
+  /* Panels are full-screen overlays here, so the canvas-area IS the viewport and
+     the insert bar centres on it directly. */
+  .insert-host {
+    left: 50%;
+  }
 }
 
 #gl-canvas {
