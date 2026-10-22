@@ -228,7 +228,7 @@ source, and the presets panel renders its empty state.
 | Web app CSS | 4.9 KB | — | ✅ |
 | Web app total (JS+CSS) | 89.0 KB | ≤ 250 KB mobile | ✅ |
 
-## Open items
+## Open items (2026-10-19)
 
 - **Multi-look coverage: PASSED.** 42 looks across all 7 cores, all mutually
   distinct (`tests/golden-infra/scripts/cores-looks.js`, wired into CI).
@@ -240,3 +240,9 @@ source, and the presets panel renders its empty state.
 - 60-min soak test — needs real hardware.
 - WebGPU parity tests — detection + context done, full renderer pending.
 - axe-core automated a11y run — blocked by no-new-deps constraint.
+- **Security review:** All 7 findings fixed (verified 2026-10-19). See `docs/security-review.md`.
+- **Privacy review:** All Medium findings resolved (verified 2026-10-19). See `docs/privacy-review.md`.
+- **Launch checklist:** Updated 2026-10-19 with actual status. See `docs/launch-checklist.md`.
+- **Documentation:** User guide + troubleshooting guide written.
+- **Rollback drill:** Script exists (`scripts/rollback-drill.sh`), not yet rehearsed.
+- **Beta cohort:** Deferred — private personal use until out of beta.

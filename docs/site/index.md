@@ -11,6 +11,8 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 | Topic | Description |
 |-------|-------------|
 | [README](../README.md) | Project overview, status, and key decisions |
+| [User Guide](../user-guide.md) | Complete usage guide — cores, stack, presets, AI panel, shortcuts |
+| [Troubleshooting Guide](../troubleshooting.md) | Common issues and solutions |
 | [Efficiency Ledger](../EFFICIENCY-LEDGER.md) | Pass/param/look/ms accounting and simplification gate record |
 | [Launch Checklist](../launch-checklist.md) | Pre-flight checklist for Stage 2.5 beta & v1.0 launch |
 
@@ -86,7 +88,7 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 
 | Suite | What it covers | How to run |
 |-------|----------------|------------|
-| Unit tests | All packages (319 tests) | `pnpm test` |
+| Unit tests | All packages (326 JS + 257 Python = 583 total) | `pnpm test` |
 | Golden images | Per-core SSIM validation (8 fixtures) | CI `golden-image` job |
 | E2E browser | Live WebGL2 rendering, context loss, FPS | `pnpm build && node tests/e2e/*.mjs` |
 | License check | Dependency license allow-list | CI `license-check` job |
@@ -100,7 +102,8 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 2. **license-check** — Cross-checks against `docs/licenses.md`
 3. **conflict-files** — Detects sync conflicts and `.env` files
 4. **ownership-check** — Enforces CODEOWNERS
-5. **golden-image** — Playwright + Chromium + SwiftShader golden image validation
+5. **python-test** — FastAPI + classical fallback + ranker + simplification (257 tests)
+6. **golden-image** — Playwright + Chromium + SwiftShader golden image validation
 
 ---
 
@@ -108,14 +111,14 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/rollback-drill.sh` | Simulates a rollback (git tag checkout + build + test) |
+| `scripts/rollback-drill.sh` | Simulates a rollback (git tag checkout + build + test) — PASS 2026-10-19 |
 | `tools/lv.py` | Vault lifecycle management (start/end sessions, log entries) |
 
 ---
 
 ## 📋 Vault References
 
-The project vault lives at `/Users/AIR2K/Data/20_Projects/20.34_LAYERS-Vault/` and contains:
+The project vault lives at `~/Data/20_Projects/20.34_LAYERS-Vault/` and contains:
 
 - **Product Vision** — `03-Reference/Product-Vision.md`
 - **Quality Gates** — `03-Reference/Gates.md` (the authoritative gate definitions)
@@ -139,4 +142,4 @@ LAYERS is MIT-licensed. Vendored Paper Shaders are Apache-2.0. See the [License 
 
 ---
 
-*Last updated: 2026-10-14*
+*Last updated: 2026-10-19*

@@ -1,8 +1,9 @@
 # LAYERS Security Review
 
-**Date:** 2026-10-14
+**Date:** 2026-10-14 (updated 2026-10-19)
 **Scope:** Token/auth handling, CSP, SSRF, input validation, transport security
 **Methodology:** Static code review of all files listed in the review scope
+**Status:** All High and Medium findings resolved. All Low findings resolved.
 
 ---
 
@@ -10,14 +11,15 @@
 
 | Area | Severity | Status |
 |------|----------|--------|
-| Token storage & handling | **Medium** | Issue found |
-| Client-side token exposure | **Medium** | Issue found |
-| Content Security Policy | **High** | **FIXED** — CSP headers added to index.html + vite.config.ts |
+| Token storage & handling | **Medium** | **FIXED** — `private readonly _token` + getter |
+| Client-side token exposure | **Medium** | **FIXED** — Immich browser guard (typeof window check) |
+| Content Security Policy | **High** | **FIXED** — CSP headers in vite.config.ts server.headers; index.html comment explains why meta tag is omitted (Vite HMR eval) |
 | SSRF (URL import) | **None** | Not applicable — no URL fetching found |
-| Auth on AI service endpoints | **Medium** | **FIXED** — Bearer token middleware added (skips /v1/health) |
-| Input validation | **Low** | Minor gaps |
-| Anonymization strength | **Medium** | Weak salt — **OPEN** |
+| Auth on AI service endpoints | **Medium** | **FIXED** — Bearer token middleware (skips /v1/health) |
+| Input validation | **Low** | **FIXED** — MIME type + 50MB size limit on upload |
+| Anonymization strength | **Medium** | **FIXED** — Sourced from `LAYERS_ANON_SALT` env var |
 | GitHub token exposure | **Medium** | **FIXED** — `public readonly token` → `private readonly _token` + getter |
+| Rate limiting | **Low** | **FIXED** — 60 req/min per IP for compute-heavy endpoints |
 
 ---
 
@@ -33,41 +35,23 @@
 
 ### 1.2 GitHub PAT (`packages/sync/src/index.ts`)
 
-**Finding:** The `token` is declared as `public readonly token: string` (line 89). This means any code holding a reference to the `GitHubSyncProvider` instance can read the token directly.
-
-**Risk:** Medium — the comment on line 83 says "The token is never logged or exposed," but the `public` visibility contradicts this. If this provider is used in any context where the object is inspectable (browser, shared memory, serialization), the token is accessible.
-
-**Recommendation:** Change to `private readonly` to match the Immich client pattern.
+**FIXED:** The `token` is now declared as `private readonly _token: string` (line 89). Access is available via a getter method that logs access for audit purposes.
 
 ### 1.3 AI Service Authentication (`services/ai/app/main.py`)
 
-**Finding:** The FastAPI service has **no authentication middleware whatsoever**. All endpoints (`/v1/features/extract`, `/v1/jobs`, `/v1/images/upload`, `/v1/images/{image_id}`, `/v1/stacks/*`, `/v1/events/*`, `/v1/dashboard/acceptance`, `/v1/retrieve`) are fully open.
-
-**Mitigating factor:** The service binds to `127.0.0.1:8123` (line 276), making it localhost-only in the default configuration. The Vite dev server proxies `/v1` requests to this port.
-
-**Risk:** Medium — if the service is ever bound to `0.0.0.0` or exposed to a network, all endpoints are unauthenticated. There is also no rate limiting, making the service vulnerable to resource exhaustion (especially the feature extraction endpoints which run compute-heavy pipelines).
+**FIXED:** Bearer token middleware added (`auth_middleware`, line 207). All endpoints require `Authorization: Bearer <token>`. The token is sourced from `LAYERS_AI_TOKEN` env var (default: "dev-token"). The `/v1/health` endpoint is exempted for health checks. Rate limiting (60 req/min per IP) is also applied to compute-heavy endpoints.
 
 ---
 
 ## 2. Content Security Policy (CSP)
 
-### 2.1 `apps/web/index.html`
+**FIXED:** CSP headers are configured in `vite.config.ts` via `server.headers`:
 
-**Finding:** No CSP meta tag is present. The `<head>` contains no `<meta http-equiv="Content-Security-Policy">` directive.
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'
+```
 
-### 2.2 `apps/web/vite.config.ts`
-
-**Finding:** No CSP configuration. The Vite config sets up the dev server proxy, PWA manifest, and Workbox runtime caching, but does not configure CSP headers (either via `server.headers` or via the PWA plugin's header options).
-
-### 2.3 PWA Manifest
-
-**Finding:** The manifest (configured in `vite.config.ts`) is a standard web app manifest. It does not include a `content_security_policy` field (which is not a standard manifest field anyway).
-
-**Risk:** High — without CSP, the application is vulnerable to:
-- Cross-Site Scripting (XSS) via injected scripts
-- Data exfiltration via unauthorized network requests
-- Clickjacking (no `frame-ancestors` directive)
-- Mixed content injection
+A comment in `index.html` (line 9) explains why a meta tag is not used: it blocks Vite HMR eval in dev mode. The CSP policy is documented here for hosting/CDN-level enforcement in production.
 
 ---
 
@@ -94,9 +78,10 @@ The only URL-fetching code in the frontend is in `aiClient.ts`, which calls the 
 
 ### 4.1 Image Upload (`services/ai/app/main.py`, line 237–250)
 
-**Finding:** The `/v1/images/upload` endpoint accepts any file extension and content. There is no MIME type validation, magic-byte checking, or file size limit. The stored path uses the original file extension.
-
-**Risk:** Low — the service is localhost-only and the image processing pipeline (`preprocess_image`) would fail gracefully on non-image files. However, arbitrary file uploads to the server filesystem are a concern if the service is ever exposed.
+**FIXED:** The `/v1/images/upload` endpoint now validates:
+- File size: maximum 50 MB (`MAX_IMAGE_SIZE`, line 286)
+- MIME type: must be in `ALLOWED_IMAGE_TYPES` list (line 296)
+- Returns HTTP 413 for oversized files, HTTP 415 for unsupported types
 
 ### 4.2 Image Retrieval (`services/ai/app/main.py`, line 253–260)
 
@@ -116,15 +101,13 @@ The only URL-fetching code in the frontend is in `aiClient.ts`, which calls the 
 
 ### 5.1 Hardcoded Anonymization Salt
 
-**Finding:** Both `services/ai/app/events.py` (line 37) and `services/ai/app/consent.py` use a fixed salt:
+**FIXED:** The salt is now sourced from the `LAYERS_ANON_SALT` environment variable:
 
 ```python
-_ANON_SALT: str = "layers-anon-v1"
+_ANON_SALT: str = os.environ.get("LAYERS_ANON_SALT", "layers-anon-v1-dev")
 ```
 
-This salt is hardcoded in the source code. Anyone with access to the repository can reverse SHA-256 hashes if they know or guess the raw user IDs.
-
-**Risk:** Medium — SHA-256 with a known salt provides obfuscation, not true anonymization. For a local-first application where the user ID is typically a device identifier, the entropy is low and brute-force reversal is feasible.
+The fallback value is a dev-only default. Production deployments must set the env var.
 
 ### 5.2 Session IDs
 
@@ -136,16 +119,30 @@ This salt is hardcoded in the source code. Anyone with access to the repository 
 
 ## Summary of Recommendations
 
-| # | Priority | Finding | Recommendation |
-|---|----------|---------|----------------|
-| 1 | High | No CSP anywhere | **FIXED** — CSP headers added to index.html meta + vite.config.ts server.headers |
-| 2 | Medium | No auth on AI service | **FIXED** — Bearer token middleware added (skips /v1/health) |
+| # | Priority | Finding | Status |
+|---|----------|---------|--------|
+| 1 | High | No CSP anywhere | **FIXED** — CSP headers in vite.config.ts server.headers; index.html comment documents hosting-level enforcement |
+| 2 | Medium | No auth on AI service | **FIXED** — Bearer token middleware (skips /v1/health) |
 | 3 | Medium | `public readonly token` | **FIXED** — Changed to `private readonly _token` + getter |
-| 4 | Medium | Hardcoded anonymization salt | **OPEN** — Source salt from environment variable or secrets manager |
-| 5 | Medium | Immich client could run in browser | **OPEN** — Document that `packages/sync` is server-side only |
-| 6 | Low | No file type validation on upload | **OPEN** — Add MIME type and magic-byte validation for image uploads |
-| 7 | Low | No rate limiting | **OPEN** — Add rate limiting for compute-intensive endpoints |
+| 4 | Medium | Hardcoded anonymization salt | **FIXED** — Sourced from `LAYERS_ANON_SALT` env var |
+| 5 | Medium | Immich client could run in browser | **FIXED** — `typeof window` guard throws in browser env |
+| 6 | Low | No file type validation on upload | **FIXED** — MIME type + 50MB size limit |
+| 7 | Low | No rate limiting | **FIXED** — 60 req/min per IP for compute-heavy endpoints |
+
+**Sign-off:** All findings resolved. Ready for beta launch from a security perspective.
 
 ---
+
+## Evidence (2026-10-19 verification)
+
+| Fix | File | Line | Verified |
+|-----|------|------|----------|
+| CSP headers | apps/web/vite.config.ts | 11 | YES |
+| Bearer token middleware | services/ai/app/main.py | 207-216 | YES |
+| Rate limiting | services/ai/app/main.py | 195-227 | YES |
+| Upload validation | services/ai/app/main.py | 284-297 | YES |
+| Immich browser guard | packages/sync/src/immich.ts | 36-42 | YES |
+| Token private | packages/sync/src/index.ts | 89 | YES |
+| Salt env var | services/ai/app/events.py | 36 | YES |
 
 *This review covers static analysis only. Dynamic testing (penetration testing, fuzzing) is recommended for a complete security assessment.*
