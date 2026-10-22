@@ -105,12 +105,12 @@ html[data-theme="light"] {
   --border: #d9dce1;
   --border-strong: #c3c8d0;
   --text-primary: #16181b;
-  --text-secondary: #4a5159;
-  --text-tertiary: #4d545d;
-  --accent: #c2611f;
-  --accent-strong: #a9520f;
-  --accent-soft: rgba(194, 97, 31, 0.12);
-  --accent-line: rgba(194, 97, 31, 0.4);
+  --text-secondary: #3a4149;
+  --text-tertiary: #3d444c;
+  --accent: #8a3d08;
+  --accent-strong: #8f4109;
+  --accent-soft: rgba(168, 78, 16, 0.14);
+  --accent-line: rgba(168, 78, 16, 0.42);
   /* The light theme is the harder case, and the first pass failed it: the panel
      is near-white, so dark text on it is the binding constraint. A white panel
      over a WHITE canvas composites to pure white, where #6b7280 only reaches
@@ -861,10 +861,6 @@ pre {
 
     <!-- ── Panels: absolute, so they float over the canvas and have something
          for the backdrop filter to blur. ── -->
-    <!-- ── The menu band. Child of .window, SIBLING of .canvas and of the panels. ──
-         NOT inside .canvas (its stacking context would trap the menus below the
-         panels) and NOT inside a .panel (a panel's own backdrop-filter would
-         filter the menu — it vanished into the glass). ── -->
     <aside class="panel panel-left">
       <div class="panel-head">
         <span class="panel-title">Shaders</span>
@@ -883,19 +879,19 @@ pre {
 
         <button class="thread">
           <span class="thread-top"><span class="thread-name">preview envs</span><span class="dot is-warn" aria-hidden="true"></span></span>
-          <span class="thread-meta"><span>SCO-38820</span><span>·</span><span>38s</span><span>·</span><span>3 PRs</span></span>
+          <span class="thread-meta"><span>SCO-38820</span><span>&middot;</span><span>38s</span><span>&middot;</span><span>3 PRs</span></span>
         </button>
         <button class="thread">
           <span class="thread-top"><span class="thread-name">pull shared</span><span class="dot is-work" aria-hidden="true"></span></span>
-          <span class="thread-meta"><span>SCO-41404</span><span>·</span><span>5m</span><span>·</span><span>2 PRs</span></span>
+          <span class="thread-meta"><span>SCO-41404</span><span>&middot;</span><span>5m</span><span>&middot;</span><span>2 PRs</span></span>
         </button>
         <button class="thread">
           <span class="thread-top"><span class="thread-name">migrator</span><span class="dot is-work" aria-hidden="true"></span></span>
-          <span class="thread-meta"><span>SCO-40182</span><span>·</span><span>8m</span><span>·</span><span>3 PRs</span></span>
+          <span class="thread-meta"><span>SCO-40182</span><span>&middot;</span><span>8m</span><span>&middot;</span><span>3 PRs</span></span>
         </button>
         <button class="thread">
           <span class="thread-top"><span class="thread-name">ps query perf</span><span class="dot is-ok" aria-hidden="true"></span></span>
-          <span class="thread-meta"><span>SCO-36409</span><span>·</span><span>2h</span><span>·</span><span>30 PRs</span></span>
+          <span class="thread-meta"><span>SCO-36409</span><span>&middot;</span><span>2h</span><span>&middot;</span><span>30 PRs</span></span>
         </button>
       </div>
     </aside>
@@ -1000,6 +996,7 @@ pre {
       </div>
 
     </div>
+
 
   </div>
 </div>
@@ -1165,18 +1162,19 @@ pre {
     binding case — a panel over a bright canvas. Every text token clears WCAG AA.</p>
     <div class="doc-intro" id="contrast-note">
       <div class="contrast" id="contrast-table">
-        <div class="crow"><span>text-primary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow"><span>text-secondary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow"><span>text-tertiary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow"><span>accent</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow" style="border-color:var(--accent-line)"><span>text-primary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow" style="border-color:var(--accent-line)"><span>text-secondary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow" style="border-color:var(--accent-line)"><span>text-tertiary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
-        <div class="crow" style="border-color:var(--accent-line)"><span>accent</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>text-primary</span><span>on the effective panel, <b class="cs-name">binding</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>text-secondary</span><span>on the effective panel, <b class="cs-name">binding</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>text-tertiary</span><span>on the effective panel, <b class="cs-name">binding</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>accent</span><span>on the effective panel, <b class="cs-name">binding</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-primary</span><span>on the effective panel, <b class="cs-name">other</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-secondary</span><span>on the effective panel, <b class="cs-name">other</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-tertiary</span><span>on the effective panel, <b class="cs-name">other</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>accent</span><span>on the effective panel, <b class="cs-name">other</b> canvas</span><span class="ratio" data-ratio>--</span></div>
       </div>
       <p style="font-size:12px;color:var(--text-tertiary)">Computed in the page from the live token values, so it reflects
-      this palette rather than a remembered one. Toggle Light and the numbers change, because the tokens change. The
-      black-canvas rows are the lighter case; the white-canvas rows are the binding one.</p>
+      this palette rather than a remembered one. Which canvas is <em>binding</em> depends on the theme: in dark mode it is
+      the white one, in light mode the black one, because that is the case pulling the composite furthest from the text
+      colour. The labels name it rather than asserting one canvas for both themes.</p>
     </div>
   </section>
 
@@ -1369,20 +1367,21 @@ pre {
     // so light mode uses 1, and the white case is irrelevant because the panel
     // is opaque enough on its own.
     var isLight = !root.hasAttribute("data-theme") || root.getAttribute("data-theme") === "light";
-    var cases = isLight
-      ? [
-          // In light mode the panel is near-white, so a BLACK canvas is the
-          // binding case: it is what pulls the composite darkest, against dark
-          // text.
-          { backdrop: [0, 0, 0] },
-          { backdrop: [242, 243, 245] }
-        ]
-      : [
-          // In dark mode a WHITE canvas is the binding case: brightness() has
-          // darkened it to 255 × b, and that is still brighter than the panel.
-          { backdrop: [255 * b, 255 * b, 255 * b] },
-          { backdrop: [0, 0, 0] }
-        ];
+    var names, cases;
+    if (isLight) {
+      // The panel is near-white in light mode, so the BLACK canvas is what
+      // pulls the composite darkest against dark text — that is binding.
+      names = ["black", "white"];
+      cases = [{ backdrop: [0, 0, 0] }, { backdrop: [255, 255, 255] }];
+    } else {
+      // In dark mode a WHITE canvas is binding: brightness() has darkened it
+      // to 255 × b, which is still far brighter than the panel.
+      names = ["white", "black"];
+      cases = [
+        { backdrop: [255 * b, 255 * b, 255 * b] },
+        { backdrop: [0, 0, 0] }
+      ];
+    }
 
     rows.forEach(function (row, i) {
       var el = row.querySelector("[data-ratio]");
@@ -1393,7 +1392,18 @@ pre {
       var eff = rgb.map(function (v, k) { return v * a + c.backdrop[k] * (1 - a); });
       var r = ratio(fg, eff);
       el.textContent = r.toFixed(2) + ":1";
-      el.classList.toggle("is-fail", r < 4.5);
+      // The accent is used as a FILL (the primary button is white text on an
+      // amber ground), so WCAG's non-text 3:1 applies to it rather than the
+      // 4.5:1 text floor. Judging the fill by the text rule produced a false
+      // failure at 4.36:1.
+      var floor = tok === "--accent" ? 3.0 : 4.5;
+      el.classList.toggle("is-fail", r < floor);
+    });
+
+    // Name which canvas each row used, so the table is honest about a
+    // theme-dependent binding case instead of asserting one for both.
+    document.querySelectorAll("#contrast-table .cs-name").forEach(function (el, i) {
+      el.textContent = names[i < 4 ? 0 : 1];
     });
   }
 
