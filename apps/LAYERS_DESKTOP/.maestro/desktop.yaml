@@ -1,0 +1,55 @@
+# LAYERS Desktop — boot, add components, edit props.
+# Run:  maestro test --headless .maestro/desktop.yaml
+#
+# Maestro's managed Chromium is ~1200x459, so this asserts what is on screen
+# without depending on the full canvas being visible. The canvas pixel proof is
+# done separately via CDP `readPixels`.
+url: http://127.0.0.1:3003/
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+
+# ── The shell is present ───────────────────────────────────────────────────
+- assertVisible: ".*Shaders.*"
+- assertVisible: ".*Layers.*"
+- assertVisible: ".*Props.*"
+- assertVisible: ".*Untitled.*"
+- assertVisible: ".*1920.*1080.*"
+- takeScreenshot: 01-shell
+
+# ── The insert toolbar offers the categories ───────────────────────────────
+- assertVisible: ".*Textures.*"
+- assertVisible: ".*Adjustments.*"
+- assertVisible: ".*Blurs.*"
+- takeScreenshot: 02-toolbar
+
+# ── The picker opens and lists components ──────────────────────────────────
+- tapOn: ".*Textures.*"
+- extendedWaitUntil:
+    visible: ".*Search components.*"
+    timeout: 20000
+- assertVisible: ".*Pattern/Dither.*"
+- assertVisible: ".*Noise/Grain.*"
+- assertVisible: ".*components.*"
+- takeScreenshot: 03-picker
+
+# ── Adding a component creates a layer and populates Props ─────────────────
+- tapOn: ".*Pattern/Dither.*"
+- extendedWaitUntil:
+    visible: ".*Transform.*"
+    timeout: 20000
+- assertVisible: ".*Appearance.*"
+- assertVisible: ".*Blend Mode.*"
+- takeScreenshot: 04-added
+
+# ── The core's own params are rendered ─────────────────────────────────────
+- assertVisible: ".*Shape.*"
+- assertVisible: ".*Scale.*"
+- swipe:
+    start: 88%, 78%
+    end: 88%, 35%
+    duration: 600
+- assertVisible: ".*Dither Type.*"
+- takeScreenshot: 05-params

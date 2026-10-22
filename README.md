@@ -4,6 +4,22 @@ Layer-based design tool where cores replace traditional layer styles. Built on a
 
 See the [Product Vision](03-Reference/Product-Vision) in the vault for the full brief.
 
+> **⚠️ Course Correction (2026-10-19):** The original implementation was the "do more with less" mobile prototype — NOT the full desktop/iPad vision. The 7-core renderer is production-ready; document model, UI, and AI pipeline need rebuilding. See `docs/Course-Correction.md` (vault) for details.
+>
+> **✅ Desktop surface added (2026-10-21):** `apps/LAYERS_DESKTOP` is the full-canvas shader editor — a shader tree, a layer stack, a full-bleed canvas the panels glass over, and a props panel, with multiple shaders coexisting as frames. It reuses `packages/engine`, `packages/cores` and `packages/stack` unchanged; only the shell is new. Runs on `:3003`. See `apps/LAYERS_DESKTOP/README.md`.
+
+## Apps
+
+| App | Port | What it is |
+|--|--|--|
+| `apps/web` | 3000 | The mobile prototype — single stack, phone-first, PWA. |
+| `apps/LAYERS_DESKTOP` | 3003 | The desktop editor — shader tree, multi-shader canvas, props panel. |
+
+Both share the same engine, cores and stack model. The desktop app exists because
+the mobile shell is built around one stack and a bottom tab bar; the desktop
+surface is built around a layer tree and a full-canvas workspace.
+
+
 ## Project Status (2026-10-19)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**

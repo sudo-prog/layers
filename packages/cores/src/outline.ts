@@ -100,6 +100,16 @@ export class OutlineCore implements Pass {
     this._params = { ...this._params, ...params };
   }
 
+  /**
+   * Merge new params in without rebuilding the pass.
+   *
+   * The dynamic-prop driver resolves driven params to numbers once per frame
+   * and pushes them here, so a driven core is not re-instantiated every frame.
+   */
+  setParams(params: Partial<OutlineParams>): void {
+    this._params = { ...this._params, ...params };
+  }
+
   getFragmentShader(): string {
     return OUTLINE_FRAGMENT;
   }

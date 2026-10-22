@@ -136,6 +136,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 
 let baseUrl = DEFAULT_BASE_URL;
 let timeoutMs = DEFAULT_TIMEOUT_MS;
+let authToken = "";
 
 /** Override the base URL (mainly for testing). */
 export function setAiBaseUrl(url: string): void {
@@ -145,7 +146,21 @@ export function setAiBaseUrl(url: string): void {
 /** Override the request timeout in milliseconds. */
 export function setAiTimeout(ms: number): void {
   timeoutMs = ms;
-};
+}
+
+/** Set the bearer token for AI service auth (default: empty = no auth). */
+export function setAiToken(token: string): void {
+  authToken = token;
+}
+
+/** Build headers including Authorization when a token is set. */
+function buildHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
 
 /**
  * Low-level POST helper. Returns the parsed JSON or throws on HTTP error.
@@ -156,7 +171,7 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
   try {
     const resp = await fetch(`${baseUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -173,7 +188,10 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
 /** Check whether the backend AI service is healthy. */
 export async function checkHealth(): Promise<boolean> {
   try {
-    const resp = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(timeoutMs) });
+    const resp = await fetch(`${baseUrl}/health`, {
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: buildHeaders(),
+    });
     if (!resp.ok) return false;
     const data = (await resp.json()) as { status: string };
     return data.status === "ok";
@@ -292,6 +310,7 @@ export async function recordApplication(coreType: string, cluster: string): Prom
 export async function getAcceptanceDashboard(): Promise<AcceptanceDashboard> {
   const data = await fetch(`${baseUrl}/dashboard/acceptance`, {
     signal: AbortSignal.timeout(timeoutMs),
+    headers: buildHeaders(),
   });
   if (!data.ok) {
     const text = await data.text().catch(() => "");

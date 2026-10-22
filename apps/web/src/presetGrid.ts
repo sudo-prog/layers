@@ -40,6 +40,26 @@ function passesFor(record: PresetRecord): number {
   return estimatePasses(record.stack.items);
 }
 
+/**
+ * Deterministic gradient placeholder as a base64 data URL.
+ * Used when a preset has no rendered thumbnail (legacy presets saved
+ * before the thumbnail feature, or WebGL2 unavailable at save time).
+ */
+function gradientPlaceholder(name: string): string {
+  // Simple hash of the name to pick a hue.
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue1 = ((hash % 360) + 360) % 360;
+  const hue2 = (hue1 + 60) % 360;
+
+  // Build a tiny SVG gradient and encode as base64.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:hsl(${hue1},70%,60%)"/><stop offset="100%" style="stop-color:hsl(${hue2},70%,40%)"/></linearGradient></defs><rect width="128" height="128" fill="url(#g)"/></svg>`;
+  const base64 = btoa(unescape(encodeURIComponent(svg)));
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
 export async function mountPresetGrid(
   container: HTMLElement,
   opts: PresetGridOptions,
@@ -146,6 +166,15 @@ export async function mountPresetGrid(
         void apply();
       }
     });
+
+    // Thumbnail — show real rendered preview when available, otherwise a
+    // deterministic gradient placeholder based on the preset name.
+    const thumbnailUrl = record.thumbnail ?? gradientPlaceholder(record.name);
+    const img = el("img", "preset-card-thumb") as HTMLImageElement;
+    img.src = thumbnailUrl;
+    img.alt = "";
+    img.loading = "lazy";
+    card.appendChild(img);
 
     // Name
     card.appendChild(el("span", "preset-card-name", record.name));

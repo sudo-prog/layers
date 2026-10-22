@@ -4,9 +4,12 @@
  *
  * Uses an in-memory fake of IndexedDBProvider (same shape as the mock in
  * packages/sync/test/sync.test.ts) so the store runs under jsdom.
+ *
+ * The thumbnailRenderer module is mocked so savePreset's thumbnail capture
+ * is deterministic and testable without WebGL2.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   PresetStore,
   PresetStoreError,
@@ -14,6 +17,14 @@ import {
 } from "./presetStore";
 import { canonicalizePreset } from "@layers/schema";
 import { createStackState, type StackState } from "@layers/stack";
+
+// ── Mock thumbnailRenderer ────────────────────────────────────────────────
+
+const mockThumbnailDataUrl = "data:image/png;base64,mock-thumbnail";
+
+vi.mock("./thumbnailRenderer", () => ({
+  renderThumbnail: vi.fn(() => mockThumbnailDataUrl),
+}));
 
 // ── In-memory fake of IndexedDBProvider ────────────────────────────────
 
@@ -165,6 +176,39 @@ describe("PresetStore", () => {
       await store.deletePreset(record.id);
       expect(await store.listPresets()).toHaveLength(0);
       expect(await store.loadPreset(record.id)).toBeNull(); // tombstone doc has no stack → null
+    });
+  });
+
+  describe("thumbnail integration", () => {
+    it("savePreset captures a thumbnail from the renderer", async () => {
+      await store.init();
+      const record = await store.savePreset("WithThumb", makeStack(1));
+      expect(record.thumbnail).toBe(mockThumbnailDataUrl);
+    });
+
+    it("listPresets returns the stored thumbnail", async () => {
+      await store.init();
+      await store.savePreset("ThumbList", makeStack(1));
+      const presets = await store.listPresets();
+      expect(presets).toHaveLength(1);
+      expect(presets[0].thumbnail).toBe(mockThumbnailDataUrl);
+    });
+
+    it("exportPresetJson includes the thumbnail", async () => {
+      await store.init();
+      const record = await store.savePreset("ExportThumb", makeStack(1));
+      const exported = JSON.parse(await store.exportPresetJson(record.id));
+      expect(exported.thumbnail).toBe(mockThumbnailDataUrl);
+    });
+
+    it("savePreset still works when renderer returns null", async () => {
+      await store.init();
+      // Temporarily override the mock to return null
+      const { renderThumbnail } = await import("./thumbnailRenderer");
+      vi.mocked(renderThumbnail).mockReturnValueOnce(null);
+
+      const record = await store.savePreset("NoThumb", makeStack(1));
+      expect(record.thumbnail).toBeUndefined();
     });
   });
 

@@ -18,6 +18,7 @@ import {
   migratePreset,
 } from "@layers/schema";
 import { createStackState, type StackState } from "@layers/stack";
+import { renderThumbnail } from "./thumbnailRenderer";
 
 const INDEX_DOC_ID = "layers-preset:index";
 
@@ -219,6 +220,10 @@ export class PresetStore {
       throw new PresetStoreError(`Invalid preset: ${detail}`);
     }
 
+    // Render a real thumbnail preview using the engine+cores pipeline.
+    // Returns null when WebGL2 is unavailable (e.g. jsdom tests, private mode).
+    const thumbnail = renderThumbnail(stack) ?? undefined;
+
     const record: PresetRecord = {
       id: presetIdForName(trimmed),
       name: trimmed,
@@ -228,7 +233,7 @@ export class PresetStore {
       stack,
       createdAt: v1.createdAt,
       updatedAt: v1.updatedAt,
-      thumbnail: v1.thumbnail ?? undefined,
+      thumbnail,
       // Stage 2.2: visibility + category. Default is PRIVATE — never publish implicitly.
       visibility: meta?.visibility ?? "private",
       category: meta?.category,

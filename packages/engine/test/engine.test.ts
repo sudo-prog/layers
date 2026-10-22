@@ -4,6 +4,10 @@ import { PingPongFBO } from "../src/fbo.js";
 import { BlendPass } from "../src/blend.js";
 import { Renderer } from "../src/renderer.js";
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 // ── Mock WebGL2 context for headless testing ────────────────────────────────
 
 function createMockCanvas(): HTMLCanvasElement {
@@ -27,8 +31,12 @@ function createMockGL(): WebGL2RenderingContext {
     createProgram: vi.fn().mockReturnValue({}),
     attachShader: vi.fn(),
     linkProgram: vi.fn(),
-    getProgramParameter: vi.fn().mockReturnValue(true),
+    getProgramParameter: vi.fn((program: object, pname: number) => {
+      if (pname === 0x8742) return 16; // PROGRAM_BINARY_LENGTH
+      return true; // LINK_STATUS etc
+    }),
     getProgramInfoLog: vi.fn().mockReturnValue(""),
+    getParameter: vi.fn().mockReturnValue([0x93a1]), // PROGRAM_BINARY_FORMATS
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
     createVertexArray: vi.fn().mockReturnValue({}),
@@ -41,7 +49,7 @@ function createMockGL(): WebGL2RenderingContext {
     createFramebuffer: vi.fn().mockReturnValue({}),
     bindFramebuffer: vi.fn(),
     framebufferTexture2D: vi.fn(),
-    checkFramebufferStatus: vi.fn().mockReturnValue(36053), // FRAMEBUFFER_COMPLETE
+    checkFramebufferStatus: vi.fn().mockReturnValue(36053),
     createTexture: vi.fn(() => ({ _id: ++textureCounter })),
     bindTexture: vi.fn(),
     texImage2D: vi.fn(),
@@ -56,6 +64,8 @@ function createMockGL(): WebGL2RenderingContext {
     uniform2f: vi.fn(),
     activeTexture: vi.fn(),
     drawArrays: vi.fn(),
+    getProgramBinary: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]).buffer),
+    programBinary: vi.fn().mockReturnValue(true),
     TEXTURE_2D: 0x0DE1,
     TEXTURE0: 0x84C0,
     TEXTURE1: 0x84C1,
@@ -79,8 +89,60 @@ function createMockGL(): WebGL2RenderingContext {
     COMPILE_STATUS: 0x8B81,
     LINK_STATUS: 0x8B82,
     TRIANGLE_STRIP: 0x0005,
+    PROGRAM_BINARY_LENGTH: 0x8742,
+    PROGRAM_BINARY_FORMATS: 0x87ff,
   };
   return gl as unknown as WebGL2RenderingContext;
+}
+
+// ── Simple custom pass with a unique shader ─────────────────────────────────
+
+const SIMPLE_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uTexture;
+in vec2 vTexCoord;
+out vec4 fragColor;
+void main() { fragColor = texture(uTexture, vTexCoord) * 0.5; }`;
+
+const SIMPLE_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aPosition;
+layout(location = 1) in vec2 aTexCoord;
+out vec2 vTexCoord;
+void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition, 0.0, 1.0); }`;
+
+class SimplePass {
+  readonly id: string;
+  readonly name: string;
+  enabled = true;
+
+  constructor(id: string) {
+    this.id = id;
+    this.name = id;
+  }
+
+  getFragmentShader() { return SIMPLE_FS; }
+  getVertexShader() { return SIMPLE_VS; }
+
+  compile(gl: WebGL2RenderingContext): WebGLProgram | null {
+    const vs = gl.createShader(gl.VERTEX_SHADER)!;
+    const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
+    gl.shaderSource(vs, SIMPLE_VS);
+    gl.compileShader(vs);
+    gl.shaderSource(fs, SIMPLE_FS);
+    gl.compileShader(fs);
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    return prog;
+  }
+
+  setUniforms(_gl: WebGL2RenderingContext, _program: WebGLProgram, _params: unknown, _time: number): void {}
+
+  dispose(_gl: WebGL2RenderingContext): void {}
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -221,10 +283,9 @@ describe("Renderer", () => {
     canvas.getContext = vi.fn().mockReturnValue(gl);
 
     const renderer = new Renderer(canvas, { width: 256, height: 256 });
-    // Use two passes with distinct ids so both get cached.
+    // Use two passes with distinct shader hashes so both compile independently.
     const p1 = new BlendPass("normal");
-    const p2 = new BlendPass("normal");
-    (p2 as { id: string }).id = "blend-composite-2";
+    const p2 = new SimplePass("simple-dim");
     const s1 = vi.spyOn(p1, "compile");
     const s2 = vi.spyOn(p2, "compile");
 

@@ -1,0 +1,106 @@
+# LAYERS — dynamic props actually drive a rendered pixel.
+# Run:  maestro test --headless .maestro/dynamic-props.yaml
+#
+# This flow exists to catch the failure this feature was built to fix: a driven
+# prop that stores correctly but renders nothing. The driver editor's own
+# controls only exist once a prop is genuinely driven, so asserting them proves
+# the editor side works; the rendered-pixel proof lives in the CDP checks
+# documented in docs/properties-panel.md.
+#
+# Layout notes that make this flow deterministic:
+#  * Maestro's managed Chromium is ~1200x459, so most of the panel is below the
+#    fold and absent from the accessibility tree.
+#  * `#inspector` is the inner scroller and the document is `overflow: hidden`,
+#    so `swipe` is required — `scrollUntilVisible` scrolls the document and
+#    reaches nothing.
+#  * The `Stack` header is sticky over the top ~118px of the panel. A control
+#    scrolled to y<118 is covered and a real click lands on the header instead.
+#    Every step below therefore scrolls DOWN only, never back up, so no control
+#    is ever parked under the header.
+url: http://127.0.0.1:3000/
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+
+# ── Add a core ─────────────────────────────────────────────────────────────
+- tapOn: ".*Pattern.Dither.*"
+- extendedWaitUntil:
+    visible: ".*Transform.*"
+    timeout: 20000
+
+# ── Scroll down to the component's own props ───────────────────────────────
+- swipe:
+    start: 88%, 80%
+    end: 88%, 15%
+    duration: 700
+- swipe:
+    start: 88%, 80%
+    end: 88%, 35%
+    duration: 700
+
+# ── Open the dynamic driver on Scale ───────────────────────────────────────
+# The affordance renders as a visible `dyn` caption (its `aria-label` is
+# "Make Scale dynamic", but Maestro matches TEXT, not the label). Every numeric
+# prop has one, so the first `dyn` in the panel is Scale's — hence `index: 0`.
+- tapOn:
+    text: "dyn"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*Driver.*"
+    timeout: 20000
+
+# ── All four modes are offered ─────────────────────────────────────────────
+- assertVisible: ".*Off.*"
+- assertVisible: ".*Cursor.*"
+- assertVisible: ".*Auto.*"
+- assertVisible: ".*Map.*"
+- takeScreenshot: 01-driver-open
+
+# ── Auto mode exposes speed and easing ─────────────────────────────────────
+# Tested before any deep scroll: in Auto mode the rows are Speed · Easing ·
+# Smoothing · Momentum · Base value, and Speed sits directly under Driver.
+- tapOn:
+    text: "Auto"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*Speed.*"
+    timeout: 20000
+- assertVisible: ".*Easing.*"
+- takeScreenshot: 02-auto-mode
+
+# ── Off restores the static value ──────────────────────────────────────────
+- tapOn:
+    text: "Off"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*Static value.*"
+    timeout: 20000
+- takeScreenshot: 03-driver-off
+
+# ── Cursor mode exposes its control set ────────────────────────────────────
+- tapOn:
+    text: "Cursor"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*Axis.*"
+    timeout: 20000
+- assertVisible: ".*Smoothing.*"
+
+# The driver editor's own rows push the lower controls below the fold. Swipe
+# further DOWN. Two swipes, because the `Object Fit` control is now a 2-row
+# auto-fit grid (60px instead of 32px) and everything below it sits lower.
+- swipe:
+    start: 88%, 80%
+    end: 88%, 30%
+    duration: 600
+- assertVisible: ".*Momentum.*"
+- swipe:
+    start: 88%, 78%
+    end: 88%, 40%
+    duration: 600
+- assertVisible: ".*Base value.*"
+- assertVisible: ".*Curve.*"
+- assertVisible: ".*Reach.*"
+- takeScreenshot: 04-cursor-mode

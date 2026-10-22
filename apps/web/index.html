@@ -6,33 +6,48 @@
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- CSP: configure at hosting/CDN level in production. Do NOT add a meta tag here —
+       it blocks Vite HMR eval in dev mode. See docs/security-review.md for the CSP policy. -->
   <title>LAYERS — Visual Style Engine</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/src/styles.css" />
+  <link rel="stylesheet" href="/src/props.css" />
+  <!-- Graphite glass surface layer — must come last so it wins on source order. -->
+  <link rel="stylesheet" href="/src/graphite.css" />
 </head>
 <body>
   <div id="app">
     <header class="toolbar">
       <h1 class="logo">LAYERS</h1>
       <div class="toolbar-actions">
-        <button id="btn-undo" class="btn" title="Undo (Ctrl+Z)" disabled aria-label="Undo">↩ Undo</button>
-        <button id="btn-redo" class="btn" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
-        <span class="divider"></span>
-        <button id="btn-export" class="btn" title="Export preset JSON">Export</button>
-        <button id="btn-import" class="btn" title="Import preset JSON">Import</button>
-        <button id="btn-vector" class="btn" title="Vector Editor">✏️ Vector</button>
-        <button id="btn-save" class="btn" title="Save to IndexedDB">💾 Save</button>
-        <button id="btn-clear" class="btn" title="Clear IndexedDB">🗑 Clear</button>
-        <span class="divider"></span>
-        <button id="btn-theme" class="btn" title="Toggle theme">🌙 Dark</button>
+        <!-- Light/dark switch: leftmost in the actions group, styled like the
+             other buttons -->
+        <button id="btn-theme" class="theme-switch" role="switch" aria-checked="false" aria-label="Dark theme" title="Toggle dark theme">
+          <span class="theme-switch-knob" aria-hidden="true"></span>
+        </button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+
+        <!-- Primary actions: always visible, icon-only below 768px -->
+        <button id="btn-undo" class="btn" data-icon="undo" title="Undo (Ctrl+Z)" disabled aria-label="Undo"></button>
+        <button id="btn-redo" class="btn" data-icon="redo" title="Redo (Ctrl+Y)" disabled aria-label="Redo"></button>
+
+        <!-- Secondary actions: collapse into the mobile "More" sheet -->
+        <button id="btn-export" class="btn btn-secondary" data-icon="export" title="Export preset JSON" aria-label="Export"></button>
+        <button id="btn-import" class="btn btn-secondary" data-icon="import" title="Import preset JSON" aria-label="Import"></button>
+        <button id="btn-vector" class="btn btn-secondary" data-icon="vector" title="Vector Editor" aria-label="Vector editor"></button>
+        <button id="btn-save" class="btn btn-secondary" data-icon="save" title="Save to IndexedDB" aria-label="Save"></button>
+        <button id="btn-clear" class="btn btn-secondary" data-icon="clear" title="Clear IndexedDB" aria-label="Clear saved state"></button>
+        <!-- Mobile-only overflow trigger -->
+        <button id="btn-more" class="btn btn-more" data-icon="more" title="More actions" aria-label="More actions" aria-expanded="false" aria-controls="more-sheet"></button>
       </div>
     </header>
 
     <main class="workspace">
       <aside class="panel panel-left">
         <h2 class="panel-title">Cores</h2>
+        <!-- "Cores" is the layer primitive; the add-layer toolbar names them. -->
         <div id="core-list" class="core-list"></div>
       </aside>
 
@@ -42,10 +57,10 @@
           <canvas id="mask-canvas" width="512" height="512" class="mask-canvas hidden"></canvas>
           <div id="mask-overlay" class="mask-overlay hidden">
             <div class="mask-toolbar">
-              <button id="btn-paint" class="btn active">🖌 Paint</button>
-              <button id="btn-erase" class="btn">🧹 Erase</button>
-              <button id="btn-clear-mask" class="btn">Clear</button>
-              <button id="btn-close-mask" class="btn">✕ Close</button>
+              <button id="btn-paint" class="btn active" data-icon="vector" aria-label="Paint"></button>
+              <button id="btn-erase" class="btn" data-icon="clear" aria-label="Erase"></button>
+              <button id="btn-clear-mask" class="btn" data-label="Clear" aria-label="Clear mask"></button>
+              <button id="btn-close-mask" class="btn" data-label="Close" aria-label="Close mask editor"></button>
               <label>Size <input type="range" id="brush-size" min="1" max="200" value="20"></label>
               <label>Opacity <input type="range" id="brush-opacity" min="0" max="1" step="0.01" value="0.5"></label>
             </div>
@@ -55,6 +70,7 @@
           <span id="pass-count">0 passes</span>
           <span id="fps-display"></span>
         </div>
+        <div id="insert-host" class="insert-host"></div>
       </section>
 
       <aside class="panel panel-right">
@@ -62,7 +78,6 @@
         <div id="stack-list" class="stack-list"></div>
         <div id="inspector" class="inspector">
           <p class="inspector-empty">Select a core to edit its parameters</p>
-          <button id="btn-mask" class="btn" style="display:none;width:100%;margin-top:8px;">🎭 Edit Mask</button>
         </div>
       </aside>
     </main>
@@ -72,6 +87,26 @@
     <span class="sync-indicator"></span>
     <span id="sync-text">Sync: --</span>
   </footer>
+
+  <!-- Mobile tab bar -->
+  <nav class="mobile-tabbar" role="navigation" aria-label="Main navigation">
+    <button class="mobile-tabbar-btn active" data-tab="canvas" aria-label="Canvas">
+      <span class="mobile-tabbar-icon" data-icon="canvas"></span>
+      <span class="mobile-tabbar-label">Canvas</span>
+    </button>
+    <button class="mobile-tabbar-btn" data-tab="cores" aria-label="Cores">
+      <span class="mobile-tabbar-icon" data-icon="cores"></span>
+      <span class="mobile-tabbar-label">Cores</span>
+    </button>
+    <button class="mobile-tabbar-btn" data-tab="stack" aria-label="Stack">
+      <span class="mobile-tabbar-icon" data-icon="stack"></span>
+      <span class="mobile-tabbar-label">Stack</span>
+    </button>
+    <button class="mobile-tabbar-btn" data-tab="presets" aria-label="Presets">
+      <span class="mobile-tabbar-icon" data-icon="presets"></span>
+      <span class="mobile-tabbar-label">Presets</span>
+    </button>
+  </nav>
 
   <!-- Help overlay -->
   <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
@@ -85,20 +120,20 @@
   <div id="vector-panel" class="vector-panel hidden">
     <div class="vector-header">
       <h3>Vector Editor</h3>
-      <button id="btn-close-vector" class="btn">✕</button>
+      <button id="btn-close-vector" class="btn" data-label="Close" aria-label="Close vector editor"></button>
     </div>
     <div class="vector-toolbar">
-      <button id="btn-add-point" class="btn">+ Point</button>
-      <button id="btn-add-line" class="btn">+ Line</button>
-      <button id="btn-add-curve" class="btn">+ Curve</button>
-      <button id="btn-delete-point" class="btn">Delete</button>
-      <button id="btn-new-path" class="btn">New Path</button>
+      <button id="btn-add-point" class="btn" data-label="Point" aria-label="Add point"></button>
+      <button id="btn-add-line" class="btn" data-label="Line" aria-label="Add line"></button>
+      <button id="btn-add-curve" class="btn" data-label="Curve" aria-label="Add curve"></button>
+      <button id="btn-delete-point" class="btn" data-label="Delete" aria-label="Delete point"></button>
+      <button id="btn-new-path" class="btn" data-label="New" aria-label="New path"></button>
       <span class="divider"></span>
-      <button id="btn-zoom-out" class="btn">−</button>
-      <button id="btn-zoom-in" class="btn">+</button>
+      <button id="btn-zoom-out" class="btn" data-label="−" aria-label="Zoom out"></button>
+      <button id="btn-zoom-in" class="btn" data-label="+" aria-label="Zoom in"></button>
       <span class="divider"></span>
-      <button id="btn-export-svg" class="btn">Export</button>
-      <button id="btn-import-svg" class="btn">Import</button>
+      <button id="btn-export-svg" class="btn" data-label="Export" aria-label="Export SVG"></button>
+      <button id="btn-import-svg" class="btn" data-label="Import" aria-label="Import SVG"></button>
     </div>
     <svg id="vector-svg" width="256" height="256" class="vector-svg"></svg>
   </div>

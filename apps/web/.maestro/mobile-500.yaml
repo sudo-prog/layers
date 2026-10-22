@@ -1,0 +1,41 @@
+url: http://127.0.0.1:3001/
+---
+# LAYERS mobile interface — Maestro at 500x844 (below the 767px breakpoint)
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+- takeScreenshot: 01-canvas-default
+
+# Bottom tab bar present
+- assertVisible: ".*Canvas.*"
+- assertVisible: ".*Cores.*"
+- assertVisible: ".*Stack.*"
+- assertVisible: ".*Presets.*"
+
+# Cores tab -> cores panel
+- tapOn: ".*Cores.*"
+- extendedWaitUntil:
+    visible: ".*Pattern/Dither.*"
+    timeout: 20000
+- assertVisible: ".*Noise/Grain.*"
+- assertVisible: ".*Blur/Convolution.*"
+- takeScreenshot: 02-cores-panel
+
+# Stack tab -> stack panel
+- tapOn: ".*Stack.*"
+- extendedWaitUntil:
+    visible: ".*Select a core to edit.*"
+    timeout: 20000
+- takeScreenshot: 03-stack-panel
+
+# Canvas tab -> back
+- tapOn: ".*Canvas.*"
+- takeScreenshot: 04-back-to-canvas
+
+# Presets tab -> preset panel
+- tapOn: ".*Presets.*"
+- extendedWaitUntil:
+    visible: ".*Save current stack.*"
+    timeout: 20000
+- takeScreenshot: 05-presets-panel

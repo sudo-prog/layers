@@ -1,0 +1,815 @@
+
+####################################################################################################
+## G7kzM8M7hA4 — Quick Tour of the Shaders Design Editor   (5169 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en This is Shaders, the design platform for creating beautiful, stunning WebGPU driven
+effects for your web projects. Whether that's going to be the background of a hero section or a card or your logo in
+liquid glass, whatever you're looking to create, you can create it in Shaders. The process starts here in the design
+editor. The design editor is a workspace and infinite canvas where you can explore different ideas. You can mix and
+match components. You can tweak props and you can get something that is uniquely yours and ready to ship. And once it
+is ready to ship, you can take it to production-ready in just a few clicks. Shaders is built on top of a component
+library that exports either using your agent or directly to code. So, let's take a look at the workflow. Starting with
+our workspace on the left-hand side, we have our shaders and our layer panel. On the right-hand side, we'll have our
+props panel. So, when you select a particular layer, you can see the available properties on the right-hand side. And
+in the middle, we have our infinite canvas. Now, I say infinite canvas in the sense that you can zoom in, zoom out
+just like any other design tool. And in this case, I'm going to go ahead and duplicate our demo shader. And you can
+work with multiple shaders in the same project in the same workspace. So, now I have demo two selected. And one of the
+benefits of this is that you can pull up two different looks and you can try different variations. So, let me click on
+light edge, one of our many shader components. This is one in particular is a shape effect. And I'm just going to say,
+you know, maybe I tweak the colors. Maybe I make this a little bit more purple. Uh and actually, I could just hit the
+randomize colors button and just see if anything pops out. And there you go, something blue and purple that looks
+great right off the bat and it just came by random chance. So, with the infinite canvas, I can look at demo two by
+itself. I can zoom out to see all of them. I can zoom in and out. I've got that sort of ability to move around. And
+this is great for exploring different variations. You might use it for trying different looks and effects out, but you
+could also use it, for example, to try out different resolutions. So, if this was going going let's say, the
+background of uh hero section. Well, it might work on desktop and you're not quite sure how it's going to look on
+mobile, go ahead and just set the dimensions of this canvas the way you want them to. This case, I'll just choose a
+preset like iPhone 16 Pro. And you'll see, oh, well, that doesn't quite work on mobile devices. So, what I'm going to
+do is I'm just going to adjust this and click the image layer and you can see a lot of shaders is just dragging and
+dropping on the canvas just like any other design tool, but this is producing production-ready code under the hood
+that you can just export straight into your project. So, here we go. We've got an interesting shader effect. This
+could be a uh mobile hero section. Maybe if I delete the logo, maybe that's the background for a menu on mobile when
+you open the hamburger menu, that could be your background. Um let's take a look at this particular demo and I'll just
+zoom in on it. Again, I will uh double-click just to select the logo. I'm going to remove that. Let's say this is a
+hero section background. We've already changed the colors, but we want to do a little bit more than that. Down here at
+the bottom is where you'll find all of the components that you can use inside of the editor. We have textures, so you
+could add text layers, shape effects, which are these sort of physical material effects, uh stylization, so you could
+style something however you want to. There's tons and tons of different options here. I'm just going to pick one of
+the, you know, the fan favorites and that is cursor ripples and it just creates this nice rippling effect over our
+background. So, there you go. I'm very, very happy with that. It's time to take this to code. And this is not
+difficult to do. With demo two selected and let's actually just rename this our desktop version. I'll just call that
+desktop. I'm going to go ahead and click on the export option here and when I click export, uh you'll see export code
+for the desktop version. I'm going to choose React. Let's say I'm using a React project. There's a couple of ways you
+can export this. The best way by far is the Shaders MCP. You can literally just copy and paste this prompt. Ask it,
+"Hey, go ahead, connect to my account, install this shader." And it can do it all for you, and it can customize it. It
+can hook up those prompts to reactive state for animations and timelines. You can do a lot with the MCP and with your
+agent. Or if you feel like just copying the code manually, uh here's the code, right? You can just expand this code
+section. You can see all of the code. And like I said, this is production-ready code, right? It's using the Shaders
+component library, so it's not a mess of shader code, of trigonometry, of math. It is just straight that you can copy
+and paste directly into your project.
+
+
+####################################################################################################
+## 4hGsEpoUK8k — Intro to the Design Editor Interface   (12567 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en This is the Shader's design editor. Uh if this is your first time here, we'll do a
+real quick walk around and just take a look at what's available to you. This is going to feel very familiar. It's a
+lot like other design tools like Figma or Paper or Wonder. It's got the same general layout, but there are some Shader
+specific functionality that you might want to be aware of. So, here I am, brand new project. This is called Untitled
+Project, and I have one Shader in the project called Untitled. So, it's very new. Uh very quick First thing I could do
+is just name this, right? So, if I wanted to name this uh intro project, I could just double-click on the project
+name, call it intro project, and do that. Same goes with naming Shaders and naming layers once we have layers. I'm
+going to double-click this, and I'm just going to call this uh Shader one. Very, very simple, right? Layers are
+components. So, in Shaders, components build up everything that you're working with, and you can find those components
+down here in the insert toolbar. We have categories for textures, which are your usual starting points. You might want
+to start with a gradient or a dot grid or I mean any one of the available textures here. Then we have text. You can
+actually write onto the screen. We have shapes, which are useful for masking, blending, and for dynamic props if
+you're going to be driving prop values based on certain visual output. We'll get to that in a later video, but just,
+you know, know that shapes by themselves are pretty basic, but they can get quite powerful. Then we have shape
+effects. So, shape effects are I think unique to Shaders in the sense that we support both 2D and 3D SDF driven shape
+effects, and these are physical materials. They look really, really interesting, and they can create some really
+unique effects. You can use a bunch of different shapes, both 2D and 3D, and you can load in your own SVG file. It can
+even be like a 2D effect, like a 2D glass liquid glass effect, or you can make it a 3D effect, like an extruded logo,
+and show that in carbon fiber, for example. Some real fun stuff that we could do with shape effects. Again, we'll get
+to that in a later video. We also have stylization. So, once you have something on the screen, here's how you stylize
+it. Here's how you change it. And layers that you can apply, almost like adjustment layers that you can put on top. We
+have a category for interactive effects. Now, yes, by default all shaders effects are interactive. You could wire any
+prop to any state and make them interactive, make them animated. The interactive category is just specifically for
+those which are obviously interactive by default. They're following the mouse, they're liquefying the screen, they're,
+you know, you got smoke that is moving around that you can interact with. A bunch of different ways we could use
+these, but by default they're interactive. Then we have distortions, just as you imagine distortions to work, like
+bulging, mirrors, the ability to look through glass and like see fluted glass distortion on the screen. We have blurs,
+which are, I think, pretty self-explanatory. You can blur in different ways. And we have adjustments. Again, self-
+explanatory. Just things like brightness, and if you want to increase the saturation, or if you want to apply a tint,
+you can do that in the adjustments panel. And last but not least, we have media. You can upload your own media, you
+can browse through what you've already uploaded. And honestly, I think the best way of working with media is just to
+drag a file from your desktop directly into the canvas, and that works just fine. That will literally put it directly
+into your shader. So, that's that. Let's take a look at the shader itself. I'm going to add a linear gradient here
+just for the sake of having something visual for us to look at. And here's our shader, right? So, if I just deselect
+that, we have a shader wire as our active shader. In the top right, we have dimension preview. This is not the
+dimensions that the shader will export at. Shaders are by default dimensionless. It is a canvas that gets rendered to
+your DOM when it actually goes to ship, and you decide how you connect that canvas, how you wire it up. You set the
+width and the height on that canvas, position it how you want to, and that's how your shader will ship. The idea of
+these dimensions is to give you a preview that is close if not accurate to how you plan on using it within the editor
+itself before you get to code. So, if you know I'm going to build a hero section and it's going to be full width, you
+know, maybe I'm doing a 1440, but I want a slightly shorter hero section, you can design something at an intended
+resolution that you intend to ship it out. But, of course browsers are responsive, it's going to shrink and whatnot.
+So, uh just know that the export dimensions here are for preview purposes and not what you would actually implement in
+code, but it's easy for your agent or you to implement that in code when we get there. In the bottom right corner of
+the shader, we also have two color options. P3 linear and sRGB are your available color spaces. I would say nearly all
+the time I find myself using P3 linear. It's a good default to use. And then we have tone mapping. So, uh in this
+case, linear was just what we set to. I find myself tending towards either uh ACES filmic or towards neutral. I feel
+like filmic gives you just a little bit brighter blown-out space. Uh neutral gives you just deeper colors, and I like
+neutral. So, I'm going to set it to neutral. You don't really notice much when the only thing here is a linear
+gradient. Now, let me select that linear gradient, and you will see a few more of our available settings. Uh on the
+right-hand side, we have our props panel. So, this is where you will find how to control everything, how to configure
+every single prop. Every different effect, every component has different props available to it. Some of them are
+similar though. Uh you will find the transform section in basically every Well, most props uh most components will
+have a transform section. You will also find an appearance section in most props to control, you know, the basics like
+opacity, uh blending, masking. We'll get to masking and all that later, but that's where you would find it in the
+props panel. At the top here, you will also have uh the component name, a link to the component documentation if you
+really want to go read that for some reason, and some zoom controls so you can zoom to a particular shader or to a
+particular zoom level. On the left-hand side, I forgot to mention it, you can also just toggle away the UI, which
+gives you a better preview. So, if I toggle this away on our sort of hero section template here, we can actually reach
+100% on this screen, so I can see this in one-for-one pixels, which is really, really nice to see sometimes. Let me go
+ahead and zoom in and kind of give you an basic intro to the infinite canvas. So, this is shader one, right? And let's
+say I go and I I modify some of these colors. Uh let's say we like something like Mhm, pick an idea, like maybe
+something like that. Yeah, sure, we'll go with that. This is my shader. Now, I may want to try different variations of
+this. I may want to explore, I may want to, you know, even export video or export code that has different ideas in it.
+So, what I can do is I can click on this and I can right-click to duplicate. And you'll see we get two up display on
+our infinite canvas. And all we've done, this is sort of like Figma or any other design tool, is we've got this frame
+that represents our shader and we can play with it in the space. So, here's shader two, which has its own linear
+gradient, right? It's been a It's been copied. I can change those settings. And there you go, I've got two different
+shaders side by side. Really great for trying out different variations, but back to dimensions, it's also great for
+trying out different dimensions. So, if I was to say, "Oh man, I'm really happy with a shader effect that I've made,
+it works well on the hero section on desktop, but I wonder how that's going to look on a mobile device." You can
+change the dimensions to something that's more representative of how that shader is going to look on a mobile device
+and see, "Hey, does it still hold up?" And in this example, you know, the horizontal linear gradient doesn't actually
+work too great for mobile. Maybe I want to change the direction of mobile and make it more diagonal. So, you can catch
+things like this in design. And on top of just catching it, you can actually export code and tell your agent, you
+know, this is the desktop version, this is the mobile version, and use different props and different values for
+different responsive breakpoints. So, having an infinite canvas like this works really well when you're trying
+different variations and when you're trying different responsive breakpoints. You can always zoom in on the active
+shader. There's a a button up here for that for handling that. In this case, I've got this I'm going to double-click
+and call this mobile shader. I'm zoomed in on the mobile version. I can also choose to zoom out to show everything all
+at once. Uh and you can duplicate as many times as you want, right? Like I'm going to duplicate this a bunch of times.
+You have other controls if you right-click. So, here's, for example, just a random smattering of shaders. I could
+right-click, I could zoom to fit the active one, zoom to fit all of them, I could clean up the layout and just, you
+know, it put that into a little bit more um clean structure. And you've got tools just to help you like align things
+nicely as you're playing with them. Honestly, this is just personal preference stuff. You set up the workflow you
+where you want your workflow to work. Uh none of this stuff really gets exported at the end, so. Let me just go back
+to our shader one. And let's say, okay, it's time to either share this with a client or with co-workers. Uh there's a
+share link option. I could click on the share button down here and that would give me a link that I could share out
+for people to preview. Or I could click on export. Now, uh when you're exporting from the design editor, this is a pro
+feature. It will require a pro subscription. You can export code or you can export video or image. Uh you can do it in
+right-click, too, right? I could copy the image for this. It would copy it to the clipboard. I could paste it anywhere
+that I wanted to just as a PNG image. Or I could let's let's look at video video first. I could click on the video
+option. I could export uh let's say a 10-second video at two times resolution. Or I could click on export. Export,
+obviously, is where you go from design to production. Uh and it's super easy to do. So, all you do, come in here to
+the export panel, you've got view, react, felt, solid, JavaScript, and framework at the time of recording this video.
+Um, and you could just install the shaders MCP. You could, uh, install using the simple command NPX shaders at latest
+install MCP. It will install it for your agent, and then you could literally just authenticate, log into your account,
+and ask your agent to install this particular shader. It includes the name and the ID, so the agent can find it
+because it's logged into your account. And it can it knows everything on how to install it, right? It can take it, it
+can install it into your hero section, and then you could come back and be like, "Oh, actually, this mobile section,
+uh, you know, you'd copy either this ID or you just copy the whole thing and say use this for the mobile version." And
+it can and it can swap that out for you. Or if you really want to, if for some reason you're feeling like doing it
+yourself, you can just copy the component code manually. The code that's shown here is clean component code, nothing
+messy, using artificial components which are already heavily tested for performance, so you're going to get
+production-ready, uh, performance out of this whole thing once you actually go to ship. So, that is the export
+process, that is the interface. We've covered a lot in this video. This has been about 10 11 minutes, um, but
+hopefully now you've got a little bit of a sense as to how to actually browse the editor, how to work with things. And
+in the next video, we're going to take a look at how to compose effects more than just a single linear gradient on the
+screen.
+
+
+####################################################################################################
+## 6uZteHaMbRI — Installing a shader via MCP   (4373 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en All right, let's take two minutes and look at how to take code from the design
+editor into shaders MCP into your project. I have a hero section set up over here with React. It's got a nice
+placeholder waiting for us and we need to take the shader into that project. So here I have a shader. This is just one
+of our pro presets. I've made some changes, just some tweaks as some interactivity and I'm happy with the way it
+looks. It's ready to go. So I'm going to go down to the bottom right hand corner to export. Click export and this
+window is going to pop up. Now I'm using React. Luckily I have React selected already. You can pick any other of our
+supported frameworks as well. With React selected, you'll see we have options for exporting the code manually or using
+the shaders MCP, which is what we're going to do today. If you haven't already, we'll connect to the MCP. I'll do that
+here for you in a second so you can see that process. And then we're going to copy and paste this prompt. This is what
+the agent's going to get to know that it needs to trigger the MCP and install this specific shader. So, I have that
+copied to my clipboard. Let's jump into our project. Okay. So, here I am looking at the hero section that we're going
+to add this shader to. This is for um just a makebelieve art gallery. And you can see we have this gray box in the
+background. That's exactly where I want to add this shader effect. So, let's start by jumping into the terminal. This
+is just a terminal I've got set up in the project directory. And I'm going to run the command that will install
+shaders mcp. That is mpx shaders at latest install mcp. Now it's going to ask where do you want it installed. On my
+system I have it installed in a few places. I will just go down and uh deselect some of these. I only really care
+about cloud code for this example cuz we're going to use quad code in this case. We'll go ahead and run that. And it
+will tell me, hey, it's installed. You're good to go. And here's where you can find more documentation if you need it.
+So, let's close that down and open cloud code. When we do, you'll see one MCP server needs authentication. Well,
+that's shaders. Let me run the MCP command. And you'll see, yep, shaders needs authentication. I'm going to go ahead
+and authenticate into this. And I'll be right back. Okay. And I have authenticated into my shaders account, which
+means that now the shaders MCP can access my personal resources, meaning the shaders that I have designed. So, if you
+remember, we copied into our clipboard the prompt that we're going to use to install this shader. I'm going to go
+ahead and paste that directly into cloud here. Now that the shaders MCP is in place, I am going to give it a little
+bit of extra context cuz I want to tell it well where do I want to install this, right? It just says in my project.
+So, I'm going to delete in my project. I'm just going to say ash shaders MCP to install watercolor and paper. Uh,
+that's the ID number from my shaders into the hero section background of this project. A little bit more specific, you
+can provide as much context as you want. Uh, if you didn't have a background in place, like this placeholder that I
+have, you could tell it, I want this to be full screen. I want this to be at the left half of the screen. I want this
+to be in a particular card. Uh, you don't have to just rely on the initial prompts to get this running. You should be
+really telling it exactly what you want, but this will get you started. ash shaders mcp to install watercolor on paper
+the ID from my shaders into the I'm going to hit enter, let this run, and I'll see what happens. And just like that,
+we have an interactive shader running in the background of this hero section. Took it a couple of minutes for Claude
+to just find the shader, pull it down, connect it up, and yeah, works perfectly. This is how you can connect your
+design editor to your projects in just a matter of seconds. You can say, "Hey, I want this particular shader installed
+or I want this particular preset installed." And you can also ask Claude or any other agent to tweak the colors to uh
+hook up reactivity. So you could say any of these props, maybe if I hovered over this button, it might change the
+colors of the background. You get a lot of options using the shaders MCP.
+
+
+####################################################################################################
+## SNyHPscVdts — Dynamic prop mapping   (13902 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en Okay, now it's time to take a look at dynamic props, which include mapping, cursor
+position, and just automatic values or automation. I've got a basic studio background set up. I'm going to dive in and
+show you what dynamic props look like cuz it's definitely one of the most powerful features of the component library.
+Let's go ahead and just add in a shape effect. I'm going to go ahead and add in a brushed metal effect. And we'll pick
+a 3D shape for the sake of this. Um a cube is an easy one. We can kind of see how things work. You can see rotation,
+and we can use dynamic props to drive some of these. Now, you'll notice as I go to the props panel over here, we have
+a bunch of different props. And those are all just static values. Like I can adjust the width. I can adjust the depth.
+I could adjust the rotation value. Uh I could adjust the rounding, right? And it's all of these are just static props.
+What if I wanted to, say, rotate this cube automatically? Actually, I'm going to go I'm going to reset a lot of this
+back to where it is, right? Just to our default cube setting. And then what you'll notice next to any of these props
+is you have make value dynamic, right? That's our dynamic prop value. So, I'm going to say maybe the Y rotation,
+right? This axis. I'm going to go ahead and make it dynamic. Now, in this particular component, we support two types
+of dynamic prop. And that is cursor base, which is what you're seeing here, mouse driven, uh and automatic. So, mouse
+driven you're already seeing right? Like it's just a little sneak hint. I'm moving my mouse and the cube is spinning.
+So, as I go to the left, it goes to the left. And as I go to the right, it goes to the right. And that's because I
+have tied the X axis of the cursor position to the Y rotation. So, rotating around the Y axis, which is ironically
+lining up in a way that the cube looks like it's trying to follow the mouse. Now, I could make this a little more uh
+accurate, make it more look like it's trying to face the mouse by controlling some of the cursor driven settings. So,
+the settings we have let's actually start down here on the bottom row. We have min and max. So, this is at the far
+left and at the far right maximums, mins and max. What will the rotation look like, right? We're setting the value at
+minimum and maximum. So, right now it's -180° to the left and +180° to the right. That's a long range of motion. And
+so, it looks like it's spinning a lot as I move this around. If I was to bring that minimum value up to maybe
+somewhere in the like let's say -40 range. And we bring the maximum down somewhere in the +40 range. Now, it's a lot
+simpler. Now, it's just only turning a little bit to follow the mouse. I can maybe make that a little bit more
+pronounced, maybe in the 60 to 60 range. And that feels like it's accurately following the mouse around. We also have
+curve settings that sort of influences how we go from one end to the other. Is it a linear curve? Is it leaning more
+in one direction or more in the other? If I was to turn this all the way to -1, it would be really tempting to like
+stay to the left until I get way to the right and suddenly it curves up until full right. Same thing on the other side
+a maximum one value. It really wants to stay to the right until I get to the left. I'm going to go ahead and reset
+that back to zero so it's just a normal curve. Now, we also have smoothing and momentum values. And these ones are fun
+because this is very sharp, right? Like as I move my mouse, it is following instantaneously. I may want to smooth that
+out over time. So, if I add just a little bit of smoothing here, right? 0.2 is good. I can jiggle my mouse back and
+forth and it won't quite jiggle as fast. It's going to try and catch up over time. It's a lot more smooth, which is
+great for anything that is following a mouse around that you don't want to be way too hectic. Now I can move my mouse
+around like crazy and it's going to generally try and smooth itself over towards where the mouse is in a way that is
+not distracting. Let me turn that smoothing down here just to maybe uh 0.1. Just enough that it's not pixel perfectly
+following it. We also have momentum. Momentum basically acts like a spring. So as I turn this all the way up, watch
+this. As I slide it to the left, it's going to bounce. I slide it to the right and it bounces some more. So it's going
+to go past the intended point and it's going to spring back into where it's supposed to be. So that is momentum and uh
+smoothing. I tend to keep both of those probably in the 0.1 to 0.2 range and you end up with something that feels
+organic. It's not perfectly tracking the mouse, but it's pretty good. Now, let's take a look at what happens when you
+combine dynamic props. So here I have cursor driven on rotation Y, but we could also do rotation X and we could do it
+using the Y axis of the mouse. So let's do that. I'm going to reset X just to the default value. It doesn't matter.
+It's going to get overwritten. I'm going to say make this dynamic and then I'm going to set the axis to Y. So now it's
+following that motion. Now I do want to bring rain in on minimum maximum like we did last time. I'm going to bring
+that down to maybe 30 and 30 in that range because we do have less horizontal distance on this particular aspect
+ratio, right? It's wider on the horizontal and it's shorter on the vertical. So now we have something Look at that. It
+literally looks as if the that face of the cube is trying to follow my mouse around. Now the Y axis has no smoothing.
+The horizontal axis has some smoothing. Uh so maybe we want to make those match just so it feels consistent. And there
+you go. A cube that is following my mouse position to always look at it. And this is cool as is with a cube, but you
+could use this with your logo, or with literally any of the props, which brings me to some of the other props that we
+have available. Uh, let's go to Maybe we just play with the height a little bit, right? We can control the height or
+the depth, maybe the rounding. That could be a fun one. So, the rounding, we have Look at that. It is bouncing to a
+crazy rounding value. I was worried for a second it disappeared. No, it's just bouncing, so the rounding is too tight.
+So, I'm going to actually go ahead, reduce our maximum value here to a much smaller value. We don't need to round it
+anywhere near as much. Something like that. Okay, 0 to 0.1 seems to be a good rounding value for this particular shape
+in this particular configuration. &gt;&gt; [snorts] &gt;&gt; Now, what you've noticed, or may have noticed, is that
+we're using auto mode, right? This is the second of the dynamic prop modes, and this mode is just automatically
+animating over time. In this case, I've set it to ping pong, which means it's going to animate in and out, in and out.
+It's like a heartbeat that just keeps keeps going. So, it's going to animate from the minimum value to the maximum
+value at a target speed. This is one. I can make this slower by bringing the speed down. Now, it's barely moving, or I
+could crank that speed up, and it would just pulse like crazy. There you go. You've got a cube that is going from
+sharp to rounded, and it is uh following our cursor as we go. He quite quite effectively. So, that is dynamic props.
+There's one more type of dynamic prop I can show you with this, and uh that is positioning. So, this particular prop
+we are using cursor driven, we're using automatic, and now let's also use cursor driven cursor driven for a position.
+So, the center position, I can drag this around, you'll see our center position moves, but I could also reset it to
+the center point, 0 0, make it dynamic, and now it's going to follow the mouse, which is interesting cuz it's also
+pointing in the direction of the mouse with that association being the center point. So, it's kind of almost like it's
+now facing away from the center point, wherever it is, which is an interesting effect. Uh now you have very similar
+controls. You have smoothing. I'm going to increase that and momentum. Right? So, now everything feels the same way it
+does. It's all using the same smoothing, same But we also have controls like reach. So, right now I can move this off
+screen, which is cool, but maybe that's not the the look you're going for. Let me bring the reach down. And what you
+will see is that we are limiting how far the position can move from the designated point that you've actually set. So,
+you can set a point and have that dynamic follow happening at the same time. This is useful in this context where here
+I am wanting it to like slowly move a little bit in that direction, but not completely get off the screen. I might
+allow it to do a little bit more. And there you go. Now I've got a cube that is rotating and kind of tracking in the
+right direction, but it won't leave the screen. There's also a few options down here for adjustments. The first one or
+the first two, lock X and lock Y. If I lock the X position, it can now move up and down, but it can't move side to
+side. If I lock the Y position, it can now move side to side, but it cannot move up and down. And then we have some
+fun ones. We have uh inversing for horizontal and inversing for Y. So, now it's going to move in the opposite
+direction of my mouse in terms of horizontal. And now in vertical as well. I've done vertical and horizontal. So, uh
+you can literally make it go in complete different directions from where your cursor is, which kind of gets trippy
+after a while. So, those are dynamic props for cursor driven, for auto animation, and for positional uh data for
+center points and for position points. But there's more we can do. Take a look at this. This is actually one of my uh
+most exciting features that I like. Let's take a look at what I call prop mapping or the map mode. This is a dot grid.
+It is just a collection of dots. You can decide how big they the dots are. You can decide the density of the dots. Um
+but these have uh maps as well. These have These are dynamic props. Let's go ahead. I'm just going to turn off dot
+grid just for a second so I can see. I'm going to add some text. I'm going to have that text say "Hello world." I am
+going to uh We'll delete that metal effect. We don't need that. I'm going to grab "Hello world." I'm just going to set
+it to Geist. We will just reduce the spacing a little bit. We'll make it big. "Hello world." There you go. Yeah, that
+works. Now let's turn it off and turn on dot grid. So if you remember masking, we could use a layer like the text as a
+mask. And I could do that right now. I could say I want the dot grid to be masked by the text. And if I did that, you
+would get dots that fit the grid and it looks good. You've got like text actually made of dots. But look closely. If I
+zoom in here, you'll notice the dots are cut off at the edge of the text because we're masking one for one on the
+pixels, right? We're saying this dot is partially in and partially out of the text, get rid of it. So that's not going
+to work in this particular scenario if we want to make text out of dots, for example. Let's go back to where we were
+before. We have just a regular dot grid. Now we're going to use map mode. What I'm going to do, I'm going to come in
+here to dot size, right? Cuz if we have a dot size of zero, the dot's gone. And if it's full, it you know, takes up
+all the space. Doesn't matter what value I set it at. I'm going to use dynamic pop mode. Now you'll notice we have
+mapping as an option. With mapping, if I click on source, I could say text and just like masking, we have what channel
+do we want to use? In this case, the alpha of the text. And what you'll notice is look at this. We actually have pixel
+perfect dots that don't get cut off because they're driven by the text. So, if I was to drop this this density down,
+you could actually like fill up the text with this dot grid. Now, this is cool, but it gets even cooler when you start
+introducing softness into this equation. So, if I was to go ahead and I'll just disconnect mapping mode for now. We'll
+just say there's no source on that. Uh I'm going to turn on our text and I'm going to turn on let's say we'll add a
+sine wave to it. That's a nice soft shape. It has It fades from white into transparent. I'm going to select both the
+sine wave and Hello World and I'm going to group them into what I'm going to call our map source. Right, so there's
+our map source. And we're just going to turn it off. Okay. So, now jumping from that into this, let's take a look at
+dot size when we use the mask source. So, if I select map source for this, now look at that. We've got Hello World
+written in dots and as I zoom in to 100% here, our sine wave is making those dots fade out to zero over time. So, we
+don't end up with a sharp edge and we actually control the size of the dots. Now, what if I was to come in here to dot
+grid, decrease the density, you can kind of see how those grow and shrink over time. You can use this with nearly any
+effect. Uh most props support dynamic map cropping uh and it just creates these really cool looks, right? So, I could
+imagine, just to use this as an example, I could imagine turning off the dot grid. I could imagine turning on
+something like a color wheel, which I've been using this a lot in our tutorials, but it it's it's a good one for
+showing color. And now masking based on that new dot There you go. We've got dynamic popping, creating dot driven
+text, and a sine wave with this nice smoothing effect. And now we're using that to mask a color, so it all looks very
+colorful. Just like that, we've created a bunch of stuff. We've explored dynamic prop map popping. There is a lot that
+that you could do with this, so I'm going to just go ahead, get off the camera, and let you guys go explore.
+
+
+####################################################################################################
+## vsHE7vki8E0 — Exploring shape effects   (11022 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en Shape effects inside of shaders makes it easy to create those popular effects you
+see like liquid glass or liquid metal. Uh, and you can do it not just using 2D and 3D shapes, but also using your own
+logo, both uh static SVG in 2D space or even extruded into 3D space. It sounds really difficult, but it's actually
+quite easy with Shape Effects. So, let's dive in and take a look at what that actually looks like. I'm going to start
+by jumping down here into the insert toolbar. And if you click on this little uh lightning bolt icon, that's our
+shapes effects uh category. So in here, you'll see all of the effects and a quick preview of sort of what they might
+look like and we can play with what these end up being. But what I'm going to do is I'm just going to pick one of
+these or maybe a couple of these, play with them and show you essentially how to work with them. Let's start with um
+perhaps we'll start with a common one, glass. So liquid glass is something that is very popular uh in a lot of just
+front end code today and it's hard to do. It's hard to do well web GPU. You can do some of it in like um SVG filters.
+I've seen a lot of people just do it in WebGL. We're going to do it in shaders which is WebGPU first and we're going
+to be able to mix it and match it with other content to create cool cool effects. So here I have basic glass and it's
+in the shape of a circle by default. Let me go ahead and add some texture to our scene so we can see the effect of the
+glass refracting. So, I'm going to go ahead and just add hello world as some text. And if you've been watching the
+rest of the tutorial so far, you'll know I like to use Guist. And I'm just going to go ahead and just make a big text
+element. I'm going to put it directly in the center of the screen. Now, you'll see we have our glass element. It's
+behind the text, so it's not refracting anything. If I move this in front of the text, now you start to see that
+refraction. And we have controls for everything from the fel, which is sort of this outside glow, uh, all the way to
+how, you know, impactful that refraction is, how thick into the glass do we push that? Do we create some sort of color
+fringing on the edges? And thanks to WebGPU and the compute shaders that we can run, we also have blur filters. So, we
+can blur this glass out in a really nice way to create a nice glass effect. And that might be all you need to do,
+right? I could imagine you uh literally just dropping an image into the background, adding liquid glass on top of it,
+and that's all you need to do to create a cool effect. Like, I could scale this glass up, put it in the corner, and
+maybe have an image like slowly moving in the background or something like that. And voila, we've created a cool
+modern effect that runs really, really fast in the shaders uh render runtime. So, let me go ahead and just drop that
+circle back into the middle. I will I'll keep the blur for now, just, you know, cuz it's there. You'll see we have a
+bunch of available shapes. So, I could make this in the shape of a polygon or I can make it in the shape of a heart.
+This one was actually a request by my daughter. She was looking through the shapes and she wanted to add a heart
+shape. So, this one is for her. Let's go and look at some of the other shapes. I'll skip most of the 2D ones. You kind
+of get a sense for how that works. We also provide for 3D shapes. So, let's look at sphere. It's a great option. It's
+very similar to uh circle obviously because we're rendering in 2D canvas. But if I turn blur down, you'll notice this
+one renders very differently because it's using actual 3D spherical refraction, which is different than a 2D sp uh 2D
+circular refraction. I'll turn the blur back up just just a little bit. Give us that nice texture. Now, let's pick a
+different 3D shape. You've probably seen in previous tutorials, we have a cube. So, here's a cube shape and it's
+refracting with the glass. We can move it around. We could I mean you we can do everything we want the same way we do
+with other layers, but we can just do it with this layer and it will refract as it moves around the content behind it,
+which means we can also move the content behind it. And we can also animate the content. Right? So, if I was to say
+this background gradient needs to speed up. There you go. Now, it's it's going nice and fast. and our glasses on top
+of it. This glass has a bit of a soft edge right now. If you're wondering why, that's because the thickness value is
+all the way up. As you push that down on a 3D shape, you tend to lose some of that thickness and get a nice harder
+edge. So, that's glass. That's one of the possible effects. Let me go ahead and show you what this looks like when
+we're talking about custom logos. So, you might want to say, "Okay, I love this. This is perfect for my brand. The
+only downside is I want to put my logo in here." Right? That's not my logo. So, I'm going to go to custom SVG. Uh, now
+this allows you to upload any shape you want. I'm going to open this up. And I don't know what I've uploaded recently,
+just a bunch of random logos. But here's the Apple logo. We'll use this for an example. There's our Apple logo. And I
+can scale that down either here or just by manually dragging the controls. And there you go. You've got glass, liquid
+glass in the shape of your logo. You can also take it and take it from geometry flat to geometry extrude. And this is
+where your logo goes from 2D to 3D. If I was to drop that uh thickness down just a little bit so we can get a nice
+clear look at those edges. I can extrude a little bit further. Maybe choose to bevel a little bit. And now I've got a
+3D version of my SVG logo. So this was just an SVG file, right? This was just the Apple logo as an SVG that I dropped
+in. which means you can do this with any sort of look. So, what I'm going to do, I'm going to go ahead and duplicate
+this into a new shader over here and actually probably ironically delete most of it except the dark background that I
+have hidden back here. And I'm going to do a completely different look. So, going back to shape effects, I'm going to
+go to light edge. Now, this may look familiar. uh paper shaders actually had pulsing border and they went open source
+and we talked to them and and actually were able to port this over to WebGPU into our renderer. So this is based on an
+original paper shader. But uh light edge again looks really nice, works on any of the effects, works in 2D and works
+in 3D really well, but we're going to use it for a custom SVG. I'm going to go ahead and upload the shaders logo. I'm
+just going to go ahead and drag and drop that directly from my desktop into this panel here so you can see it live
+just how quick it is. I'm going to drop the shaders logo in there. And there it is. I am going to extrude that
+geometry. And this doesn't look great by default, right? It's it's looking pretty bad, actually. But you're going to
+see something cool in a minute. So, check this out. I'm going to increase the depth of that logo. Looks really weird
+at an angle. Let me take rotation and reset rotation to zero. Now things are starting to look a little bit better. We
+can actually see our logo. Although the glow itself is a little weird. Let's go down to our glow controls. I'm going
+to come down here to thickness and softness. And I'm just going to play with it until I am happy with the sort of glow
+that I got going on. That's quite nice. Okay. Now, do we want to change some of these colors? We could. I could change
+the way the colors are blending. I could change this. I'm happy with the fill mode. That's fine. Maybe we just change
+the colors by randomizing them. Right. I'm going to hit randomize a few times until I really like the look of the
+colors that I'm seeing. Kind of want That's interesting. Kind of the blues and oranges. Uh I feel like I should do
+something interesting with the middle color. I always tend to go back to the purples myself. And let's call that our
+effect. This looks nice. And you might be wondering, okay, well, why did you extrude it only to make it 2D again,
+right? Only to put it forward facing. And that's because now, while we don't have a timeline or any any concept of a
+timeline within shaders itself, you can animate these props once they get to your codebase. So, here's what we're
+going to do. We're going to take this and I'm just going to rotate it up. And when I do, look at that. It's sort of
+disappearing into this glowing form, right? It's it's becoming more of an outline. And as I move it down, it sort of
+coaleses into the actual logo. So this could work really well for a hero section, for a loading page. If you really
+wanted to go crazy on a loading page, you could use this in very different ways on your website. You can make it
+interactive on scroll. So as the user scrolls down the page, uh a logo comes into play. Um all this is is as you can
+see here on the left hand side, it's the X rotation. So uh you can take this into code and you see if I hit export go
+to the code you could come down here to light edge uh yes light edge which has a shape with rotation x -42. So you
+would just take this prop animate that prop and there you go you've got something that looks cool. I can actually
+because this is a dynamic prop capable prop. I can actually just attach this to the mouse and check that out. Now I
+can control it. I might even say our maximum value is zero or next to zero. And our minimum value is like uh probably
+90ish, we'll call it that. So now as I move the cursor all the way up to the top of the page, it's blown out. And as I
+bring it back down to the bottom of the preview, now we're suddenly in focus. And we can obviously go past that, but
+yeah, you get the point. That is just two of all of the available shape effects that we have. We have some really cool
+effects. Uh we have, let me I'm going to go real quickly here and just kind of preview a couple of them. We have heat
+map. Yet another one ported over from uh paper shaders. One of the two that have been ported over so far. We have
+smoke fill, which uh is one of the interactive ones. You may be familiar with smoke from our interactive collection.
+You can actually just move your cursor over this and interact with the smoke. And you can control the smoke emitter
+within the shape itself. So imagine your own logo filling up with smoke. Uh we have shape effects that look like metal
+and uh they work really well when you put them onto sort of this interactive moving uh geometry such as metabols or
+ribbon where you can actually have, you know, something that looks like a 3D metal metallic shape. Just a bunch of
+things that we can see here. So, I'm going to leave this as uh this video, but you can go into shaders.com, open the
+design editor. There are a bunch of shape effects. I highly recommend playing with your own custom SVGs, especially
+ext extruding that geometry and just seeing what you can
+
+
+####################################################################################################
+## iHREhq0nlqM — Composing your first shader effect   (7752 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en Let's take a look at creating our first effect inside of the shaders editor. We're
+going to go, we're going to combine layers, we're going to nest, we're going to stack, and we're going to create
+something new, something that's never been created inside of shaders before. Here I have an empty canvas, just white
+empty, no layers, no components. So, let's go ahead and add something to the screen. Down here in the insert toolbar,
+I'm going to click on textures. Now, this opens up all of the base textures, and typically you want to start with
+either a texture or you could drag in your own image. You want to start with some sort of pixels rendered to the
+screen. It could be anything, though. In this case, I'm going to start with just a multipoint gradient, which renders
+five points to the screen, each with their own color, and you can just kind of move those points around. You know, I'm
+not going to be hyper specific here. Uh let me just go ahead and hit randomize color, and we'll see what we get after
+hitting that a few times. I'm also going to change the color space just to improve the blending a little bit. Uh we'll
+hit it a couple more times. Actually, that's nice. That to me feels kind of nice. Maybe I change this blue to more of
+a turquoise. Yeah, that's sort of this greeny turquoise with a blown-out highlight in the middle. Works really nice
+for a gradient. So, this is the first layer in our layer stack. The layer stack works like the [clears throat] DOM
+works. It works top-down. So, in this case, the gradient is our background layer. It's our It's our starting point.
+Now, let's apply a Actually, let's add another layer on top. We'll do We'll do a shape effect. There's a bunch of
+different shape effects we could do. I'm going to pick uh we'll pick holographic. That's a fun one. It's supposed to
+look like a sort of holographicy sticker. This is one of our shape effects, and we'll have another video later on
+explaining all of the shape effects. But, I'm going to go ahead and just set up some properties of this here. I'm
+going to pick a 3D pyramid. That might be a nice shape. I'm going to use the drag handles in the editor to make our
+pyramid a little bit larger. That's not bad. I feel like I may want to tweak the height a little bit. Maybe that
+rotation on the Z axis. And there you go. So, now we've got a pyramid over a multi-point gradient background. Uh the
+way that works, like I mentioned, the gradient is now in the background. It's the first layer in the stack. Then we
+have this holographic shape effect on top. Uh and we can control that and it will render on top of the background.
+Now, let's show you the uh effects of adding stylization, of adding effects to this. I'm going to go to our stylize
+category. We have a bunch of different fun things we could do here, but one that's really just obvious to call
+attention to is ASCII. You're probably familiar with the ASCII effect. It's replacing the pixels with ASCII
+characters. Um you can choose fonts, you can choose what characters, but here you go. We've just applied ASCII.
+Effects, stylizations, distortions, blurs, they will impact everything proceeding at the sibling level. So, what that
+means is ASCII is going to impact both holographic and multi-point gradient because it's below both of those and
+they're all at the same level. We haven't got to nesting yet, but in a moment we will. Uh so, ASCII right now impacts
+everything in front of it. If I wanted the ASCII to only impact this holographic pyramid, well, how would we do that?
+And the answer comes back to what I just said, nesting. So, what I can do is I can take holographic and I can drag it
+inside of ASCII. And now you'll see that our ASCII effect is only applied to the pyramid. I am going to go ahead and
+probably just uh Oh, I don't know if I want to change the colors. Maybe I will. There you go. Just so we can actually
+see the pyramid a little bit better in this preview. But there you go. We've got a multi-point gradient that does not
+have an ASCII effect applied. Then we have our ASCII and because ASCII has child content, it has this holographic,
+it's only going to apply to that. Works really, really well. So, that's that. Let me add a text layer real quick. I'm
+going to uh just hit the text option and I'm going to say Hello world. And I've just typed text onto the screen. I am
+a fan of the Geist font at the moment. I'm sure a lot of people are. I'm going to just play with some of these
+settings, make a nice big Actually, I think we have Geist pixel now. There you go. We've got a nice pixel effect going
+on. And I'm going to drop that. I'm going to align that in the center. There we go. And I'm going to drop that between
+multipoint gradient and ASCII. And it might be hard to tell, let me zoom in, but the ASCII is rendering on top of the
+Hello world text. So, if I drop that down to a blue to a very dark blue, you will see ASCII rendering on top of the
+actual text. Now, I could move this text into the ASCII parent and suddenly it would be part of the ASCII effect,
+right? It would actually apply and be rastered into that. So, now because, you know, that's just dark text, it's
+actually cutting into our triangle and creating this interesting look. And I could play with this with the cell size
+to potentially make that show up a little bit more visible. Let me see that. Something like Hello world where you can
+kind of see the dots and it's cutting into our triangle. I'm quite happy with that, to be honest. I'm liking the way
+this is looking. And this is really how you compose shaders inside of Shader Effects to create something new. All
+we've done is we've added a gradient in the background. We've added a couple of layers that we're going to apply an
+ASCII effect to and we wrapped them in the ASCII tag and that gives us this cool effect. Now, you could also go as far
+as applying distortion. For example, I could apply a page peel distortion, which applies to the entire page and move
+that away. Remember the nesting thing? I'm going to drag ASCII which will drag all of its children into that page peel
+hierarchy. And now when I page peel only the ASCII layer is peeling away. And so you can come up with some really
+interesting things. A fun part of this, which we're going to get to in the uh export tutorial later, if I go into
+export and I show the code for this, you'll notice uh if I come down here to the page peel component, where is it?
+There's holographic, there's text, there's page peel. Amount is just a property value 0.3. And so, that's because what
+I just left it in the prop panel was 0.3. If I wanted to take that and use GSAP or use motion or any other animation
+library or just use a request animation frame if I feel like it, I could animate the amount of the page peel and I
+could have layers of the shader peel away. I could change the density of the ASCII effect. Uh I could change the text,
+right? The text is just an input to that component code. If I come back in here, go to text, uh &gt;&gt; [snorts]
+&gt;&gt; and you'll see, there you go. Text is hello world. So, you could change that dynamically at runtime. You
+could have it say, "Hello, John." Right? It introduce the user in the shader itself. Uh and it's all rendering WebGPU
+side, high performance. Uh and it's it's it's definitely going to work really well really really well in the browser.
+So, that is how you compose effects inside of the design editor by stacking and by nesting from the top down in DOM
+order. In the next video, we're going to take a look at masking and blending, which gives you even more control over
+how this whole thing works. Uh thanks for checking it out and I'll see you in the next one.
+
+
+####################################################################################################
+## qQV0aADlIeo — Masking and blending   (8232 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en All right, in this video we're going to take a look at masking and blending. The
+appearance settings are available for basically every component and they affect the way that the layers interact when
+they're stacking, when they're nesting, and you can create some really interesting effects. So, there's no one place
+to start here. We're going to play around. I'm going to show you how it works and let's see what we end up creating.
+To begin, I've got a solid color in the background. I've just added a near near black color, dark kind of blue. And
+that that'll be our background plate for this. I'm going to go ahead and just add in a texture of some sort. Uh I'm
+not sure off the top of my head what we want. Maybe we'll do strands. Strands is a nice one, creates this sort of
+flowing ribbon look. I may not even play with the settings of you know other than just maybe moving the positions
+around. Uh maybe just increasing the color scale a little bit. Maybe we'll pick some new colors. Um let's see what we
+like the look of. There you go, like a pink and white thing. Maybe uh spreading the colors out a little bit, little
+bit of softness. Little bit of width and maybe even some more strands. There you go. That gives us a good starting
+point for us to work when we're talking about uh let's do blending first, right? So, blending allows you to take two
+layers and blend them together in a way that's not just stacking one layer on top of the other. To do this, I'm going
+to just use two strands as an example. I'm going to duplicate the existing strands component by just I hit control D
+on the keyboard or command D. And I'm going to go ahead and just move these to a different angle. So, now they're
+intersecting, right? They're they're like an X on the screen. What I'm going to do is I'm going to come down here to
+the top layer, which has this appearance section. They all have the appearance section, but I want the top layer and
+I'm going to look at blend mode. Now, there's a bunch of different options. By normal, it's just stacking them.
+There's different normals, so if your uh texture layer has some transparency, you can blend with different color space
+modes. In this case, I might just try browsing through them. So, multiply is going to make it darker, screen is just
+kind of going to look the same screen on top. Linear dodge will blow out some of the highlights where they meet, which
+doesn't do too much in the linear tone mapping mode, but might look different in AC filmic. No, maybe not. Okay, we'll
+keep it in that color mode anyway. Now, let's look at maybe difference. Difference is where you can actually tell the
+difference. Um here we actually can see where things are overlapping. And that's not a bad effect. I know I know it's
+weird. It's not something I would necessarily want for a hair section, but you get the point of how these two layers
+are intersecting. Where they intersect, the pixels are now operating in a different blend mode. So, that is how you
+apply blend modes. You apply it to the top layer and it affects everything below it. It's blending with the layer
+below it. Uh maybe we just try exclusion or we could do luminosity. We're just trying a few different things to see
+what looks right. Maybe hard light. We'll we'll stick with the difference cuz it has that kind of weird almost
+iridescent effect going on in the middle. Now, let's talk about masking. So, masking is one of those power features.
+You you're going to use it a lot when you're adding content on top of the shader. For example, you might have a busy
+shader. You might have something like this where you want the content to sit on top of the shader. Maybe you want some
+text on the left hand side. You want a whole body paragraph. Uh and you don't really want the noise of the shader to
+be distracting from that content. Well, masking could be very useful in that case. And other cases, but that's a good
+example. Let me go ahead and use a basic shape for that. Now, there's tons of shapes, but an obvious one that comes to
+mind is just a circle. I could take a circle component. I could increase its softness and just make it very large.
+Right, here's here's a circle. And maybe I want to say, "Let's We're going to add some content on top. Let's add some
+text on the left hand side of this." I'll actually adjust this a little bit. Let me turn off the circle for a second.
+I will adjust this so our strands intersect a little bit more to the right-hand side just for the sake of the visual.
+Uh let's grab these strands. I'm just going to move that so I can grab it, put it back. Cool. So now we've got strands
+on the right-hand side and we have our circle on the left. What I'm going to do Now, I could do this, right? I could
+say, "I'm going to make my circle a dark color." And suddenly we've, you know, created a mask. But that's not really
+masking, is it? It's just sort of hiding what's there. Really, what we want to do is we want to cut it out. We want to
+make that transparent. So, to do that, I'm going to turn the circle off. I'm going to go into the layer or layers that
+I want to mask. In this case, I've got two layers that I want to mask, two strands that are interacting with each
+other. So, I'm going to hold uh shift just to select them both, right? Or you could hit control or command just to
+select multiple layers. I'm going to right-click group. Now, I have a group of two layers, which is our strands, which
+is our I'm just going to call it our strand effect. And in this group, I'm going to come down to appearance, mask
+source, and I'm going to set it to be the circle. And we're going to use the circle alpha inverted, right? So, we we
+want to show the content where the circle isn't in this case. Just like that, we've masked It looks almost identical
+to what we had before, but if I turn off our background, you'll notice we actually have transparency here. We're
+masking out the strands' content. So, that's one example. I mean, we could do much clearer examples just for the sake
+of this. Uh let me go to a color wheel effect, boost up everything so we have a very obvious moving color wheel. If I
+wanted to drop in, let's say a blob effect, I could decrease its softness, give it a good size, increase its
+deformation and speed. And then I could literally just turn that off, go to color wheel, mask source blob, set it to
+alpha, and there you go. Our color wheel effect is contained within the alpha of the blob. Now, we don't have to use
+alpha. As you've may have noticed, we have other channel options. Uh let me go ahead and just add a maybe a chevron
+texture to the screen. I can reduce the count, reduce the angle, or change the angle, and maybe increase the softness
+a little bit, and give it some speed so it's moving in a direction. This is going to look kind of trippy. I'm going to
+turn that off. I'm going to go into color wheel, and I'm going to set our mask source to be chevron. And all of a
+sudden, it's going to break. And that's okay, because the chevron doesn't have any transparency. So, it doesn't have
+any alpha for it to base the mask on. So, I'm going to change the mask channel from alpha to luminance. And now, our
+rainbow effect, our color wheel effect, is being applied within the white sections of that chevron effect, and it's
+fading out of transparency where that chevron was darker. That's it. That That's as easy as masking is. And that's the
+power of shaders. It's not one particular component. It's not one particular layer. It's the ability to compose them,
+to nest them, and then to blend them together, and to mask them between themselves to become more than the sum of its
+parts. So, this isn't obviously a filter I would likely ship unless I was, you know, uh doing something for a '70s
+themed website for some reason. But, you get the point. We've just created two effects that show how you can do
+masking and blending, and you can get really creative uh to to create your own shader effects from this. So, in the
+next video, we're going to take a look at dynamic props. It's where you take this one step further, and you're using
+uh one effect to drive the prop of another effect. Let's check that out.
+
+
+####################################################################################################
+## q8tvm0r0h1I — Custom media and transformations   (9548 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en Okay, in this video we're going to take a look at how to use your own media inside
+of shaders. How to bring in your images, your videos, your SVG logos, and put them in the canvas. We're also going to
+take a look at positioning, at transformation, at translation, at anchor points, and all that fun stuff so that you
+can get pixel perfect canvas sizing. So, let's start by just getting an image into this empty canvas that we have
+here. This is a desktop size 1920x 1080 empty shader canvas. The best way to upload media. Now, you can do it from the
+media panel, but I think the best way is just to drag and drop your image. Here I've got one from the desktop. I'm
+dragging it in to the canvas now. And this is a bit of a bigger image. So, give it a second to upload. There it goes.
+And you can see we've dropped in a new image texture component with our image loaded from our media gallery. Perfect.
+But this image is a little too big. Let me zoom out. And you'll see the dimensions of our image do not match the
+dimensions of our canvas because this image is larger than our canvas. It's in the 2600 width range where our canvas
+is about 1920 wide. Now there's a couple of ways we could handle this and they're both basically the opposite of each
+other. The first thing is we could say I want this image to fit my canvas size. So to do that, right click fit to
+frame. Just like that, our image has been made to the canvas size. It's perfectly fit. Uh now it does use the fill
+object fit mode which means it's going to sort of squash and uh squish that image to make uh make it fit. If you
+wanted to maintain uh the aspect ratio and just maybe crop the shortest edge out or the longest edge out, you could do
+that using the cover mode. Now we're keeping that uh aspect ratio and no matter what we do with our canvas sizing,
+it's not going to squash and stretch. It's going to crop instead. So that's one way you could do it. Let me just reset
+that back to fill uh and reset the size to be a nice large size. So this is our original sizing right we can came in
+we came in with the opposite way of doing this is to say okay I want the canvas the frame to match the image size
+right I want to make the canvas bigger because the image is bigger or if the image was smaller I want to make the
+canvas smaller to match that's just a different right click option we have set frame to image dimensions if you do
+that suddenly you'll see our image uh is one for one pixels right we've got this 2600 wide canvas which matches our
+image which we know is 2600 wide. So, what I'm going to do for the sake of discussion is just put us back to desktop
+mode, fit to frame with cover. And there you go. We have something reasonable that we can look at for the rest of this
+video. So, that's how you upload your own media into shaders. And where does that media go? Well, obviously it goes
+onto the canvas, but it also goes into your media gallery. This media gallery is available across all your projects,
+across all your shaders. Uh, and it's just all the stuff that you've uploaded into shaders that you can choose to use.
+So here you can see our image. I just uh had this palm tree image up here and a bunch of random images I've uploaded
+during previous testing. And you can actually take any of these from the media gallery and just one click add them
+into your composition. So here I have this random smiley face sticker. I know it's a small image, so we'll use that
+one. And I'll drop that into place. And there you go. There it is. It's coming in with its natural dimensions and it's
+going to position it in the center of the frame. And then you can drag it around, rotate it, do whatever you want to
+do with that image. So, let me just reset transformation by hitting the reset option on the props transformation
+section. And that's going to put that right back in the middle. So, let's take a look at uh I guess first off, let me
+name these. So, we'll call these uh palm trees, if I can spell palm correctly. And we'll call this smile. So, now we
+know what our layers are named and we can actually reference them later. I'm going to turn palm trees off just so we
+can see our smile. And I'm going to size this down. And I'm just going to half-hazardly size this down to a smaller
+size. And I'm going to position this, let's say, in the top right corner. I'm going to literally butt it up right
+against those edges. No, no padding, no margin. We're just going all the way right up against the top right corner.
+Now, if you watched an earlier video about the introduction to the design editor, you might remember that the
+dimensions of our canvas are for preview only. The dimensions that actually get used are the dimensions you apply to
+the output shader component. So when you export this to code, what happens is uh you can apply either CSS styles or
+you can apply uh tailwind styles or whatever you use for styling. You apply that to the shader layer. A canvas gets
+rendered that follows those dimensions. This allows shaders to work for like responsive hero sections. As the browser
+is coming down, it's not always going to be 1920 pixels wide. You have different people looking at it on mobile phones
+and whatnot. And so these dimension previews are literally just for how you want to preview it in this workspace.
+Which means this doesn't actually work across all devices. Let me show you what I mean. If I take this and I say,
+"Okay, this is great. Let's imagine the screen is a little bit smaller, maybe it's a little less wide, and I save
+those dimensions." Well, now we've got a small issue because our smiley face here is cut off. It's perfect on the
+height because we haven't really adjusted the height of this frame, but the width is now shifting some of that content
+over. We're cutting off the right hand side of our smile. Now, what's happening here is uh it's sort of hard to
+explain, but I guess I guess I can do this in a very simple way. The anchor point is always going to be the center.
+And so, as we're making this smaller, we're sort of positioning based on the center, and it's getting thrown off. And
+you can see that here under the transformation section, it is trying to position this on the center. So, let's go
+ahead and jump back to 1920. And when I do, we're back to exactly where we wanted to be, right where we're completely
+up against the edges. And let me set the anchor position now for this image to the top right corner where we're
+positioning it. Now, let's imagine I drop this down back to what was it, 1,000 pixels or so? I forget what number we
+used, but let's say we drop that down. It is now perfectly positioned exactly where it's supposed to be because now
+it's positioning itself next to that top right corner. So as that corner comes in, it doesn't matter where it goes. It
+doesn't matter what the rest is happening with the canvas. It's in 0 0 as far as the position is concerned from the
+top right corner. You can see that here in the X and Y in this position it is 0 0. If I was to say okay well let's see
+how far away is it from the uh bottom left corner. We keep it in the same position. But now you can see our X position
+is 70.5% and our Y position is 72.8%. And that naturally leads to interesting examples when you, you know, change the
+dimensions back to a different size. We keep those X and Y positions, but it's different now that the canvas is a
+different size. This brings us to pixel positioning. So, let me take a look at uh the anchor point. I'm going to go
+ahead. I'm going to set this in the top right corner where it was before. So now we're at X0 Y0 relative to the top
+right corner. And let's go ahead and swap this from percentages down to pixels. If I swap, if I click on this U
+percentage symbol here next to X, you'll see there's a tool tip that says switch unit. I'm going to swap these X and Y
+to pixels and set it to maybe 40 pixels for both. I'm also going to come in here to width and height. Those are
+already set to pixels. You can set those to percentages. I'm going tohead go ahead and set this to just maybe a nice
+even 300 by 300. You'll notice when I did that, I adjusted the width when I did that. It also adjusted the height. And
+the reason why is cuz we have our aspect ratio locked. You can toggle that off if you want to adjust them separately.
+But for an image, it's intended that the aspect ratio by default is going to stay the same so you don't end up
+squashing or stretching it. So that's that. We've got our X and Y defined as 40 pixels and 40 pixels from the top
+right edge. So now we are positioned in this top right corner. And we will stay that way even if I bring this all the
+way down back to a,000. We are now exactly 40 pixels from the top and exactly 40 pixels from the right. So this is how
+you position. This works well with images and this also works well with other layers. I'm just using an image cuz it's
+a good example for this. If we were to come in and say, "Okay, I want this linear gradient to be positioned the exact
+same way." You could do the exact same thing. You could swap this to pixel mode. Let's say we want this again to 40 40
+from the top right. Drop it behind the smile. And there you go. This gives you a good example of these two will move
+together in unison as I go to 1920. There you go. They move together in unison. They're both aligned 40 pixels from
+the top right corner. So that is uh images. that is media and that is using transformation and pixel level units
+inside of shaders.
+
+
+####################################################################################################
+## z41JXKn4WHs — Component Spotlight: Digital Looks   (6978 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en All right, in this video I want to take a look at creating some more digital looks.
+Uh we're going to do that by blending some textures and some of our digital stylizations. So, let's jump right in. To
+begin, I'm going to go ahead and add a gradient to the scene. That way we have something to manipulate. Again,
+typically you want to start with a texture so you have pixels rendering and then you can modify them from there. So,
+I'm going to grab let's say uh we'll do a conic gradient. So, a conic gradient is just like an angular gradient. It
+revolves around a point. Uh we can maybe add a color stop to this. Randomize the colors a little bit. I'm going to
+change our color space. And I'm going to come down here into the effect panel and just maybe repeat this twice so that
+we get this line uh all the way through the screen. If I repeated it multiple times, you get more of a pinwheel
+effect. I think what we're going for is just going to be a a nice just straight horizontal line. Let me tweak some of
+these colors. I do think I want uh sort of an orangey look maybe to this. Orangey red. Maybe if I drop this uh last
+color here down to a darker color. There you go. Now we have something we can play with. That's Yeah, that's kind of
+interesting. This will be a good starting point to work with our digital effects. Doesn't have to be perfect. So, here
+we have this conic gradient in place. Now, I'm going to go down here to our distortions category. We have a bunch of
+different distortions that would work well for this, but just to get something moving, let's pick the very first one,
+bar shift. It just sort of shifts things up and down in a bar-like approach. You can adjust the angle to get different
+sort of diagonal lines going here. Just going to sort of leave it like that. And I'm going to introduce some speed so
+that we have some motion. Increase the intensity just a little bit. Play with the seed. And now we have these sort of
+constantly moving bars of color texture. This works well with the conic gradient cuz a conic gradient comes with a
+hard line and with the bars, you don't notice the hard line. It just feels like part of the part of the effect, right?
+Let's jump in to see what we could do with this. And the very first one I'm going to look at is under stylization. Uh
+and we'll start with object tracker. So, what object tracker does is it tries to track part of your image and just
+draws these nice uh tracking frames around it. Very digital-like look. In this case, we're detecting the brightness
+and we can adjust the threshold here to determine how much we're going to detect and how much we're not. Maybe I want
+to come back into our gradient and just make the peak of our gradient clearly brighter than the rest. So, I'll drop
+the rest down. And I'm using ACES filmic, which seems like a good color space, but we'll start Maybe we just start
+with this. This isn't bad. I could make it whiter. I don't really want that. Could also pump it in one particular
+direction or the other to create more contrast. Honestly, not hating this. A bit more saturation and we're looking
+good. So, this object tracker is uh it's got its threshold that we've been setting just to determine how much we're
+tracking. We can also change Is it like a mosaic style? Is it a grid? Is it a quadtree? I'm going to try quadtree just
+to get a bit more detail. Maybe size down our grid a little bit. Allow for a bit more subdivision. And you can set the
+stroke and fill of the object tracker. So, right now our fill is almost transparent. So, you're just seeing that
+bounding box. I could just randomize the colors here and now we're starting to see something that feels very
+different. What if, just for fun, we drop that to near black? And we give it just a white stroke. And now maybe
+instead of tracking the brightness, we'll track the dark areas. Ooh, that's interesting. I could bump that threshold
+up. Maybe I want to subdivide a little bit more or decrease our base cell size. Play with some of that gradient.
+&gt;&gt; [snorts] &gt;&gt; That's an interesting effect. I'm going to come back here into object tracker and just play
+with the threshold. Maybe I want more, maybe I want less. Uh maybe we want to shift the angle here. Okay, now we're
+getting something that feels kind of like a digital space. These color shapes moving over the color over the space,
+that's quite nice. We can play with the intensity, that's not going to do much here. Count. So, that's an interesting
+effect. Now, let's take this a few steps further with some more digital effects. We have keyframes. That's a fun one.
+It's sort of very similar object tracker in the notion that we're trying to track certain parts of the image. In this
+case, it's tracking the bright sections. So, it's trying to like keep track of where these shapes are moving. We can
+increase the number of trackers, that might give us obviously a more dynamic involved look with with more trackers
+involved. We can bump up the variance or even bring it down maybe so it starts tracking other parts of this. I wonder
+if I move it below object tracker if it will move with those shapes a little bit better. I don't know. &gt;&gt;
+[clears throat] &gt;&gt; A lot we could play with here. I'm just going to leave it like this for now. I am going to
+drop object tracker's threshold a little bit so we get some shapes in here. And maybe just play with transparency to
+let some of this through. That's interesting. We're getting We're getting kind of wild with the way this looks. Uh but
+you can start to see how we could build up a sort of digital effect from this. I am going to remove keyframes. It's
+you know, in my opinion, probably a little bit too much here. And there's plenty of other effects we could play with.
+We have data moshing which feels like this sort of uh failure of the video frame rate. It's starting to like, you
+know, uh bleed certain frames together. That works well used We have overlays that work across the entire frame such
+as we could apply a glitch effect here that feels kind of digital. We could apply a CRT screen which feels like you're
+looking through a TV sort of style pixel screen at this. And of course, we can play with the colors. We can play with
+all of our settings to create these wild digital glitchy effects. Uh, this was obviously what we've been doing this
+for about 6 minutes now. 6 minutes of just playing with different components and a handful of these effects that we've
+created something that feels kind of digital that we can have countless different variations of. If I duplicate this,
+I could come in here and just pick different color schemes, shift the bars at an angle, and we have an entirely
+different look. In fact, I may take this and just make this one of our presets available at shaders.com. So, that has
+been some of the digital effects, some of the stylizations, and building a digital composition with shaders.
+
+
+####################################################################################################
+## nygrb3w8FG4 — Component Spotlight - Liquid Glass   (7606 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en All right, in this component spotlight video, I want to take a look at glass or
+liquid glass as it's better known. Now, liquid glass is one of the most popular effects in shaders and it's really
+easy to use for both 2D effects, 3D effects. It just brings a new level of detail to your compositions. So, let's dive
+in. Right here in my design editor, I have a multi-point gradient and a wave distortion layer. Uh this is just setting
+a base, something for us to put the glass on top of. So, you can see the multi-point gradient is just this color
+gradient that we have in the background and the wave distortion is just giving it some motion. I might even up this
+just a little bit. Uh and just give us a little bit more speed so we can see things as they're moving. Maybe I change
+the wave type to a different type, maybe just sign. There you go. So, we have some sort of background that we can see
+the glass effect through. Now, let's pull in the effect. It's under shape effects, glass. And by default, you're
+getting just a circle of glass that gets rendered to the screen. Now, this works really well with your own media and
+images. If I was to drop in uh one of our sticker layers in here, like just an image that I've uploaded in the past,
+drop that below glass and now we can really start to see how the glass refracts our content. Let me go ahead and play
+with some of the settings and just sort of show you how glass works. So, uh by default, you need to pick a shape,
+right? So, we're using circle. We could also use any 2D shape, like a polygon looks really nice on those hard edges.
+Uh and we can control, you know, the same way with any other shape effect, we can control those shape parameters. But,
+let's go down into some of the glass specific ones. So, first off, you have Fresnel, uh which is sort of the lighting
+that appears around the edge of the shape. So, in this polygon case, if I bump this up, you'll get a sense of how that
+feels. It's this white edge which is appearing around the edge and it's supposed to look like a side lighting almost.
+So, let me go down, increase the softness, and you'll start to feel like almost the glass is um where you're
+reflecting light right on the edge or it's to glow a little bit. Feels like it has some internal glow happening. This
+works really well with the cutout prop. Now, cutout is available in a bunch of different shape effects. And what this
+does is says, "Okay, well, here's the shape and here's the glass and we don't want anything outside of that." So, if I
+turn cutout on, now we have liquid glass that we can move around that's going to show its background contents in a way
+that doesn't have anything outside of the shape. Now, this works well with stacking and with nesting. So, if I was to
+say, "Okay, I only want the glass to be on this particular image texture." I could drop the image into the glass. It's
+still cutting out, but it's only cutting out that image and now we have glass that actually reveals this image as it
+moves over it. So, that's a fun thing to do. Let me drop that image out and we will get back into playing with some of
+these properties here. Now, some of the obvious ones that come to mind are going to be the thickness of the glass.
+Like, how thick does that look? And how much is it going to refract light? So, with a value of zero for refraction,
+let me also just drop this Fresnel down to next to nothing. The glass is basically impossible to see or it's getting
+very close to being impossible to see. And as we crank that refraction up, now that edge is actually starting to
+refract more and more of the content around it. Uh thickness is going to control just how thick that band of
+refraction is around the edge of the shape. So, if I have that really small, again, we get into a situation where you
+can still see that, you know, tiny little sliver of glass effect. But, it's not the same thing. It's it's not going to
+produce a really noticeable effect. If we bump thickness all the way up, well, now we're we're pulling that band all
+the way into the center of the shape and with thickness and refraction here set to max, we get a heavy distortion
+effect. Uh it's very hard to see content through that in some cases. So, that's two D effects. We also have inner
+zoom. So, what zoom does is says, basically, whatever's inside of that glass shape is going to zoom in or out Uh and
+that can help identify, even if you have limited refraction, it helps identify where that glass boundary exists. So,
+if I drop refraction all the way down, I drop thickness all the way down, you've got a very small edge effect, very
+subtle. And then I increase the zoom, you've almost got a magnifying glass effect going on, right? You can move that
+around like a magnifying glass. And of course, you know, combining all of these if we introduce Fresnel, give a little
+bit of softness. If we crank the refraction up a little bit, crank the thickness up just a little bit, we've got this
+really nice liquid glass effect that we could deploy to our hero sections. We could uh use our logo in here. Let me
+actually quickly show you a couple more of the props, including what a logo and uh 3D effects might look like. Glass
+works really well with 3D. If I come down here to aberration, that's going to introduce chromatic splitting between R,
+G, and B right at that boundary level. Might be hard to tell in this particular example. Uh we've already talked about
+in the zoom. We've got light angle, so there is an additional light outside of Fresnel, which only applies from one
+particular direction. So, if I was to crank that all the way up here, you'll see it's coming from the top in this
+particular case. You can control that light angle, the color, and the softness. So, if it's a very soft light, it can
+wrap more around the image. And if it's not, then it's just going to be in that one very particular highlight spot.
+Let me go ahead, drop that all down, and we'll jump into a 3D effect. So, here we have polygon. These are our 2D
+effects. And now let's take a look at a 3D effect. I'm going to pull up octahedron. Uh that's a fun shape. I'm going
+to scale that up. I'm going to center that somewhere around there. There you go. And now we have our 3D gizmo. I can
+rotate this gizmo around, and you'll see our glass is refracting at all sorts of different indices, indices, whatever
+that word is. Uh and we're getting this just nice rotating glass effect. Now, I could imagine using dynamic props to
+animate this smoothly over time. Right? Turning Maybe we delete that image underneath and we just have this nice
+subtle glass gem that is constantly rotating on top of our composition. You could imagine using this in a hero
+section. Perhaps we expand this up and just have it fill the right-hand side of the screen. We introduce a little bit
+more refraction and reduce the thickness maybe a little bit. And maybe even pull the zoom out a little bit until we
+get something that looks really nice. Going to play with that light angle, boost that highlight, reduce that softness
+until we get something that feels like a nice glass gem that's just rotating in the corner of the screen. Maybe even
+bring down our ambient background. And now as I play with the multi-color background, you can sort of see how glass is
+adding to this effect. It's just adding a layer of refraction on top of the existing fun basic gradient. So, this is
+how you could build a cool liquid glass hero section for your website. Literally just grab the glass component from
+the Shader Component Library.
+
+
+####################################################################################################
+## aOTiSnA7CJs — Introducing Shaders v3   (761 chars)
+####################################################################################################
+WEBVTT Kind: captions Language: en Today, we introduce Shaders version 3, making it easier than ever to create and
+ship best-in-class shader effects for the web. With a completely [music] reimagined design editor, you can now design,
+explore, and iterate visually on an infinite canvas. Then deploy production-ready WebGPU shader effects in minutes.
+Powered by an all-new Type GPU render engine, effects load up to 25 times faster with production bundles up to three
+times smaller. We've added a ton of new components and resources to up your shader skills and help you deploy effects
+that stand out. Designed to power the next generation of creative front-end builders. From design magic to deployed
+code in minutes, this is Shaders version 3. &gt;&gt; [music]
+

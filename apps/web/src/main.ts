@@ -5,7 +5,14 @@
  * packages into a working visual style editor.
  */
 
-import { Renderer, GLContext } from "@layers/engine";
+import { Renderer } from "@layers/engine";
+import {
+  createDynamicDriver,
+  hasDynamicProps,
+  isDynamicProp,
+  type DynamicDriver,
+  type DynamicProp,
+} from "@layers/engine";
 import {
   PatternDitherCore,
   NoiseGrainCore,
@@ -36,36 +43,79 @@ import {
   type StackState,
   type StackItem,
 } from "@layers/stack";
-import { applyTheme, generateCSSVariables } from "@layers/ui";
+import { applyTheme } from "@layers/ui";
+import { iconSvg } from "./icons";
+import { buildPropsPanel } from "./propsPanel";
+import { mountInsertToolbar } from "./insertPanel";
 import { validateEffectStack } from "@layers/schema";
 import { persistence } from "./persistence";
-import { handleKeyboard, getShortcuts, CORE_KEYS, type KeyboardHandlers } from "./keyboard";
-import { createMaskBrush, type MaskBrush } from "./maskBrush";
-import { createVectorEditor, type VectorEditor } from "./vectorEditor";
+import { CORE_KEYS } from "./keyboard";
 import { presetStore } from "./presetStore";
-import { mountLibraryPanel, type LibraryPanelHandle } from "./libraryPanel";
-import { mountPresetGrid } from "./presetGrid";
 import { presetIdFromHash } from "./presetShare";
-import { openCamera, loadImageAsSource } from "./imageImport";
-import { mountAIPanel, type AIPanelHandle } from "./aiPanel";
-import { mountReviewScreen, type ReviewScreenHandle } from "./reviewScreen";
-import { mountComparisonTools, type ComparisonToolsHandle } from "./comparisonTools";
-import { mountLearningPanel, type LearningPanelHandle } from "./learningPanel";
 import { emitEvent } from "./eventEmitter";
 import { stackSignature as stackSignatureOf } from "./renderState";
 import { installGlobalErrorHandlers } from "./errorBoundary";
+import { mountPresetGrid } from "./presetGrid";
+import { mountLibraryPanel } from "./libraryPanel";
+import { openCamera, loadImageAsSource } from "./imageImport";
+import { state } from "./app-state";
+import {
+  canvas,
+  coreList,
+  stackList,
+  inspector,
+  insertHost,
+  btnTheme,
+  btnUndo,
+  btnRedo,
+  maskCanvas,
+  maskOverlay,
+  maskBrush,
+  syncIndicator,
+  syncText,
+} from "./dom-refs";
+import {
+  initMaskBrush,
+  initVectorEditor,
+  initHelpOverlay,
+  initStage06,
+  wireToolbarButtons,
+  wireKeyboardShortcuts,
+  wireOverlayDismissal,
+} from "./event-wiring";
+import { initMobileNav } from "./mobile-nav";
+import { decorateTabBar } from "./toolbar";
+import { renderFrame, startLoop, setFrameHook } from "./animation-loop";
+import {
+  clearRegistrations,
+  invalidateDriver,
+  registerPass,
+  resetDrivers,
+  tickDrivers,
+} from "./dynamicLoop";
+import {
+  initDebugSession,
+  injectDebugToolbar,
+  trackFrame,
+  trackLongTask,
+  isDebugEnabled,
+  logDebugEvent,
+} from "./debugSession";
 
 // ── Core metadata ──────────────────────────────────────────────────────────
 
-interface CoreDef {
+export interface CoreDef {
   name: string;
   label: string;
-  icon: string;
+  /** Icon key from ./icons — inline SVG, never an emoji. */
+  iconName: string;
+  /** One-line description shown at the top of the component's prop section. */
+  blurb: string;
   create: (params?: any) => any;
   params: ParamDef[];
 }
 
-interface ParamDef {
+export interface ParamDef {
   key: string;
   label:  string;
   type: "slider" | "select" | "color" | "toggle";
@@ -76,11 +126,12 @@ interface ParamDef {
   default: any;
 }
 
-const CORE_DEFS: CoreDef[] = [
+export const CORE_DEFS: CoreDef[] = [
   {
     name: "pattern-dither",
     label: "Pattern/Dither",
-    icon: "◉",
+    iconName: "cores",
+    blurb: "Halftone patterns and ordered dithering — simplex, dot and wave bases with selectable Bayer matrices.",
     create: (p?: any) => new PatternDitherCore(p),
     params: [
       { key: "shape", label: "Shape", type: "select", options: [
@@ -104,7 +155,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "noise-grain",
     label: "Noise/Grain",
-    icon: "▒",
+    iconName: "texture",
+    blurb: "Procedural noise and film grain. Stack octaves and blend mono or colour grain.",
     create: (p?: any) => new NoiseGrainCore(p),
     params: [
       { key: "scale", label: "Scale", type: "slider", min: 1, max: 100, step: 1, default: 20 },
@@ -116,7 +168,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "blur",
     label: "Blur/Convolution",
-    icon: "◎",
+    iconName: "blur",
+    blurb: "Convolution blur with directional, radial and edge-handling controls.",
     create: (p?: any) => new BlurCore(p),
     params: [
       { key: "radius", label: "Radius", type: "slider", min: 0.5, max: 20, step: 0.5, default: 2 },
@@ -137,7 +190,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "color-blend",
     label: "Color/Blend",
-    icon: "◐",
+    iconName: "adjust",
+    blurb: "Hue rotation, saturation and brightness, with a per-layer blend mode.",
     create: (p?: any) => new ColorBlendCore(p),
     params: [
       { key: "hueShift", label: "Hue Shift", type: "slider", min: -180, max: 180, step: 1, default: 0 },
@@ -156,7 +210,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "displacement",
     label: "Displacement",
-    icon: "≋",
+    iconName: "distort",
+    blurb: "Displace the frame along a map — liquid, fluted, wave or heat distortion.",
     create: (p?: any) => new DisplacementCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 50, step: 0.5, default: 5 },
@@ -178,7 +233,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "lighting",
     label: "Lighting",
-    icon: "☀",
+    iconName: "light",
+    blurb: "Directional light, glow, haze and vignette applied as a layer.",
     create: (p?: any) => new LightingCore(p),
     params: [
       { key: "offsetX", label: "Offset X", type: "slider", min: -100, max: 100, step: 1, default: 0 },
@@ -197,7 +253,8 @@ const CORE_DEFS: CoreDef[] = [
   {
     name: "outline",
     label: "Outline/Edge",
-    icon: "✎",
+iconName: "edge",
+    blurb: "Edge detection and ink outline with roughness and bleed.",
     create: (p?: any) => new OutlineCore(p),
     params: [
       { key: "strength", label: "Strength", type: "slider", min: 0, max: 3, step: 0.01, default: 1 },
@@ -207,98 +264,6 @@ const CORE_DEFS: CoreDef[] = [
     ],
   },
 ];
-
-// ── App state ──────────────────────────────────────────────────────────────
-
-let stackState: StackState = createStackState();
-let renderer: Renderer | null = null;
-let sourceCanvas: HTMLCanvasElement | null = null;
-/** Stack state saved while a single layer is isolated for preview. */
-let preIsolateStack: StackState | null = null;
-
-/**
- * Normalise any 2D-drawable canvas (including OffscreenCanvas) into a real
- * HTMLCanvasElement, which the review/compare tools need for `toDataURL()`
- * and `getContext('2d')`. OffscreenCanvas lacks both.
- */
-function toHTMLCanvas(
-  src: OffscreenCanvas | HTMLCanvasElement,
-  width: number,
-  height: number,
-): HTMLCanvasElement {
-  const out = document.createElement("canvas");
-  out.width = width;
-  out.height = height;
-  const ctx = out.getContext("2d");
-  if (ctx) ctx.drawImage(src as CanvasImageSource, 0, 0, width, height);
-  return out;
-}
-
-let theme: "light" | "dark" = "light";
-let undoStack: StackState[] = [];
-let redoStack: StackState[] = [];
-let frameCount = 0;
-let lastFpsTime = performance.now();
-let fpsValue = 0;
-let stackSignatureCache: string = "";
-
-// ── DOM refs ───────────────────────────────────────────────────────────────
-
-const $ = <T extends Element>(sel: string): T => {
-  const el = document.querySelector<T>(sel);
-  if (!el) throw new Error(`Element not found: ${sel}`);
-  return el;
-};
-
-const canvas = $<HTMLCanvasElement>("#gl-canvas");
-const coreList = $<HTMLDivElement>("#core-list");
-const stackList = $<HTMLDivElement>("#stack-list");
-const inspector = $<HTMLDivElement>("#inspector");
-const passCount = $<HTMLSpanElement>("#pass-count");
-const fpsDisplay = $<HTMLSpanElement>("#fps-display");
-const btnUndo = $<HTMLButtonElement>("#btn-undo");
-const btnRedo = $<HTMLButtonElement>("#btn-redo");
-btnUndo.setAttribute("aria-label", "Undo");
-btnRedo.setAttribute("aria-label", "Redo");
-const btnExport = $<HTMLButtonElement>("#btn-export");
-const btnImport = $<HTMLButtonElement>("#btn-import");
-const btnSave = $<HTMLButtonElement>("#btn-save");
-const btnClear = $<HTMLButtonElement>("#btn-clear");
-const btnTheme = $<HTMLButtonElement>("#btn-theme");
-const syncIndicator = $<HTMLSpanElement>(".sync-indicator");
-const syncText = $<HTMLSpanElement>("#sync-text");
-const maskCanvas = $<HTMLCanvasElement>("#mask-canvas");
-const maskOverlay = $<HTMLDivElement>("#mask-overlay");
-const maskBrush = createMaskBrush(maskCanvas);
-const vectorEditor = createVectorEditor($<SVGSVGElement>("#vector-svg"));
-const helpOverlay = $<HTMLDivElement>("#help-overlay");
-const helpContent = $<HTMLDivElement>("#help-content");
-const vectorPanel = $<HTMLDivElement>("#vector-panel");
-const vectorSvg = $<SVGSVGElement>("#vector-svg");
-const btnVector = $<HTMLButtonElement>("#btn-vector");
-// btnMask is created dynamically in rebuildInspector
-const brushSizeSlider = $<HTMLInputElement>("#brush-size");
-const brushOpacitySlider = $<HTMLInputElement>("#brush-opacity");
-const btnPaint = $<HTMLButtonElement>("#btn-paint");
-const btnErase = $<HTMLButtonElement>("#btn-erase");
-const btnClearMask = $<HTMLButtonElement>("#btn-clear-mask");
-const btnCloseMask = $<HTMLButtonElement>("#btn-close-mask");
-const btnCloseVector = $<HTMLButtonElement>("#btn-close-vector");
-const btnAddPoint = $<HTMLButtonElement>("#btn-add-point");
-const btnAddLine = $<HTMLButtonElement>("#btn-add-line");
-const btnAddCurve = $<HTMLButtonElement>("#btn-add-curve");
-const btnDeletePoint = $<HTMLButtonElement>("#btn-delete-point");
-const btnNewPath = $<HTMLButtonElement>("#btn-new-path");
-const btnZoomIn = $<HTMLButtonElement>("#btn-zoom-in");
-const btnZoomOut = $<HTMLButtonElement>("#btn-zoom-out");
-const btnExportSvg = $<HTMLButtonElement>("#btn-export-svg");
-const btnImportSvg = $<HTMLButtonElement>("#btn-import-svg");
-const btnCloseHelp = $<HTMLButtonElement>("#btn-close-help");
-
-// Set ARIA labels for icon-only buttons
-btnCloseMask.setAttribute("aria-label", "Close mask");
-btnCloseVector.setAttribute("aria-label", "Close vector editor");
-btnCloseHelp.setAttribute("aria-label", "Close help");
 
 // ── Core param conversion ──────────────────────────────────────────────────
 
@@ -330,7 +295,13 @@ function toHexColor(value: unknown, fallback: unknown): string {
   return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
 }
 
-/** Convert a stack item's params into the shape the core constructor expects. */
+/**
+ * Convert a stack item's params into the shape the core constructor expects.
+ *
+ * A driven prop is stored as an object, so `Number(raw)` would be `NaN` and the
+ * effect would silently render nothing. Driven keys are skipped here and filled
+ * in per frame by `applyDrivenParams()` from the dynamic driver instead.
+ */
 function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Record<string, unknown> {
    const out: Record<string, unknown> = {};
    for (const p of def.params) {
@@ -338,13 +309,14 @@ function buildCoreParams(def: CoreDef, itemParams: Record<string, unknown>): Rec
      if (p.type === "color") {
        out[p.key] = toRgbArray(raw) ?? toRgbArray(p.default) ?? [0, 0, 0];
      } else if (p.type === "slider") {
-       out[p.key] = Number(raw);
+       // A driven prop resolves through the driver; never coerce it here.
+       out[p.key] = isDynamicProp(raw) ? undefined : Number(raw);
      } else {
        out[p.key] = raw;
      }
    }
    return out;
- }
+}
 
 /**
  * Creates a signature string for the current stack state to detect changes.
@@ -354,76 +326,40 @@ function stackSignature(state: StackState): string {
   return stackSignatureOf(state);
 }
 
-// ── Undo/redo ──────────────────────────────────────────────────────────────
+// ── Context lost banner ────────────────────────────────────────────────────
 
-function pushUndo(): void {
-  undoStack.push(stackState);
-  if (undoStack.length > 100) undoStack.shift();
-  redoStack = [];
-  updateUndoButtons();
+export function showContextLostBanner(): void {
+   if (state.contextLostBanner) {
+     return; // Already showing
+   }
+
+   state.contextLostBanner = document.createElement('div');
+   state.contextLostBanner.textContent = 'Graphics context lost — restoring…';
+   state.contextLostBanner.style.position = 'fixed';
+   state.contextLostBanner.style.top = '0';
+   state.contextLostBanner.style.left = '0';
+   state.contextLostBanner.style.right = '0';
+   state.contextLostBanner.style.backgroundColor = 'rgba(255, 165, 0, 0.9)';
+   state.contextLostBanner.style.color = '#000';
+   state.contextLostBanner.style.padding = '0.75rem';
+   state.contextLostBanner.style.textAlign = 'center';
+   state.contextLostBanner.style.fontWeight = 'bold';
+   state.contextLostBanner.style.zIndex = '1000';
+   state.contextLostBanner.style.boxSizing = 'border-box';
+   document.body.appendChild(state.contextLostBanner);
 }
 
-function updateUndoButtons(): void {
-  btnUndo.disabled = undoStack.length === 0;
-  btnRedo.disabled = redoStack.length === 0;
-}
-
-function doUndo(): void {
-   if (undoStack.length === 0) return;
-   redoStack.push(stackState);
-   stackState = undoStack.pop()!;
-   updateUndoButtons();
-   rebuildStack();
-   rebuildInspector();
-   rebuildPasses();
-   scheduleSave();
- }
-
-function doRedo(): void {
-   if (redoStack.length === 0) return;
-   undoStack.push(stackState);
-   stackState = redoStack.pop()!;
-   updateUndoButtons();
-   rebuildStack();
-   rebuildInspector();
-   rebuildPasses();
-   scheduleSave();
+export function hideContextLostBanner(): void {
+   if (state.contextLostBanner) {
+     state.contextLostBanner.remove();
+     state.contextLostBanner = null;
+   }
 }
 
 // ── Renderer ───────────────────────────────────────────────────────────────
 
-let contextLostBanner: HTMLDivElement | null = null;
-
-function showContextLostBanner(): void {
-   if (contextLostBanner) {
-     return; // Already showing
-   }
-   
-   contextLostBanner = document.createElement('div');
-   contextLostBanner.textContent = 'Graphics context lost — restoring…';
-   contextLostBanner.style.position = 'fixed';
-   contextLostBanner.style.top = '0';
-   contextLostBanner.style.left = '0';
-   contextLostBanner.style.right = '0';
-   contextLostBanner.style.backgroundColor = 'rgba(255, 165, 0, 0.9)';
-   contextLostBanner.style.color = '#000';
-   contextLostBanner.style.padding = '0.75rem';
-   contextLostBanner.style.textAlign = 'center';
-   contextLostBanner.style.fontWeight = 'bold';
-   contextLostBanner.style.zIndex = '1000';
-   contextLostBanner.style.boxSizing = 'border-box';
-   document.body.appendChild(contextLostBanner);
-}
-
-function hideContextLostBanner(): void {
-   if (contextLostBanner) {
-     contextLostBanner.remove();
-     contextLostBanner = null;
-   }
-}
-
 function initRenderer(): void {
-   renderer = new Renderer(canvas, {
+   state.renderer = new Renderer(canvas, {
      width: 512,
      height: 512,
      preserveDrawingBuffer: true,
@@ -452,37 +388,40 @@ function initRenderer(): void {
    sctx.fillRect(100, 100, 150, 150);
 
    // Store the source canvas for later use
-   sourceCanvas = document.createElement("canvas");
-   sourceCanvas.width = 512;
-   sourceCanvas.height = 512;
-   const sourceCtx = sourceCanvas.getContext("2d")!;
+   state.sourceCanvas = document.createElement("canvas");
+   state.sourceCanvas.width = 512;
+   state.sourceCanvas.height = 512;
+   const sourceCtx = state.sourceCanvas.getContext("2d")!;
    sourceCtx.drawImage(src, 0, 0);
 
-   renderer.uploadSource(src, 512, 512);
-   
+   state.renderer.uploadSource(src, 512, 512);
+
    // Set up WebGL context loss handlers
-   const glContext = renderer.context;
+   const glContext = state.renderer.context;
    glContext.onContextLost(() => {
      showContextLostBanner();
    });
-   
+
    glContext.onContextRestored(() => {
      hideContextLostBanner();
      // Rebuild passes when context is restored
      rebuildPasses();
    });
- }
+}
 
-function rebuildPasses(): void {
-   if (!renderer) return;
+export function rebuildPasses(): void {
+   if (!state.renderer) return;
 
    // Clear existing passes
-   for (const pass of [...renderer.passes]) {
-     renderer.removePass(pass.id);
+   for (const pass of [...state.renderer.passes]) {
+     state.renderer.removePass(pass.id);
    }
 
+   // The pass→core map is rebuilt alongside the passes themselves.
+   clearRegistrations();
+
    // Add enabled stack items as passes
-   const enabled = getEnabledItems(stackState);
+   const enabled = getEnabledItems(state.stack);
    for (const item of enabled) {
      const def = CORE_DEFS.find((d) => d.name === item.core);
      if (!def) continue;
@@ -490,40 +429,54 @@ function rebuildPasses(): void {
      // Params must go through the constructor: cores read from their private
      // _params object, so assigning core[key] directly has no effect.
      const core = def.create(buildCoreParams(def, item.params));
-     renderer.addPass(core);
+     state.renderer.addPass(core);
+     // Register it so the dynamic driver can push resolved values into it.
+     registerPass(core as unknown as { setParams?: (p: Record<string, unknown>) => void }, item.id, item.core);
    }
 
-   renderer.warmUp();
+   // The set of driven props may have changed; force a driver rebuild and drop
+   // any smoothing state that belonged to the previous stack.
+   invalidateDriver();
+
+   state.renderer.warmUp();
 }
 
-function renderFrame(): void {
-   if (!renderer) return;
-   
-   // If context is lost, don't render but still update UI
-   if (renderer.context.isLost) {
-     // Still update pass count for UI consistency
-     const enabled = getEnabledItems(stackState);
-     const passes = estimatePasses(enabled);
-     passCount.textContent = `${passes} passes`;
-     if (!isMobileOk(passes)) {
-       passCount.style.color = "var(--error)";
-     } else {
-       passCount.style.color = "var(--text-tertiary)";
-     }
-     return;
-   }
-   
-   renderer.render(0);
+// ── Undo/redo ──────────────────────────────────────────────────────────────
 
-   // Update pass count
-   const enabled = getEnabledItems(stackState);
-   const passes = estimatePasses(enabled);
-   passCount.textContent = `${passes} passes`;
-   if (!isMobileOk(passes)) {
-     passCount.style.color = "var(--error)";
-   } else {
-     passCount.style.color = "var(--text-tertiary)";
-   }
+export function pushUndo(): void {
+  state.undoStack.push(state.stack);
+  if (state.undoStack.length > 100) state.undoStack.shift();
+  state.redoStack = [];
+  updateUndoButtons();
+}
+
+export function updateUndoButtons(): void {
+  btnUndo.disabled = state.undoStack.length === 0;
+  btnRedo.disabled = state.redoStack.length === 0;
+}
+
+export function doUndo(): void {
+   if (state.undoStack.length === 0) return;
+   state.redoStack.push(state.stack);
+   state.stack = state.undoStack.pop()!;
+   updateUndoButtons();
+   rebuildStack();
+   rebuildInspector();
+   rebuildPasses();
+   resetDrivers();
+   scheduleSave();
+}
+
+export function doRedo(): void {
+   if (state.redoStack.length === 0) return;
+   state.undoStack.push(state.stack);
+   state.stack = state.redoStack.pop()!;
+   updateUndoButtons();
+   rebuildStack();
+   rebuildInspector();
+   rebuildPasses();
+   resetDrivers();
+   scheduleSave();
 }
 
 // ── Core list UI ───────────────────────────────────────────────────────────
@@ -533,7 +486,7 @@ function buildCoreList(): void {
   for (const def of CORE_DEFS) {
     const btn = document.createElement("button");
     btn.className = "core-btn";
-    btn.innerHTML = `<span class="core-icon">${def.icon}</span><span>${def.label}</span>`;
+    btn.innerHTML = `<span class="core-icon">${iconSvg(def.iconName)}</span><span>${def.label}</span>`;
      btn.addEventListener("click", () => {
        pushUndo();
         const core = def.create();
@@ -541,7 +494,7 @@ function buildCoreList(): void {
         for (const p of def.params) {
           params[p.key] = p.default;
         }
-        stackState = addStackItem(stackState, {
+        state.stack = addStackItem(state.stack, {
           core: def.name,
           params,
           opacity: 1,
@@ -561,17 +514,17 @@ function buildCoreList(): void {
 
 // ── Stack list UI ──────────────────────────────────────────────────────────
 
-function rebuildStack(): void {
+export function rebuildStack(): void {
   stackList.innerHTML = "";
-  if (stackState.items.length === 0) {
+  if (state.stack.items.length === 0) {
     stackList.innerHTML = `<p class="stack-empty">Click a core to add it to the stack</p>`;
     return;
   }
 
-  for (const item of stackState.items) {
+  for (const item of state.stack.items) {
     const el = document.createElement("div");
     el.className = "stack-item";
-    if (item.id === stackState.selectedId) el.classList.add("selected");
+    if (item.id === state.stack.selectedId) el.classList.add("selected");
     if (!item.enabled) el.classList.add("disabled");
 
     const name = document.createElement("span");
@@ -586,7 +539,7 @@ function rebuildStack(): void {
     toggle.addEventListener("click", (e) => {
        e.stopPropagation();
        pushUndo();
-       stackState = toggleStackItem(stackState, item.id);
+       state.stack = toggleStackItem(state.stack, item.id);
        rebuildStack();
        rebuildPasses();
        scheduleSave();
@@ -600,7 +553,7 @@ function rebuildStack(): void {
     remove.addEventListener("click", (e) => {
        e.stopPropagation();
        pushUndo();
-       stackState = removeStackItem(stackState, item.id);
+       state.stack = removeStackItem(state.stack, item.id);
        rebuildStack();
        rebuildInspector();
        rebuildPasses();
@@ -609,7 +562,7 @@ function rebuildStack(): void {
     el.appendChild(remove);
 
     el.addEventListener("click", () => {
-      stackState = selectStackItem(stackState, item.id);
+      state.stack = selectStackItem(state.stack, item.id);
       rebuildStack();
       rebuildInspector();
       scheduleSave();
@@ -620,408 +573,130 @@ function rebuildStack(): void {
 }
 
 // ── Inspector UI ───────────────────────────────────────────────────────────
+//
+// The properties panel lives in ./propsPanel. It owns its own DOM; this
+// function only resolves which layer is selected and hands over the handlers.
+// Keeping it here means every existing call site (rebuildInspector) keeps
+// working unchanged.
 
-function rebuildInspector(): void {
-  const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+/**
+ * Re-syncs one rendered param row after its value changed.
+ *
+ * The panel is not rebuilt on a param change — doing so would tear down the
+ * dynamic-prop editor the user has open. Instead the row's own `__resync` hook
+ * (attached by propsPanel) re-reads the stored value and refreshes its control
+ * and affordance in place.
+ */
+function resyncParamRow(itemId: string, key: string): void {
+  const node = inspector.querySelector<HTMLElement>(
+    `.param[data-param="${CSS.escape(key)}"][data-item="${CSS.escape(itemId)}"]`,
+  );
+  const resync = (node as HTMLElement & { __resync?: () => void } | null)?.__resync;
+  if (resync) resync();
+}
+
+export function rebuildInspector(): void {
+  const selected = state.stack.items.find((i) => i.id === state.stack.selectedId);
   if (!selected) {
-    inspector.innerHTML = `<p class="inspector-empty">Select a core to edit its parameters</p>`;
+    inspector.innerHTML = `<p class="inspector-empty">Select a layer to edit its properties</p>`;
     return;
   }
 
   const def = CORE_DEFS.find((d) => d.name === selected.core);
   if (!def) {
-    inspector.innerHTML = `<p class="inspector-empty">Unknown core: ${selected.core}</p>`;
+    inspector.innerHTML = `<p class="inspector-empty">Unknown layer type: ${selected.core}</p>`;
     return;
   }
 
-  let html = `<h3 class="inspector-title">${def.label}</h3>`;
-
-  for (const param of def.params) {
-    const val = selected.params[param.key] ?? param.default;
-    html += `<div class="param-group">`;
-    html += `<label class="param-label">${param.label}`;
-
-    if (param.type === "slider") {
-      const numVal = Number(val);
-      html += `<span class="param-value">${numVal}</span>`;
-      html += `<input type="range" class="param-slider" data-key="${param.key}" `;
-      html += `min="${param.min}" max="${param.max}" step="${param.step}" value="${numVal}">`;
-    } else if (param.type === "select") {
-      html += `<select class="param-select" data-key="${param.key}">`;
-      for (const opt of param.options!) {
-        const sel = opt.value === val ? " selected" : "";
-        html += `<option value="${opt.value}"${sel}>${opt.label}</option>`;
+  buildPropsPanel(inspector, selected, def, {
+    // A param change must NOT re-render the panel: doing so tears down the
+    // dynamic-prop editor the user has open, discarding the mode they just
+    // picked. Persist, then re-sync only the affected value in place.
+    setParam: (key, value) => {
+      pushUndo();
+      // Read the live item: `selected` is captured when the panel was built, so
+      // spreading its params here would silently revert any param another
+      // control changed in the meantime.
+      const live = state.stack.items.find((i) => i.id === selected.id);
+      if (!live) return;
+      state.stack = updateStackItem(state.stack, live.id, {
+        params: { ...live.params, [key]: value },
+      });
+      resyncParamRow(live.id, key);
+      rebuildPasses();
+      scheduleSave();
+    },
+    // Structural changes (reorder, remove, visibility) DO need a full rebuild.
+    setItem: (patch) => {
+      pushUndo();
+      if (patch.__move === "up") {
+        state.stack = moveStackItem(state.stack, selected.id, "up");
+      } else if (patch.__move === "down") {
+        state.stack = moveStackItem(state.stack, selected.id, "down");
+      } else if (patch.__remove) {
+        state.stack = removeStackItem(state.stack, selected.id);
+      } else {
+        state.stack = updateStackItem(state.stack, selected.id, patch);
       }
-      html += `</select>`;
-    } else if (param.type === "color") {
-      // Colors are stored as hex strings in the stack (so the picker and
-      // IndexedDB round-trip correctly) and converted to [r,g,b] on the way
-      // into the core, which divides by 255.
-      const hexVal = toHexColor(val, param.default);
-      html += `<div class="param-color">`;
-      html += `<input type="color" data-key="${param.key}" value="${hexVal}">`;
-      html += `<span>${hexVal}</span>`;
-      html += `</div>`;
-    } else if (param.type === "toggle") {
-      const checked = val ? " checked" : "";
-      html += `<input type="checkbox" data-key="${param.key}"${checked} style="width:18px;height:18px;cursor:pointer;">`;
-    }
-
-    html += `</label></div>`;
-  }
-
-  // Opacity slider
-  html += `<div class="param-group">`;
-  html += `<label class="param-label">Opacity`;
-  html += `<span class="param-value">${selected.opacity}</span>`;
-  html += `<input type="range" class="param-slider" data-key="__opacity" min="0" max="1" step="0.01" value="${selected.opacity}">`;
-  html += `</label></div>`;
-
-  // Blend mode
-  html += `<div class="param-group">`;
-  html += `<label class="param-label">Blend Mode`;
-  html += `<select class="param-select" data-key="__blend">`;
-  const blendModes = ["normal", "multiply", "screen", "overlay", "soft-light", "hard-light", "color-dodge", "color-burn", "darken", "lighten", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
-  for (const bm of blendModes) {
-    const sel = bm === selected.blend ? " selected" : "";
-    html += `<option value="${bm}"${sel}>${bm}</option>`;
-  }
-  html += `</select></label></div>`;
-
-  // Move up/down
-  html += `<div class="param-group" style="display:flex;gap:8px;">`;
-  html += `<button class="btn" data-key="__moveUp" style="flex:1;">↑ Move Up</button>`;
-  html += `<button class="btn" data-key="__moveDown" style="flex:1;">↓ Move Down</button>`;
-  html += `</div>`;
-
-  inspector.innerHTML = html;
-
-  // Add mask button when item is selected
-  const maskBtn = document.createElement("button");
-  maskBtn.id = "btn-mask";
-  maskBtn.className = "btn";
-  maskBtn.style.width = "100%";
-  maskBtn.style.marginTop = "8px";
-  maskBtn.textContent = "🎭 Edit Mask";
-  maskBtn.addEventListener("click", () => {
-    const sel = stackState.items.find((i) => i.id === stackState.selectedId);
-    if (!sel) return;
-    maskOverlay.classList.remove("hidden");
-    maskOverlay.classList.add("visible");
-    maskCanvas.classList.remove("hidden");
-    if (sel.mask) {
-      maskBrush.loadMaskData(sel.mask).then(() => {});
-    } else {
-      maskBrush.clear();
-    }
-  });
-  inspector.appendChild(maskBtn);
-
-  // Wire up events
-  inspector.querySelectorAll("[data-key]").forEach((el) => {
-    const key = (el as HTMLElement).dataset.key!;
-
-    if (el instanceof HTMLInputElement && el.type === "range") {
-      el.addEventListener("input", () => {
-        const numVal = parseFloat(el.value);
-        (el as HTMLElement).parentElement!.querySelector(".param-value")!.textContent = String(numVal);
-        pushUndo();
-         if (key === "__opacity") {
-           stackState = updateStackItem(stackState, selected.id, { opacity: numVal });
-         } else {
-           const newParams = { ...selected.params, [key]: numVal };
-           stackState = updateStackItem(stackState, selected.id, { params: newParams });
-         }
-         rebuildPasses();
-         scheduleSave();
-      });
-    } else if (el instanceof HTMLSelectElement) {
-      el.addEventListener("change", () => {
-        pushUndo();
-         if (key === "__blend") {
-           stackState = updateStackItem(stackState, selected.id, { blend: el.value });
-         } else {
-           const newParams = { ...selected.params, [key]: el.value };
-           stackState = updateStackItem(stackState, selected.id, { params: newParams });
-         }
-         rebuildPasses();
-         scheduleSave();
-      });
-    } else if (el instanceof HTMLInputElement && el.type === "color") {
-       el.addEventListener("input", () => {
-         const val = el.value;
-         (el as HTMLElement).parentElement!.querySelector("span")!.textContent = val;
-         pushUndo();
-         // Store the hex string; render() converts it to [r,g,b] for the core.
-         const newParams = { ...selected.params, [key]: val };
-         stackState = updateStackItem(stackState, selected.id, { params: newParams });
-         rebuildPasses();
-         scheduleSave();
-       });
-    } else if (el instanceof HTMLInputElement && el.type === "checkbox") {
-       el.addEventListener("change", () => {
-         pushUndo();
-         const newParams = { ...selected.params, [key]: el.checked };
-         stackState = updateStackItem(stackState, selected.id, { params: newParams });
-         rebuildPasses();
-         scheduleSave();
-       });
-    } else if (el instanceof HTMLButtonElement) {
-      el.addEventListener("click", () => {
-        pushUndo();
-         if (key === "__moveUp") {
-           stackState = moveStackItem(stackState, selected.id, "up");
-         } else if (key === "__moveDown") {
-           stackState = moveStackItem(stackState, selected.id, "down");
-         }
-         rebuildStack();
-         rebuildPasses();
-         scheduleSave();
-      });
-    }
+      rebuildStack();
+      rebuildInspector();
+      rebuildPasses();
+      scheduleSave();
+    },
+    editMask: () => {
+      maskOverlay.classList.remove("hidden");
+      maskOverlay.classList.add("visible");
+      maskCanvas.classList.remove("hidden");
+      if (selected.mask) {
+        maskBrush.loadMaskData(selected.mask).then(() => {});
+      } else {
+        maskBrush.clear();
+      }
+    },
+    allItems: () => state.stack.items,
+    refresh: () => rebuildInspector(),
   });
 }
 
+
 // ── Theme ──────────────────────────────────────────────────────────────────
 
-function toggleTheme(): void {
-  theme = theme === "light" ? "dark" : "light";
-  applyTheme(theme);
-  btnTheme.textContent = theme === "light" ? "🌙 Dark" : "☀️ Light";
+export function toggleTheme(): void {
+  state.theme = state.theme === "light" ? "dark" : "light";
+  applyTheme(state.theme);
+  syncThemeSwitch();
+}
+
+/**
+ * Reflect the current theme on the light/dark switch.
+ *
+ * The switch is a `role="switch"` button: `aria-checked` carries the state for
+ * assistive tech, and the knob position is driven purely by the `data-theme`
+ * attribute on <html>, so CSS and ARIA can never disagree.
+ */
+export function syncThemeSwitch(): void {
+  const on = state.theme === "dark";
+  btnTheme.setAttribute("aria-checked", on ? "true" : "false");
+  btnTheme.setAttribute("aria-label", on ? "Light theme" : "Dark theme");
+  btnTheme.title = on ? "Switch to light theme" : "Switch to dark theme";
 }
 
 // ── Mask brush ─────────────────────────────────────────────────────────────
 
-let isPainting = false;
-let lastPaintX = 0;
-let lastPaintY = 0;
-
-function initMaskBrush(): void {
-  // Sync mask canvas size with GL canvas
-  maskCanvas.width = canvas.width;
-  maskCanvas.height = canvas.height;
-
-  // Brush size slider
-  brushSizeSlider.addEventListener("input", () => {
-    maskBrush.setSize(parseInt(brushSizeSlider.value, 10));
-  });
-
-  // Brush opacity slider
-  brushOpacitySlider.addEventListener("input", () => {
-    maskBrush.setOpacity(parseFloat(brushOpacitySlider.value));
-  });
-
-  // Paint/Erase mode buttons
-  btnPaint.addEventListener("click", () => {
-    maskBrush.setMode("paint");
-    btnPaint.classList.add("active");
-    btnErase.classList.remove("active");
-  });
-  btnErase.addEventListener("click", () => {
-    maskBrush.setMode("erase");
-    btnErase.classList.add("active");
-    btnPaint.classList.remove("active");
-  });
-
-  // Clear mask
-  btnClearMask.addEventListener("click", () => {
-    maskBrush.clear();
-    saveMaskToSelected();
-  });
-
-  // Close mask overlay
-  btnCloseMask.addEventListener("click", () => {
-    maskOverlay.classList.remove("visible");
-    maskOverlay.classList.add("hidden");
-    maskCanvas.classList.add("hidden");
-    saveMaskToSelected();
-  });
-
-  // Paint events on mask canvas
-  maskCanvas.addEventListener("mousedown", (e) => {
-    isPainting = true;
-    const rect = maskCanvas.getBoundingClientRect();
-    lastPaintX = e.clientX - rect.left;
-    lastPaintY = e.clientY - rect.top;
-    maskBrush.paint(lastPaintX, lastPaintY);
-  });
-  maskCanvas.addEventListener("mousemove", (e) => {
-    if (!isPainting) return;
-    const rect = maskCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    // Interpolate between last and current position for smooth strokes
-    const dx = x - lastPaintX;
-    const dy = y - lastPaintY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.max(1, Math.floor(dist / (maskBrush.getSize() / 4)));
-    for (let i = 1; i <= steps; i++) {
-      const ix = lastPaintX + (dx * i) / steps;
-      const iy = lastPaintY + (dy * i) / steps;
-      maskBrush.paint(ix, iy);
-    }
-    lastPaintX = x;
-    lastPaintY = y;
-  });
-  maskCanvas.addEventListener("mouseup", () => {
-    isPainting = false;
-    saveMaskToSelected();
-  });
-  maskCanvas.addEventListener("mouseleave", () => {
-    isPainting = false;
-    saveMaskToSelected();
-  });
-
-}
-
-function saveMaskToSelected(): void {
-  const selected = stackState.items.find((i) => i.id === stackState.selectedId);
+export function saveMaskToSelected(): void {
+  const selected = state.stack.items.find((i) => i.id === state.stack.selectedId);
   if (!selected) return;
   const maskData = maskBrush.getMaskData();
   if (maskData !== selected.mask) {
-    stackState = updateStackItem(stackState, selected.id, { mask: maskData });
+    state.stack = updateStackItem(state.stack, selected.id, { mask: maskData });
     scheduleSave();
   }
 }
 
-// ── Vector editor ──────────────────────────────────────────────────────────
-
-function initVectorEditor(): void {
-  // Close button
-  btnCloseVector.addEventListener("click", () => {
-    vectorPanel.classList.remove("visible");
-    vectorPanel.classList.add("hidden");
-  });
-
-  // Add point mode
-  let addPointMode = false;
-  btnAddPoint.addEventListener("click", () => {
-    addPointMode = !addPointMode;
-    btnAddPoint.classList.toggle("active", addPointMode);
-    vectorSvg.style.cursor = addPointMode ? "crosshair" : "default";
-  });
-
-  // Click on SVG to add point
-  vectorSvg.addEventListener("click", (e) => {
-    if (!addPointMode) return;
-    const rect = vectorSvg.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    vectorEditor.addPoint(x, y);
-    vectorEditor.render();
-  });
-
-  // Add line
-  btnAddLine.addEventListener("click", () => {
-    const paths = vectorEditor.getPaths();
-    if (paths.length > 0 && paths[paths.length - 1].points.length >= 2) {
-      const pts = paths[paths.length - 1].points;
-      vectorEditor.addLine(pts.length - 2, pts.length - 1);
-      vectorEditor.render();
-    }
-  });
-
-  // Add curve
-  btnAddCurve.addEventListener("click", () => {
-    const paths = vectorEditor.getPaths();
-    if (paths.length > 0 && paths[paths.length - 1].points.length >= 2) {
-      const pts = paths[paths.length - 1].points;
-      const last = pts[pts.length - 1];
-      const prev = pts[pts.length - 2];
-      const cpx = (prev.x + last.x) / 2;
-      const cpy = Math.min(prev.y, last.y) - 50;
-      vectorEditor.addCurve(pts.length - 2, pts.length - 1, cpx, cpy);
-      vectorEditor.render();
-    }
-  });
-
-  // Delete last point
-  btnDeletePoint.addEventListener("click", () => {
-    const paths = vectorEditor.getPaths();
-    if (paths.length > 0 && paths[paths.length - 1].points.length > 0) {
-      const pts = paths[paths.length - 1].points;
-      vectorEditor.deletePoint(paths.length - 1, pts.length - 1);
-      vectorEditor.render();
-    }
-  });
-
-  // New path
-  btnNewPath.addEventListener("click", () => {
-    vectorEditor.newPath();
-    vectorEditor.render();
-  });
-
-  // Zoom
-  btnZoomIn.addEventListener("click", () => {
-    vectorEditor.zoomIn();
-    vectorEditor.render();
-  });
-  btnZoomOut.addEventListener("click", () => {
-    vectorEditor.zoomOut();
-    vectorEditor.render();
-  });
-
-  // Export SVG
-  btnExportSvg.addEventListener("click", () => {
-    const svgString = vectorEditor.exportSVG();
-    const blob = new Blob([svgString], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vector-path.svg";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  // Import SVG
-  btnImportSvg.addEventListener("click", () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".svg";
-    input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      vectorEditor.importSVG(text);
-      vectorEditor.render();
-    });
-    input.click();
-  });
-
-  // Vector button in toolbar
-  btnVector.addEventListener("click", () => {
-    vectorPanel.classList.remove("hidden");
-    vectorPanel.classList.add("visible");
-    vectorEditor.render();
-  });
-}
-
-// ── Help overlay ───────────────────────────────────────────────────────────
-
-function initHelpOverlay(): void {
-  const shortcuts = getShortcuts();
-  let html = "<h3>Keyboard Shortcuts</h3><table>";
-  for (const [key, desc] of Object.entries(shortcuts)) {
-    html += `<tr><td class="shortcut-key">${key}</td><td>${desc}</td></tr>`;
-  }
-  html += "</table>";
-  helpContent.innerHTML = html;
-
-  btnCloseHelp.addEventListener("click", () => {
-    helpOverlay.classList.remove("visible");
-  });
-
-  helpOverlay.addEventListener("click", (e) => {
-    if (e.target === helpOverlay) {
-      helpOverlay.classList.remove("visible");
-    }
-  });
-}
-
 // ── Export / Import ────────────────────────────────────────────────────────
 
-function exportPreset(): void {
-  const enabled = getEnabledItems(stackState);
+export function exportPreset(): void {
+  const enabled = getEnabledItems(state.stack);
   const preset = {
     version: "0.1",
     stack: enabled.map((item) => ({
@@ -1043,7 +718,7 @@ function exportPreset(): void {
   emitEvent("preset_saved", {});
 }
 
-function importPreset(): void {
+export function importPreset(): void {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = ".json";
@@ -1059,7 +734,7 @@ function importPreset(): void {
          return;
        }
        pushUndo();
-       stackState = createStackState(preset.stack);
+       state.stack = createStackState(preset.stack);
        rebuildStack();
        rebuildInspector();
        rebuildPasses();
@@ -1071,119 +746,9 @@ function importPreset(): void {
   input.click();
 }
 
-// ── Keyboard shortcuts ─────────────────────────────────────────────────────
-
-function handleKeyboardShortcut(e: KeyboardEvent): void {
-  const handlers: KeyboardHandlers = {
-    doUndo,
-    doRedo,
-    doSave: () => btnSave.click(),
-    doExport: exportPreset,
-    doDelete: () => {
-      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-      if (selected) {
-         pushUndo();
-         stackState = removeStackItem(stackState, selected.id);
-         rebuildStack();
-         rebuildInspector();
-         rebuildPasses();
-         scheduleSave();
-      }
-    },
-     doToggle: () => {
-       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-       if (selected) {
-         pushUndo();
-         stackState = toggleStackItem(stackState, selected.id);
-         rebuildStack();
-         rebuildPasses();
-         scheduleSave();
-       }
-     },
-     doMoveUp: () => {
-       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-       if (selected) {
-         pushUndo();
-         stackState = moveStackItem(stackState, selected.id, "up");
-         rebuildStack();
-         rebuildPasses();
-         scheduleSave();
-       }
-     },
-     doMoveDown: () => {
-       const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-       if (selected) {
-         pushUndo();
-         stackState = moveStackItem(stackState, selected.id, "down");
-         rebuildStack();
-         rebuildPasses();
-         scheduleSave();
-       }
-     },
-    doDuplicate: () => {
-      const selected = stackState.items.find((i) => i.id === stackState.selectedId);
-      if (selected) {
-        pushUndo();
-        const newItem = {
-          ...selected,
-          id: `stack-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        };
-         stackState = addStackItem(stackState, newItem);
-         rebuildStack();
-         rebuildInspector();
-         rebuildPasses();
-         scheduleSave();
-      }
-    },
-    doToggleTheme: toggleTheme,
-    doAddCore: (index: number) => {
-      const coreName = CORE_KEYS[String(index)];
-      if (!coreName) return;
-      const def = CORE_DEFS.find((d) => d.name === coreName);
-      if (!def) return;
-      pushUndo();
-      const core = def.create();
-      const params: Record<string, unknown> = {};
-      for (const p of def.params) {
-        params[p.key] = p.default;
-      }
-      stackState = addStackItem(stackState, {
-        core: def.name,
-        params,
-        opacity: 1,
-        blend: "normal",
-        mask: null,
-        enabled: true,
-      });
-      rebuildStack();
-      rebuildInspector();
-      rebuildPasses();
-      scheduleSave();
-    },
-    doToggleHelp: () => {
-      helpOverlay.classList.toggle("visible");
-    },
-  };
-  handleKeyboard(e, { stackState, theme, undoStack, redoStack }, handlers);
-}
-
-// ── FPS counter ────────────────────────────────────────────────────────────
-
-function updateFps(): void {
-  frameCount++;
-  const now = performance.now();
-  const elapsed = now - lastFpsTime;
-  if (elapsed >= 1000) {
-    fpsValue = Math.round((frameCount * 1000) / elapsed);
-    fpsDisplay.textContent = `${fpsValue} fps`;
-    frameCount = 0;
-    lastFpsTime = now;
-  }
-}
-
 // ── Sync status ────────────────────────────────────────────────────────────
 
-async function updateSyncStatus(): Promise<void> {
+export async function updateSyncStatus(): Promise<void> {
   if (!persistence.available) {
     syncIndicator.className = "sync-indicator";
     syncText.textContent = "Sync: unavailable";
@@ -1213,201 +778,13 @@ async function updateSyncStatus(): Promise<void> {
 
 // ── Persistence helpers ────────────────────────────────────────────────────
 
-function scheduleSave(): void {
-  persistence.scheduleSave(stackState);
+export function scheduleSave(): void {
+  persistence.scheduleSave(state.stack);
 }
 
 // ── Stage 0.6 — Presets + photo import ─────────────────────────────────────
 
-function initStage06(): void {
-  const toolbarActions = document.querySelector(".toolbar-actions");
-  if (!toolbarActions) return;
-
-  // Find the theme button to insert before it (keeps the existing layout).
-  const btnThemeEl = document.getElementById("btn-theme");
-
-  // ── Review toolbar button ──────────────────────────────────────────────
-  const btnReview = document.createElement("button");
-  btnReview.className = "btn";
-  btnReview.id = "btn-review";
-  btnReview.textContent = "📋 Review";
-  btnReview.title = "Review source vs reconstruction";
-  btnReview.addEventListener("click", () => {
-    const existing = document.getElementById("review-overlay");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const mount = document.createElement("div");
-    mount.id = "review-overlay-mount";
-    document.body.appendChild(mount);
-    const handle = mountReviewScreen(mount, {
-      getCurrentStack: () => stackState,
-      getRenderer: () => renderer,
-      getSourceCanvas: () => sourceCanvas,
-      getCanvas: () => canvas,
-      onAction: (action) => {
-        if (action === "close") {
-          const existing = document.getElementById("review-overlay");
-          if (existing) existing.remove();
-        }
-      },
-    });
-  });
-  toolbarActions.insertBefore(btnReview, btnThemeEl);
-
-  // ── Compare toolbar button ─────────────────────────────────────────────
-  const btnCompare = document.createElement("button");
-  btnCompare.className = "btn";
-  btnCompare.id = "btn-compare";
-  btnCompare.textContent = "⚖ Compare";
-  btnCompare.title = "Compare source vs reconstruction";
-  btnCompare.addEventListener("click", () => {
-    const existing = document.getElementById("compare-overlay");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const mount = document.createElement("div");
-    mount.id = "compare-overlay-mount";
-    document.body.appendChild(mount);
-    const handle = mountComparisonTools(mount, {
-      getCurrentStack: () => stackState,
-      getRenderer: () => renderer,
-      getSourceCanvas: () => sourceCanvas,
-      getCanvas: () => canvas,
-      onIsolate: (itemId) => {
-        // Temporarily render only the given item (or restore the full stack
-        // when null). The pre-isolation stack is kept in a module-level slot so
-        // the restore is not clobbered by a re-capture of the isolated state.
-        if (itemId === null) {
-          if (preIsolateStack) {
-            stackState = preIsolateStack;
-            preIsolateStack = null;
-          }
-        } else {
-          if (!preIsolateStack) preIsolateStack = stackState;
-          stackState = {
-            ...preIsolateStack,
-            items: preIsolateStack.items.map((it) => ({ ...it, enabled: it.id === itemId })),
-          };
-        }
-        rebuildPasses();
-      },
-      onAction: (action) => {
-        if (action === "close") {
-          const existing = document.getElementById("compare-overlay");
-          if (existing) existing.remove();
-        }
-      },
-    });
-  });
-  toolbarActions.insertBefore(btnCompare, btnThemeEl);
-
-  // ── Presets toolbar button ─────────────────────────────────────────────
-  const btnPresets = document.createElement("button");
-  btnPresets.className = "btn";
-  btnPresets.textContent = "★ Presets";
-  btnPresets.title = "Browse and apply saved presets";
-  btnPresets.addEventListener("click", () => {
-    const existing = document.getElementById("preset-panel");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    openPresetPanel();
-  });
-  toolbarActions.insertBefore(btnPresets, btnThemeEl);
-
-  // ── Library toolbar button (Stage 2.2) ────────────────────────────────
-  const btnLibrary = document.createElement("button");
-  btnLibrary.className = "btn";
-  btnLibrary.textContent = "📚 Library";
-  btnLibrary.title = "Search, share and manage presets";
-  btnLibrary.addEventListener("click", () => {
-    const existing = document.getElementById("library-overlay-mount");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    openLibraryPanel();
-  });
-  toolbarActions.insertBefore(btnLibrary, btnThemeEl);
-
-   // ── Import Photo toolbar button ────────────────────────────────────────
-   const btnImportPhoto = document.createElement("button");
-   btnImportPhoto.className = "btn";
-   btnImportPhoto.textContent = "📷 Photo";
-   btnImportPhoto.title = "Import a photo from your camera or library";
-   btnImportPhoto.addEventListener("click", () => {
-     void importPhotoFromCamera();
-   });
-   toolbarActions.insertBefore(btnImportPhoto, btnThemeEl);
-
-   // ── Learning toolbar button ────────────────────────────────────────────
-   const btnLearn = document.createElement("button");
-   btnLearn.className = "btn";
-   btnLearn.id = "btn-learn";
-   btnLearn.textContent = "📊 Learning";
-   btnLearn.title = "Open learning panel";
-   btnLearn.addEventListener("click", () => {
-     const existing = document.getElementById("learning-overlay");
-     if (existing) {
-       existing.remove();
-       return;
-     }
-     const mount = document.createElement("div");
-     mount.id = "learning-overlay-mount";
-     document.body.appendChild(mount);
-     const handle = mountLearningPanel(mount, {
-       getFeatureVector: () => {
-         // Try to get features from AI panel if available
-         const aiPanelMount = document.getElementById("ai-panel-mount");
-         if (aiPanelMount && aiPanelMount.firstChild) {
-           // This is a simplified approach - in a real app we'd have better state sharing
-           return null;
-         }
-         return null;
-       }
-     });
-   });
-   toolbarActions.insertBefore(btnLearn, btnThemeEl);
-
-   // ── AI toolbar button ──────────────────────────────────────────────────
-  const btnAI = document.createElement("button");
-  btnAI.className = "btn";
-  btnAI.textContent = "🤖 AI";
-  btnAI.title = "AI Assistant — extract features, search/optimize/prune stacks";
-  btnAI.addEventListener("click", () => {
-    const existing = document.getElementById("ai-panel-mount");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const mount = document.createElement("div");
-    mount.id = "ai-panel-mount";
-    document.body.appendChild(mount);
-     const handle = mountAIPanel(mount, {
-       getCurrentStack: () => stackState,
-       applyStack: (items: any[]) => {
-         pushUndo();
-         stackState = {
-           items: items,
-           selectedId: items[0]?.id ?? null,
-         };
-         rebuildStack();
-         rebuildInspector();
-         rebuildPasses();
-         scheduleSave();
-         emitEvent("stack_applied", {});
-       },
-     });
-    void handle.refreshHealth();
-  });
-  toolbarActions.insertBefore(btnAI, btnThemeEl);
-}
-
-async function openPresetPanel(): Promise<void> {
+export async function openPresetPanel(): Promise<void> {
   const panel = document.createElement("div");
   panel.id = "preset-panel";
   panel.className = "preset-panel";
@@ -1435,14 +812,14 @@ async function openPresetPanel(): Promise<void> {
   await mountPresetGrid(gridContainer, {
     onApply: (stack) => {
       pushUndo();
-      stackState = stack;
+      state.stack = stack;
       rebuildStack();
       rebuildInspector();
       rebuildPasses();
       scheduleSave();
       panel.remove();
     },
-    getCurrentStack: () => stackState,
+    getCurrentStack: () => state.stack,
   });
 }
 
@@ -1453,7 +830,7 @@ async function openPresetPanel(): Promise<void> {
  * overlay-dismissal list; it must be the id of the element that gets removed
  * on close.
  */
-async function openLibraryPanel(): Promise<void> {
+export async function openLibraryPanel(): Promise<void> {
   const mount = document.createElement("div");
   mount.id = "library-overlay-mount";
 
@@ -1472,7 +849,7 @@ async function openLibraryPanel(): Promise<void> {
   await mountLibraryPanel(modal, {
     onApply: (stack) => {
       pushUndo();
-      stackState = stack;
+      state.stack = stack;
       rebuildStack();
       rebuildInspector();
       rebuildPasses();
@@ -1480,7 +857,7 @@ async function openLibraryPanel(): Promise<void> {
       emitEvent("preset_applied", {});
       mount.remove();
     },
-    getCurrentStack: () => stackState,
+    getCurrentStack: () => state.stack,
   });
 }
 
@@ -1497,7 +874,7 @@ async function applyPresetFromHash(): Promise<void> {
     const stack = await presetStore.loadPreset(id);
     if (stack) {
       pushUndo();
-      stackState = stack;
+      state.stack = stack;
       rebuildStack();
       rebuildInspector();
       rebuildPasses();
@@ -1510,23 +887,43 @@ async function applyPresetFromHash(): Promise<void> {
   }
 }
 
-async function importPhotoFromCamera(): Promise<void> {
+export async function importPhotoFromCamera(): Promise<void> {
   const file = await openCamera();
   if (!file) return;
   try {
     const source = await loadImageAsSource(file);
-    if (renderer) {
-      renderer.uploadSource(source.canvas, source.width, source.height);
+    if (state.renderer) {
+      state.renderer.uploadSource(source.canvas, source.width, source.height);
       // Update the stored source canvas. `loadImageAsSource` may return an
       // OffscreenCanvas; the review/compare tools need a real HTMLCanvasElement
       // (for toDataURL + getContext('2d')), so normalise by blitting into one.
-      sourceCanvas = toHTMLCanvas(source.canvas, source.width, source.height);
+      state.sourceCanvas = toHTMLCanvas(source.canvas, source.width, source.height);
       rebuildPasses();
       emitEvent("photo_imported", {});
     }
   } catch (e) {
     alert(`Could not load image: ${e instanceof Error ? e.message : String(e)}`);
   }
+}
+
+// ── Canvas utility ─────────────────────────────────────────────────────────
+
+/**
+ * Normalise any 2D-drawable canvas (including OffscreenCanvas) into a real
+ * HTMLCanvasElement, which the review/compare tools need for `toDataURL()`
+ * and `getContext('2d')`. OffscreenCanvas lacks both.
+ */
+function toHTMLCanvas(
+  src: OffscreenCanvas | HTMLCanvasElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = width;
+  out.height = height;
+  const ctx = out.getContext("2d");
+  if (ctx) ctx.drawImage(src as CanvasImageSource, 0, 0, width, height);
+  return out;
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -1537,7 +934,7 @@ async function init(): Promise<void> {
    if (persistenceReady) {
      const restored = await persistence.restore();
      if (restored && restored.items.length > 0) {
-       stackState = restored;
+       state.stack = restored;
        console.info("[persistence] Restored stack state from IndexedDB");
      }
    }
@@ -1548,43 +945,8 @@ async function init(): Promise<void> {
      logToConsole: true
    });
 
-   // ── Escape closes the topmost open overlay (WCAG 2.2 AA) ──
-   // Ordered outermost-last so the most recently opened overlay closes first.
-   const OVERLAY_SELECTORS = [
-     "#help-overlay",
-     ".review-overlay",
-     ".compare-overlay",
-     ".learning-overlay",
-     "#library-overlay-mount",
-     "#vector-panel",
-   ];
-   document.addEventListener("keydown", (e) => {
-     if (e.key !== "Escape") return;
-     for (const sel of OVERLAY_SELECTORS) {
-       const nodes = Array.from(document.querySelectorAll<HTMLElement>(sel));
-       // Help/vector use a `hidden`/`visible` class; the mounted overlays are
-       // removed from the DOM by their own close button.
-       const open = nodes.filter((n) => {
-         if (n.classList.contains("hidden")) return false;
-         if (n.classList.contains("help-overlay")) return n.classList.contains("visible");
-         return true;
-       });
-       const top = open[open.length - 1];
-       if (top) {
-         e.preventDefault();
-         const close = Array.from(top.querySelectorAll("button")).find(
-           (b) => (b.getAttribute("aria-label") || "").toLowerCase().includes("close")
-             || b.textContent?.trim() === "✕",
-         );
-         if (close) {
-           (close as HTMLButtonElement).click();
-         } else {
-           top.remove();
-         }
-         return;
-       }
-     }
-   });
+   // Escape closes the topmost open overlay (WCAG 2.2 AA)
+   wireOverlayDismissal();
 
    // Initialise the preset store BEFORE any panel mounts it. Without this the
    // store reports unavailable and both the Presets and Library panels fail
@@ -1597,72 +959,74 @@ async function init(): Promise<void> {
 
    initRenderer();
    buildCoreList();
+   mountInsertToolbar(insertHost, CORE_DEFS, {
+     addCore: (coreName) => {
+       const def = CORE_DEFS.find((d) => d.name === coreName);
+       if (!def) return;
+       pushUndo();
+       const params: Record<string, unknown> = {};
+       for (const prm of def.params) params[prm.key] = prm.default;
+       state.stack = addStackItem(state.stack, {
+         core: def.name,
+         params,
+         opacity: 1,
+         blend: "normal",
+         mask: null,
+         enabled: true,
+       });
+       rebuildStack();
+       rebuildInspector();
+       rebuildPasses();
+       scheduleSave();
+       emitEvent("stack_created", { core_type: def.name });
+     },
+     close: () => {},
+   });
    rebuildStack();
    rebuildInspector();
    rebuildPasses();
    renderFrame();
 
-  // Event listeners
-  btnUndo.addEventListener("click", doUndo);
-  btnRedo.addEventListener("click", doRedo);
-  btnExport.addEventListener("click", exportPreset);
-  btnImport.addEventListener("click", importPreset);
-  btnSave.addEventListener("click", async () => {
-    persistence.flush();
-    const result = await persistence.save(stackState);
-    if (result.ok) {
-      syncText.textContent = "Sync: saved";
-      syncIndicator.className = "sync-indicator synced";
-    } else {
-      syncText.textContent = "Sync: save failed";
-      syncIndicator.className = "sync-indicator error";
-    }
-    updateSyncStatus();
-  });
-  btnClear.addEventListener("click", async () => {
-    if (!confirm("Clear all saved state from IndexedDB?")) return;
-    persistence.flush();
-    const result = await persistence.clear();
-    if (result.ok) {
-      stackState = createStackState();
-      undoStack = [];
-      redoStack = [];
-      updateUndoButtons();
-      rebuildStack();
-      rebuildInspector();
-      rebuildPasses();
-      syncText.textContent = "Sync: cleared";
-      syncIndicator.className = "sync-indicator synced";
-    } else {
-      syncText.textContent = "Sync: clear failed";
-      syncIndicator.className = "sync-indicator error";
-    }
-    updateSyncStatus();
-  });
-  btnTheme.addEventListener("click", toggleTheme);
-  document.addEventListener("keydown", handleKeyboardShortcut);
+   // Event listeners
+   wireToolbarButtons();
+   wireKeyboardShortcuts();
 
-  // Initialize new features
-  initMaskBrush();
-  initVectorEditor();
-  initHelpOverlay();
-  initStage06();
+   // Initialize new features
+   initMaskBrush();
+   initVectorEditor();
+   initHelpOverlay();
+   initStage06();
+   decorateTabBar();
+   initMobileNav();
 
-  // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
-  // the store is initialised so the id can be resolved.
-  void applyPresetFromHash();
+   // Reflect the restored theme on the switch (the theme itself is applied by
+   // applyTheme, which sets data-theme on <html>).
+   syncThemeSwitch();
+
+   // Stage 2.2: a `#/preset/<id>` link loads that preset on open. Runs after
+   // the store is initialised so the id can be resolved.
+   void applyPresetFromHash();
+
+   // Start debug session (gated by ?debug=1)
+   initDebugSession();
+   if (isDebugEnabled()) {
+     injectDebugToolbar();
+     setFrameHook((delta: number) => {
+       trackFrame();
+       if (delta > 50) trackLongTask(delta);
+     });
+     logDebugEvent("render_loop_started", {
+       passCount: estimatePasses(getEnabledItems(state.stack)),
+       coreCount: state.stack.items.length,
+     });
+   }
 
    // Start render loop
-   function loop(): void {
-     renderFrame();
-     updateFps();
-     requestAnimationFrame(loop);
-   }
-   requestAnimationFrame(loop);
+   startLoop();
 
-  // Start sync status updates
-  updateSyncStatus();
-  setInterval(updateSyncStatus, 2000);
+   // Start sync status updates
+   updateSyncStatus();
+   setInterval(updateSyncStatus, 2000);
 }
 
 init();

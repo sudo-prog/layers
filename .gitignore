@@ -21,3 +21,7 @@ tests/golden-infra/fixtures-cores/output/
 .hermes_result.json
 services/ai/data/
 graphify-out/
+
+# Research / test screenshot evidence — regenerated, not source
+apps/web/.maestro/shots/
+docs/research/shaders-shots/

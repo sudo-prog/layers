@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0b0d" />
+    <title>LAYERS Desktop — Visual Style Engine</title>
+    <!-- CSP is configured at the hosting/CDN level in production, not as a meta
+         tag: a meta CSP blocks Vite's HMR eval() in dev mode. -->
+    <link rel="stylesheet" href="/src/desktop.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- ── Top bar: project, dimensions, colour pipeline ──────────────── -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="logo">LAYERS</span>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <button id="btn-project" class="topbar-name" title="Rename project">Untitled</button>
+        </div>
+
+        <div class="topbar-right">
+          <button id="btn-dims" class="topbar-chip" aria-expanded="false" title="Canvas dimensions">
+            <span id="dims-label">1920 × 1080</span>
+          </button>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <span class="topbar-chip is-static" title="Working colour space">P3 Linear</span>
+          <span class="topbar-chip is-static" title="Tone mapping">ACES Filmic</span>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <button id="btn-zoom-out" class="icon-btn" aria-label="Zoom out" title="Zoom out"></button>
+          <span id="zoom-level" class="topbar-readout">100%</span>
+          <button id="btn-zoom-in" class="icon-btn" aria-label="Zoom in" title="Zoom in"></button>
+          <button id="btn-zoom-fit" class="topbar-chip" title="Zoom to fit">Fit</button>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <button id="btn-theme" class="icon-btn" aria-label="Toggle light theme" title="Toggle theme"></button>
+        </div>
+      </header>
+
+      <div class="body">
+        <!-- ── Left: shaders + layers ──────────────────────────────────── -->
+        <aside class="panel panel-left">
+          <section class="tree">
+            <h2 class="panel-title">Shaders</h2>
+            <div id="shader-list" class="tree-list"></div>
+          </section>
+
+          <section class="tree tree-grow">
+            <h2 class="panel-title">Layers</h2>
+            <div id="layer-list" class="tree-list"></div>
+          </section>
+
+          <footer class="panel-footer">
+            <span id="pass-count">0 passes</span>
+            <span id="fps-display"></span>
+          </footer>
+        </aside>
+
+        <!-- ── Centre: the infinite canvas ─────────────────────────────── -->
+        <main class="canvas-area" id="canvas-area">
+          <div class="stage" id="stage">
+            <div class="frame" id="frame">
+              <canvas id="gl-canvas" width="1920" height="1080"></canvas>
+            </div>
+          </div>
+
+          <!-- Floating insert toolbar: the component library entry point -->
+          <div class="insert-host" id="insert-host"></div>
+        </main>
+
+        <!-- ── Right: props ────────────────────────────────────────────── -->
+        <aside class="panel panel-right">
+          <h2 class="panel-title">Props</h2>
+          <div id="inspector" class="inspector"></div>
+        </aside>
+      </div>
+
+      <!-- ── Component picker: a centred sheet over the canvas ─────────── -->
+      <div id="picker-scrim" class="picker-scrim hidden">
+        <div class="picker" role="dialog" aria-modal="true" aria-label="Add component">
+          <div class="picker-head">
+            <span class="picker-title" id="picker-title">Components</span>
+            <button id="picker-close" class="icon-btn" aria-label="Close"></button>
+          </div>
+          <div class="picker-cats" id="picker-cats" role="tablist"></div>
+          <div class="picker-body">
+            <input id="picker-search" class="picker-search" type="search"
+                   placeholder="Search components…" aria-label="Search components" />
+            <div id="picker-grid" class="picker-grid"></div>
+          </div>
+          <div class="picker-foot">
+            <span id="picker-count">0 components</span>
+            <span class="picker-hint">Esc to close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

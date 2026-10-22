@@ -1,0 +1,241 @@
+/* ── Ambient backdrop ───────────────────────────────────────────────────────
+ *
+ * The panels are glass, so they need something non-uniform behind them or the
+ * blur reads as a flat slab. The canvas is a discrete 512px preview (correct for
+ * a style editor), so the workspace itself carries a soft ambient wash that runs
+ * full-bleed under both panels.
+ *
+ * Opacity is chosen from measurement, not taste. Through the glass
+ * (alpha 0.74, brightness 0.45) a backdrop change of N shows as N * 0.26 * 0.45
+ * = N * 0.117 on the panel. So the first pass at 0.10 alpha moved the panel by
+ * barely 1/255 — present but invisible.
+ *
+ * A glow of 0.55 over #0a0b0d raises the backdrop to ~rgb(72,80,95); through the
+ * glass that lands at ~rgb(25,26,29) against a base of rgb(13,14,17) — a
+ * 12-unit lift, which is the threshold where a gradient is actually perceptible.
+ * The wash is strongest at the corners and gone by mid-canvas, so it never
+ * competes with the work.
+ *
+ * Contrast was re-measured at this opacity over both a white canvas and this
+ * wash; see docs/design-graphite.md.
+ */
+
+.canvas-area {
+  background:
+    radial-gradient(
+      130% 100% at 4% -12%,
+      rgb(122 162 255 / 0.55) 0%,
+      rgb(122 162 255 / 0.16) 34%,
+      transparent 66%
+    ),
+    radial-gradient(
+      100% 85% at 102% 110%,
+      rgb(122 162 255 / 0.38) 0%,
+      rgb(122 162 255 / 0.08) 40%,
+      transparent 64%
+    ),
+    radial-gradient(
+      70% 60% at 50% 50%,
+      rgb(255 255 255 / 0.05) 0%,
+      transparent 70%
+    ),
+    var(--bg-primary);
+}
+
+/* The light theme keeps the same structure with a fainter tint, so the panels
+   are not glassing over a flat white either. */
+:root:not([data-theme="dark"]) .canvas-area {
+  background:
+    radial-gradient(
+      130% 100% at 4% -12%,
+      rgb(0 102 255 / 0.30) 0%,
+      rgb(0 102 255 / 0.08) 34%,
+      transparent 64%
+    ),
+    radial-gradient(
+      100% 85% at 102% 110%,
+      rgb(0 102 255 / 0.20) 0%,
+      transparent 62%
+    ),
+    var(--bg-primary);
+}
+
+/* Reduced transparency wants no glass at all, so the wash is pointless — drop it
+   to a flat ground so the opaque panels match the surface behind them. */
+@media (prefers-reduced-transparency: reduce) {
+  .canvas-area {
+    background: var(--bg-primary);
+  }
+}
+
+/* ── The slab ─────────────────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--surface-panel);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  /* Hairline that reads as a machined edge, not a drawn line. */
+  border-color: var(--border);
+  /* A faint inner highlight along the top edge sells the glass. */
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.panel-right {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+/* The workspace behind the panels is the void the glass sits on. */
+.workspace {
+  background: var(--bg-primary);
+}
+
+/* ── Top toolbar ──────────────────────────────────────────────────────────── */
+
+.toolbar {
+  background: var(--surface-chrome);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+/* ── Panel headers: a step up in elevation, still translucent ─────────────── */
+
+.panel-title {
+  /* Header sits on the panel, not above it — same glass, stronger tint. */
+  background: color-mix(in srgb, var(--bg-primary) 22%, transparent);
+  border-bottom-color: var(--border);
+  color: var(--text-secondary);
+}
+
+/* ── Section headers inside the inspector ─────────────────────────────────── */
+
+.prop-section > summary,
+.prop-section-head {
+  color: var(--text-secondary);
+}
+
+/* ── Floating surfaces: the insert pill and its picker ────────────────────── */
+
+.insert-bar,
+.insert-picker {
+  background: var(--surface-chrome);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    0 12px 32px -8px rgb(0 0 0 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+/* ── Controls sit ON the glass, so they need their own solid fill ─────────── */
+
+/* A translucent control on a translucent panel is unreadable. Inputs and
+ * selected rows get the raised ramp value at full opacity. */
+.ctl-select-wrap,
+.ctl-slider,
+.ctl-step,
+.ctl-unit,
+.seg,
+.dyn-editor,
+.core-btn,
+.stack-item,
+.btn {
+  /* `--bg-tertiary` is opaque by design; only the outer slab is glass. */
+  border-color: var(--border);
+}
+
+.ctl-select-wrap,
+.seg,
+.dyn-editor {
+  background: color-mix(in srgb, var(--bg-tertiary) 72%, transparent);
+}
+
+/* The bar needs 590px for six labelled buttons. The visible canvas is
+   `viewport - (260 + 300)`, so the labels fit whenever
+   `viewport - 560 >= 590`, i.e. viewport >= 1150. Below that, drop to
+   icon-only: each button keeps its `aria-label` and `title`, so the name is
+   still exposed to assistive tech and on hover.
+   Measured: icon-only is 34px per button = 222px total, which fits a 464px
+   canvas at 1024 and a 208px canvas at 768 (scrolling below 900). */
+@media (max-width: 1149px) {
+  .insert-btn-label {
+    display: none;
+  }
+
+  .insert-btn {
+    min-width: 34px;
+    padding: 0 var(--space-1);
+  }
+}
+
+/* Between 768 and 899 the panels are still side-by-side but very narrow — at 768
+   the visible canvas is only 208px, and even six icon buttons (222px) overrun it.
+   Drop to four buttons plus an overflow affordance is the right answer at that
+   width, but until that exists, let the bar scroll rather than overlap a panel.
+   `overflow-x: auto` on a floating pill is acceptable here precisely because it
+   is NOT a toolbar the user must see in full — the same six controls are also
+   reachable from the Cores panel. */
+@media (min-width: 768px) and (max-width: 899px) {
+  .insert-bar {
+    max-width: calc(100vw - 580px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .insert-bar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.mobile-tabbar {
+  background: var(--surface-chrome);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  border-top: 1px solid var(--border);
+}
+
+/* ── Fallback: no backdrop-filter support means no glass, so go opaque ────── */
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel,
+  .toolbar,
+  .insert-bar,
+  .insert-picker,
+  .mobile-tabbar {
+    background: var(--bg-secondary);
+  }
+  .toolbar,
+  .mobile-tabbar {
+    background: var(--bg-primary);
+  }
+}
+
+/* ── Reduced transparency: an accessibility preference some users set ─────── */
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel,
+  .toolbar,
+  .insert-bar,
+  .insert-picker,
+  .mobile-tabbar {
+    background: var(--bg-secondary);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .toolbar,
+  .mobile-tabbar {
+    background: var(--bg-primary);
+  }
+}
+
+/* ── Reduced motion: kill the theme cross-fade ───────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .panel,
+  .toolbar,
+  .mobile-tabbar {
+    transition: none;
+  }
+}

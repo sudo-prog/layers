@@ -31,6 +31,14 @@ export class ImmichClient {
   private readonly apiKey: string;
 
   constructor(serverUrl: string, apiKey: string) {
+    // Server-side only guard: this package uses fetch() which works in
+    // browsers, but the API key must never be exposed to client-side code.
+    if (typeof window !== 'undefined' || typeof document !== 'undefined') {
+      throw new Error(
+        'ImmichClient is server-side only. ' +
+        'The API key must not be exposed to browser code.'
+      );
+    }
     this.serverUrl = serverUrl.replace(/\/+$/, '');
     this.apiKey = apiKey;
   }

@@ -1,0 +1,35 @@
+# LAYERS Desktop — measured geometry at the harness viewport.
+# Run:  maestro test --headless .maestro/geometry.yaml
+#
+# The app publishes its own measured geometry to a visually-hidden #selfcheck
+# node when loaded with ?selfcheck=1, so this flow asserts on NUMBERS rather than
+# on text merely being present. See src/selfcheck.ts for why.
+url: http://127.0.0.1:3003/?selfcheck=1
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+
+# Add a core so the inspector and the toolbar are in their real state.
+- tapOn: ".*Textures.*"
+- extendedWaitUntil:
+    visible: ".*Search components.*"
+    timeout: 20000
+- tapOn: ".*Pattern/Dither.*"
+- extendedWaitUntil:
+    visible: ".*Transform.*"
+    timeout: 20000
+
+# The self-check publishes 800ms after boot; give it room.
+- extendedWaitUntil:
+    visible: ".*geometry-ok.*"
+    timeout: 20000
+
+# A failure would read `geometry-FAIL ...` and the assertion above would fail
+# instead, so reaching here means: the frame is inside the visible canvas, the
+# toolbar does not overlap a panel or the viewport edge, no text is truncated,
+# and there is no horizontal scroll.
+- assertVisible: ".*geometry-ok.*"
+- assertNotVisible: ".*geometry-FAIL.*"
+- takeScreenshot: 01-geometry-ok

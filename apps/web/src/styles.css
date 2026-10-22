@@ -13,6 +13,10 @@
     --warning: #ff8800;
     --error: #dd2200;
     --border: #d4d4d4;
+  /* Panel widths as tokens: the full-bleed canvas and the insert bar both need
+     to know them, and hardcoding the numbers in three places let them drift. */
+  --panel-left-w: 260px;
+  --panel-right-w: 300px;
     /* Safe area variables */
     --sat: 0px; /* safe-area-inset-top */
     --sar: 0px; /* safe-area-inset-right */
@@ -30,7 +34,6 @@
     --space-10: 40px;
     --space-12: 48px;
     --space-16: 64px;
-}
 
   --text-xs-size: 12px;
   --text-xs-line-height: 16px;
@@ -66,18 +69,31 @@
 }
 
 [data-theme="dark"] {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #141414;
-  --bg-tertiary: #1e1e1e;
-  --text-primary: #ffffff;
-  --text-secondary: #aaaaaa;
-  --text-tertiary: #666666;
-  --accent: #4d9fff;
-  --accent-hover: #80bfff;
-  --success: #44cc77;
-  --warning: #ffaa44;
-  --error: #ff5544;
-  --border: #333333;
+  --bg-primary: #0a0b0d;
+  --bg-secondary: #101215;
+  --bg-tertiary: #16191d;
+  --bg-raised: #1c2026;
+  --text-primary: #f2f4f7;
+  --text-secondary: #9aa3af;
+  --text-tertiary: #8b95a3;
+  --accent: #7aa2ff;
+  --accent-hover: #9ab8ff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --border: #262b33;
+  --border-strong: #363c46;
+  /* Glass: the alphas live here too so a theme switch without the JS token
+     generator (a static preview, a test) still gets the right surface.
+     0.92 is the measured floor for AA text over a pure-white canvas. */
+  --panel-alpha: 0.74;
+  --chrome-alpha: 0.80;
+  --glass-blur: 32px;
+  --glass-saturate: 1.25;
+  --glass-brightness: 0.45;
+  --surface-panel: rgb(16 18 21 / 0.74);
+  --surface-chrome: rgb(10 11 13 / 0.80);
+  --surface-raised: rgb(22 25 29 / 0.74);
 }
 
 * {
@@ -133,6 +149,15 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* Wrap the row as a unit when space runs out — never break a label. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Toolbar buttons keep their natural width; the row wraps instead of the
+   buttons shrinking until their labels break. */
+.toolbar-actions .btn {
+  flex: 0 0 auto;
 }
 
 .divider {
@@ -150,13 +175,160 @@ body {
    color: var(--text-primary);
    font-size: var(--text-sm-size);
    cursor: pointer;
-   transition: all var(--duration-fast) var(--duration-fast-easing);
+   transition: background var(--duration-fast) var(--duration-fast-easing),
+               border-color var(--duration-fast) var(--duration-fast-easing),
+               color var(--duration-fast) var(--duration-fast-easing);
+   /* Labels stay intact on one line; the toolbar row wraps as a whole rather
+      than breaking words. Mobile hides labels entirely (icon-only). */
    white-space: nowrap;
+   text-align: center;
+   line-height: 1.25;
    min-height: 44px;
    min-width: 44px;
    display: inline-flex;
    align-items: center;
    justify-content: center;
+   gap: var(--space-2);
+}
+
+/* Icon + label composite inside a button */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.btn-label {
+  min-width: 0;
+}
+
+/* ── Toolbar overflow ─────────────────────────────────────────────────────
+   Icon-only is the default (see app-ui-density: "icons over text" for toolbar
+   controls). 15 icon buttons need ~880px, so above 900px every action sits
+   inline; below that the secondary actions move into the "More" sheet
+   (see toolbar.ts) rather than being clipped or scrolled off-screen.
+   Text labels appear only on very wide viewports. */
+.btn-more {
+  display: none;
+}
+
+/* Icon-only below 1800px: labels are visually hidden, aria-label + title carry
+   the name. 15 icon buttons fit ~880px; labelled ones need ~1780px. */
+@media (max-width: 1799px) {
+  .toolbar-actions .btn .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (min-width: 1800px) {
+  .btn-more {
+    display: none;
+  }
+
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 999px) {
+  .btn-more {
+    display: inline-flex;
+  }
+
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: none;
+  }
+}
+
+/* Divider inside the toolbar-actions row */
+.toolbar-actions > .divider {
+  flex: 0 0 auto;
+}
+
+/* Separator before the theme switch (structural, so it survives the icon-only
+   rule that hides .btn-secondary). */
+.toolbar-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 var(--space-1);
+}
+
+/* ── Light/dark switch ────────────────────────────────────────────────────
+   Smaller than the icon buttons (44x26 vs 44x44) and using the same surface
+   treatment as them, so it reads as part of the toolbar group. The knob sits on
+   the track; track/knob colours invert with the theme. */
+.theme-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  /* Same surface tokens as .btn so it reads as part of the toolbar group. */
+  background: var(--bg-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background var(--duration-fast) var(--duration-fast-easing),
+              border-color var(--duration-fast) var(--duration-fast-easing);
+}
+
+.theme-switch:hover {
+  border-color: var(--accent);
+}
+
+.theme-switch-knob {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  /* Dark grey on light, light grey on dark — --text-secondary resolves to
+     #555555 / #aaaaaa, so the dot never goes pure black or pure white. */
+  background: var(--text-secondary);
+  transform: translateY(-50%);
+  transition: left var(--duration-normal) var(--duration-normal-easing),
+              background var(--duration-fast) var(--duration-fast-easing);
+}
+
+[data-theme="dark"] .theme-switch-knob {
+  left: calc(100% - 16px - 3px);
+}
+
+/* Touch devices get a 44px-tall hit area without enlarging the visual switch. */
+@media (pointer: coarse) {
+  .theme-switch::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .btn:hover:not(:disabled) {
@@ -184,22 +356,29 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  /* Establishes the stacking context the full-bleed canvas sits in. */
+  position: relative;
 }
 
 .panel {
-  width: 260px;
-  background: var(--bg-secondary);
+  width: var(--panel-left-w);
+  background: var(--surface-panel);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
+  /* The panels float ABOVE the canvas, which runs full-bleed underneath them.
+     Without this the canvas is a flex sibling, nothing ever passes behind a
+     panel, and the glass has nothing to blur — it reads as a solid slab. */
+  position: relative;
+  z-index: 2;
 }
 
 .panel-right {
   border-right: none;
   border-left: 1px solid var(--border);
-  width: 300px;
+  width: var(--panel-right-w);
 }
 
 .panel-title {
@@ -265,6 +444,25 @@ body {
   background: var(--bg-primary);
   position: relative;
   padding: var(--space-4);
+  /* Full-bleed: the stage runs under both panels so the glass has something to
+     blur. The panels paint over it at z-index 2. */
+  margin: 0 calc(-1 * (var(--panel-left-w) + var(--panel-right-w)));
+  z-index: 0;
+}
+
+/* Below the mobile breakpoint the panels are full-screen overlays, so there is
+   nothing to bleed under. Reset the negative margins there or the canvas is
+   pushed off-screen. */
+@media (max-width: 767px) {
+  .canvas-area {
+    margin: 0;
+  }
+
+  /* Panels are full-screen overlays here, so the canvas-area IS the viewport and
+     the insert bar centres on it directly. */
+  .insert-host {
+    left: 50%;
+  }
 }
 
 #gl-canvas {
@@ -819,6 +1017,14 @@ body {
 .preset-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.preset-card-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
 }
 
 .preset-card-name {
@@ -1939,4 +2145,275 @@ body {
   .library-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
   .library-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .library-card-actions { flex-direction: column; }
+}
+
+/* ── Mobile Tab Bar (below 768px) ─────────────────────────────────────── */
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* Show tab bar */
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(49px + var(--sab));
+    padding-bottom: var(--sab);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+  }
+
+  .mobile-tabbar-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 150ms;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .mobile-tabbar-btn.active {
+    color: var(--accent);
+  }
+
+  .mobile-tabbar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+  }
+
+  .mobile-tabbar-icon .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .mobile-tabbar-label {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  /* Workspace becomes relative for panel overlays */
+  .workspace {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Canvas area fills the workspace */
+  .canvas-area {
+    position: absolute;
+    inset: 0;
+    padding-bottom: calc(49px + var(--sab));
+  }
+
+  /* Panels become full-screen overlays */
+  .panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(49px + var(--sab));
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    background: var(--bg-primary);
+    transform: translateX(100%);
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .panel.active {
+    transform: translateX(0);
+  }
+
+  /* Hide sync status on mobile */
+  .sync-status {
+    display: none;
+  }
+
+  /* Toolbar: make actions scrollable */
+  .toolbar-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .toolbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Adjust canvas for mobile */
+  #gl-canvas {
+    max-height: calc(100dvh - 49px - var(--sab) - 60px);
+  }
+
+  /* Make core rows read as tappable list rows, not bare text */
+  .core-list {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+  }
+
+  .core-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    border-radius: 10px;
+    font-size: var(--text-base-size);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .core-btn + .core-btn {
+    margin-top: var(--space-1);
+  }
+
+  .core-icon {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-lg-size);
+  }
+
+  /* Panels get a title bar that reads as a mobile header */
+  .panel-title {
+    padding: var(--space-4);
+    font-size: var(--text-base-size);
+  }
+
+  /* ── Toolbar: icon-only primaries + a "More" sheet ──────────────────────
+     A text toolbar cannot fit 15 controls in ~390px. Primary actions become
+     icon-only; secondary actions move into the bottom sheet (see toolbar.ts).
+     No horizontal scrolling — every control is reachable. */
+  .toolbar {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .toolbar-actions {
+    overflow: visible;
+    gap: var(--space-1);
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  /* Icon-only: the label is visually hidden but stays in the a11y tree via
+     the button's aria-label. (Also handled by the 900px rule above.) */
+  .toolbar-actions .btn {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-actions .btn .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Secondary actions live in the sheet, not the bar */
+  .toolbar-actions .btn-secondary,
+  .toolbar-actions > .divider.btn-secondary {
+    display: none;
+  }
+
+  .btn-more {
+    display: inline-flex;
+  }
+
+  .preset-panel {
+    bottom: 0;
+  }
+}
+
+/* ── Mobile overflow sheet ─────────────────────────────────────────────── */
+.more-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--duration-fast-easing);
+  z-index: 200;
+}
+
+.more-sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.more-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 201;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--sab));
+  transform: translateY(100%);
+  transition: transform var(--duration-normal) var(--duration-normal-easing);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
+  /* The grid can exceed the viewport on short screens — scroll instead of
+     clipping the last row. */
+  max-height: 72dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.more-sheet.open {
+  transform: translateY(0);
+}
+
+.more-sheet-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xs-size);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.more-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.more-sheet-grid .btn {
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 72px;
+  padding: var(--space-2);
+  border-radius: 10px;
+  font-size: var(--text-xs-size);
+}
+
+.more-sheet-grid .btn .icon {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 400px) {
+  .more-sheet-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-sheet,
+  .more-sheet-backdrop,
+  .panel {
+    transition: none;
+  }
 }
