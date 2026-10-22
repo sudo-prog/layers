@@ -6,8 +6,113 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded runs on the same ref — saves runner minutes on rapid pushes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Path filtering, done safely.
+#
+# The workflow still triggers on EVERY push and PR, so every job always reports a
+# status. A `changes` job computes which areas actually moved and the heavy jobs
+# skip when their area is untouched — a docs-only change no longer reinstalls
+# Playwright/Chromium or runs the Python suite.
+#
+# Safety rule: if the diff cannot be computed, every flag defaults to TRUE, so a
+# detection failure runs the full suite rather than silently skipping it.
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      js: ${{ steps.diff.outputs.js }}
+      python: ${{ steps.diff.outputs.python }}
+      golden: ${{ steps.diff.outputs.golden }}
+      licenses: ${{ steps.diff.outputs.licenses }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute changed areas
+        id: diff
+        env:
+          # Passed via env, never interpolated into the script body — a crafted
+          # branch name must not be able to inject shell commands.
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            # Validate the ref shape before using it (defence in depth).
+            case "$BASE_REF" in
+              *[!A-Za-z0-9._/-]*|"")
+                echo "Refusing unexpected base ref; running full suite."
+                RANGE=""
+                ;;
+              *)
+                git fetch --no-tags origin "$BASE_REF" || true
+                RANGE="origin/$BASE_REF...HEAD"
+                ;;
+            esac
+          elif git rev-parse -q --verify HEAD~1 >/dev/null 2>&1; then
+            RANGE="HEAD~1...HEAD"
+          else
+            RANGE=""
+          fi
+
+          CHANGED=""
+          if [ -n "$RANGE" ]; then
+            CHANGED=$(git diff --name-only "$RANGE" 2>/dev/null || true)
+          fi
+
+          if [ -n "$CHANGED" ]; then
+            js=false; python=false; golden=false; licenses=false
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+
+              # Golden-image tests render the REAL engine+cores pipeline, so a
+              # change there must trigger them. These specific checks run BEFORE
+              # the broad buckets — `case` stops at the first match, so a
+              # catch-all listed first would silently swallow them.
+              case "$f" in
+                packages/engine/*|packages/cores/*|tests/golden-infra/*) golden=true ;;
+              esac
+
+              case "$f" in
+                # CI itself changed -> run everything
+                .github/*) js=true; python=true; golden=true; licenses=true ;;
+                # Python service
+                services/*) python=true ;;
+                # JS/TS workspace
+                apps/*|packages/*|tests/*|*.json|*.yaml|*.yml|*.ts|*.js|pnpm-lock.yaml|pnpm-workspace.yaml) js=true ;;
+              esac
+
+              # License register must track any dependency change (independent check)
+              case "$f" in
+                package.json|pnpm-lock.yaml|*/package.json) licenses=true ;;
+              esac
+            done <<< "$CHANGED"
+          else
+            # Could not compute a diff -> run everything (safe default)
+            js=true; python=true; golden=true; licenses=true
+          fi
+
+          echo "Changed files in ${RANGE:-<none>}:"
+          echo "${CHANGED:-<none>}"
+          echo "-> js=$js python=$python golden=$golden licenses=$licenses"
+
+          {
+            echo "js=$js"
+            echo "python=$python"
+            echo "golden=$golden"
+            echo "licenses=$licenses"
+          } >> "$GITHUB_OUTPUT"
+
   lint-typecheck-test:
+    needs: changes
+    if: needs.changes.outputs.js == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +146,8 @@ jobs:
         run: pnpm test
 
   license-check:
+    needs: changes
+    if: needs.changes.outputs.licenses == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -90,6 +197,7 @@ jobs:
             fi
           done
 
+  # Cheap and always relevant — never gated.
   conflict-files:
     runs-on: ubuntu-latest
     steps:
@@ -109,6 +217,7 @@ jobs:
             exit 1
           fi
 
+  # Cheap and always relevant — never gated.
   ownership-check:
     runs-on: ubuntu-latest
     steps:
@@ -119,6 +228,8 @@ jobs:
         run: bash .github/scripts/ownership-check.sh
 
   python-test:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -139,6 +250,8 @@ jobs:
           LAYERS_AI_TOKEN: dev-token
 
   golden-image:
+    needs: changes
+    if: needs.changes.outputs.golden == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

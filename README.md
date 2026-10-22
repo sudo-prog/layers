@@ -8,6 +8,80 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 >
 > **✅ Desktop surface added (2026-10-21):** `apps/LAYERS_DESKTOP` is the full-canvas shader editor — a shader tree, a layer stack, a full-bleed canvas the panels glass over, and a props panel, with multiple shaders coexisting as frames. It reuses `packages/engine`, `packages/cores` and `packages/stack` unchanged; only the shell is new. Runs on `:3003`. See `apps/LAYERS_DESKTOP/README.md`.
 
+## Repository layout
+
+```
+20.34_LAYERS/
+├── apps/                    # Deployable shells — thin; wire packages together
+│   ├── web/                 #   mobile PWA editor          (:3000)
+│   └── LAYERS_DESKTOP/      #   desktop shader editor      (:3003)
+├── packages/                # Shared, reusable code — where most logic lives
+│   ├── engine/              #   WebGL2/WebGPU context, passes, renderer, caches
+│   ├── cores/               #   the 7 shader cores (GLSL)
+│   ├── stack/               #   effect-stack state + budget checks
+│   ├── ui/                  #   design tokens, themes, contrast checking
+│   ├── schema/              #   JSON Schema validation + migrations
+│   ├── sync/                #   SyncProvider, IndexedDB persistence
+│   ├── vector/              #   VectorStore
+│   └── tsconfig/            #   shared TypeScript config
+├── services/                # Python backends (not pnpm workspaces)
+│   ├── ai/                  #   FastAPI: extraction, ranking, fallback
+│   ├── eval/                #   evaluation harness
+│   └── learning/            #   learning store
+├── tests/                   # e2e + golden-image infrastructure
+├── tools/                   # scripts, generators, CI helpers
+├── docs/                    # design systems, reviews, license register
+├── contracts/               # cross-agent API/schema contracts
+├── .github/                 # workflows + ownership-check script
+├── CODEOWNERS               # BE/FE ownership rules (enforced by hook + CI)
+├── pnpm-workspace.yaml      # workspace globs
+└── turbo.json               # task graph
+```
+
+**Boundary rule:** shared packages must never import from `apps/`. Logic belongs in
+`packages/`; apps stay thin. iPad is deliberately **not** a separate app — the UI is not
+substantially different, so it should be an adaptive layout within `apps/web`.
+
+## Getting started
+
+```bash
+pnpm install                      # install every workspace package
+
+# Run one app (turbo runs every dev task in parallel, which clashes on ports)
+pnpm --filter @layers/web dev            # mobile PWA       -> http://localhost:3000
+pnpm --filter @layers/desktop dev        # desktop editor   -> http://localhost:3003
+
+# Everything at once (both apps + watchers)
+pnpm dev
+```
+
+### Common tasks
+
+```bash
+pnpm build                        # turbo build, dependency-ordered
+pnpm test                         # turbo test across the workspace
+pnpm lint                         # turbo lint
+
+pnpm --filter @layers/engine test        # one package
+pnpm --filter @layers/cores build        # one package
+
+# Python service
+cd services/ai && pip install -r requirements.txt && python -m pytest tests/ -v
+
+# Golden-image + e2e (Playwright + Chromium/SwiftShader)
+cd tests/golden-infra && pnpm install && npx playwright install chromium --with-deps
+node scripts/run-all.js
+```
+
+### Deploy
+
+```bash
+pnpm deploy    # wrangler pages deploy apps/web/dist --project-name layers
+```
+
+> The Pages project is named **`layers`** (its subdomain is `layers-403.pages.dev`).
+> `layers-403` is *not* the project name.
+
 ## Apps
 
 | App | Port | What it is |
@@ -69,6 +143,9 @@ surface is built around a layer tree and a full-canvas workspace.
 - `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
 - `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
 - `docs/EFFICIENCY-LEDGER.md` — Pass/param/look/ms accounting + Simplification Gate verdict + bundle size audit.
+- `docs/design-graphite.md` — The graphite glass design system: tokens, every measurement behind them, the load-bearing constraints.
+- `docs/research/layers-studio-design-system.md` — The studio design system proposal: radius ladder, warm accent, and menus that slide from underneath the canvas plane. Artifact: `docs/research/layers-studio-design-system.html`.
+- `docs/research/layers-warm-radius-mockups.md` — Mockups in the warm-radius / glass style: a shell with 52px corners on a warm gradient, a dense control deck beside an atmospheric visual, and the live menu motion. Artifact: `docs/research/layers-warm-radius-mockups.html`.
 
 **Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
