@@ -14,6 +14,7 @@ pkg/
 .DS_Store
 *.lv-tmp
 .stfolder/
+.stversions/
 .stignore
 tests/golden-infra/output/
 tests/golden-infra/fixtures-cores/output/
@@ -24,4 +25,6 @@ graphify-out/
 
 # Research / test screenshot evidence — regenerated, not source
 apps/web/.maestro/shots/
+apps/LAYERS_DESKTOP/scripts/shots.cjs
 docs/research/shaders-shots/
+docs/research/layers-desktop-shots/

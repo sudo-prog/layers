@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAYERS — Studio design system · tokens, radii, sliding menus</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYERS STUDIO — a design-system artifact, not a product screen.
+   Derived from the graphite glass system (docs/design-graphite.md) with the
+   studio layer added: warmer charcoal, a chosen accent, deeper radii, and
+   menus that emerge from UNDER the canvas plane rather than dropping from a
+   trigger.
+
+   03-design-graphite.md is the source of truth for the token values and the
+   measurement behind them. This file is the thing it describes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"] {
+  /* Surfaces — warm charcoal, NOT neutral grey and NOT tinted near-black.
+     Lifts are deliberately narrow so a panel reads as one material. */
+  --bg-primary: #17181b;
+  --bg-secondary: #1e2024;
+  --bg-tertiary: #26292e;
+  --bg-raised: #2f3339;
+  --border: #35393f;
+  --border-strong: #4a5059;
+
+  --text-primary: #eceef2;
+  --text-secondary: #a3aab5;
+  /* #8b939f fails AA on the darkest composite (3.96:1) — the same trap the
+     graphite doc hit with #6b7280. Lightened until the WORST backdrop clears. */
+  --text-tertiary: #a1a8b2;
+
+  /* One accent. Warm amber, chosen so it is not the indigo default and not
+     the acid-green/vermilion "near-black + one bright accent" tell. */
+  --accent: #e0824a;
+  --accent-strong: #f0955c;
+  --accent-soft: rgba(224, 130, 74, 0.16);
+  --accent-line: rgba(224, 130, 74, 0.45);
+
+  /* Signal dots — state, never decoration. */
+  --signal-warn: #e5b84b;
+  --signal-work: #e07b39;
+  --signal-ok: #4caf6d;
+
+  /* Glass. brightness() darkens the backdrop BEFORE compositing, which is
+     what lets a low alpha still clear WCAG AA over a white canvas. */
+  --panel-alpha: 0.72;
+  --chrome-alpha: 0.78;
+  --glass-blur: 28px;
+  --glass-saturate: 1.2;
+  --glass-brightness: 0.42;
+  --surface-panel: rgba(30, 32, 36, 0.72);
+  --surface-chrome: rgba(23, 24, 27, 0.78);
+
+  /* ── The radii ladder. Concentric by construction: a panel is 20px and the
+     control inside it is 10px, because 20 = 10 + 10px of padding. Same rule
+     for the inset chip (12 = 8 + 4). */
+  --r-window: 20px;
+  --r-panel: 20px;
+  --r-menu: 16px;
+  --r-card: 14px;
+  --r-chip: 12px;
+  --r-control: 10px;
+  --r-button: 10px;
+  --r-pill: 999px;
+
+  --topbar-h: 44px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 26px;
+
+  --duration-fast: 150ms;
+  --duration: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --shadow-window: 0 40px 120px -24px rgba(0, 0, 0, 0.85), 0 8px 32px -8px rgba(0, 0, 0, 0.6);
+  --shadow-menu: 0 24px 64px -12px rgba(0, 0, 0, 0.75), 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-chip: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+}
+
+/* `html[data-theme="light"]`, NOT `:root:not([data-theme="dark"])`.
+   `html` outranks `:root` on specificity, so the old selector silently never
+   matched: the light palette was entirely dead code and the toggle did nothing.
+   Measured — after removing the attribute, --bg-secondary still read #1e2024. */
+html[data-theme="light"] {
+  --bg-primary: #f2f3f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eceef1;
+  --bg-raised: #ffffff;
+  --border: #d9dce1;
+  --border-strong: #c3c8d0;
+  --text-primary: #16181b;
+  --text-secondary: #4a5159;
+  --text-tertiary: #4d545d;
+  --accent: #c2611f;
+  --accent-strong: #a9520f;
+  --accent-soft: rgba(194, 97, 31, 0.12);
+  --accent-line: rgba(194, 97, 31, 0.4);
+  /* The light theme is the harder case, and the first pass failed it: the panel
+     is near-white, so dark text on it is the binding constraint. A white panel
+     over a WHITE canvas composites to pure white, where #6b7280 only reaches
+     4.63:1 and #565d67 falls to 4.39:1 — both under the 4.5:1 floor. The
+     tokens are therefore held DARKER in light mode, which is the opposite of
+     the instinct to lighten them. */
+  --panel-alpha: 0.72;
+  --chrome-alpha: 0.8;
+  --glass-brightness: 0.96;
+  --surface-panel: rgba(255, 255, 255, 0.72);
+  --surface-chrome: rgba(255, 255, 255, 0.8);
+  --shadow-window: 0 40px 120px -32px rgba(15, 20, 30, 0.35);
+  --shadow-menu: 0 24px 64px -20px rgba(15, 20, 30, 0.28);
+  --shadow-chip: 0 2px 8px -4px rgba(15, 20, 30, 0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-control);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.icon { width: 16px; height: 16px; flex: 0 0 auto; color: currentColor; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE APP WINDOW — 20px corners, 40px of ambient air.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.app {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+  background:
+    radial-gradient(80% 70% at 8% 8%, rgba(224, 130, 74, 0.07), transparent 60%),
+    radial-gradient(70% 60% at 96% 96%, rgba(76, 122, 255, 0.05), transparent 62%),
+    var(--bg-primary);
+}
+
+.window {
+  position: relative;
+  width: min(1200px, 100%);
+  height: min(760px, calc(100vh - 2 * var(--space-8)));
+  /* An explicit height on the flex container is required by the panels below:
+     they are positioned with `top: 0; bottom: 0`, which is an INDEFINITE height
+     when the container's height is content-derived — they sized to their content
+     instead of filling the window. */
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-window);
+  box-shadow: var(--shadow-window);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE STUDIO LAYER: the toolbar is a plane ABOVE the canvas.
+   Canvas paints z=0 → menus z=1 → toolbar z=2. A menu therefore slides down
+   from under the toolbar and over the canvas, which is the effect the brief
+   asked for. It is not a dropdown off the pill.
+
+   Z-ORDER IS INHERITED, NOT ABSOLUTE. `.canvas` establishes a stacking context
+   (it needs `z-index: 0` so the panels can sit above it), which means any child
+   of `.canvas` can never rise above a SIBLING of `.canvas`. Putting the menus
+   inside `.canvas` made them paint BEHIND the left panel, which clipped their
+   left edge — caught by vision review, not by the geometry assertions. The
+   menus are therefore siblings of the panels and children of `.window`,
+   carrying the same z-index (1) as the panels. The toolbar is z=2, so a menu
+   still slides from underneath it.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  position: relative;
+  z-index: 2;
+}
+
+.toolbar-spacer { flex: 1; min-width: var(--space-4); }
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.brand-mark {
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.brand-mark .icon { width: 14px; height: 14px; }
+
+/* Trigger pills — inset into the toolbar, so the seam is invisible. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+
+.trigger:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+.trigger[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent-strong); }
+
+.trigger .icon { width: 14px; height: 14px; }
+.trigger .icon.is-chevron { width: 11px; height: 11px; }
+
+.trigger.is-accent { background: var(--accent); color: #fff; font-weight: 600; }
+.trigger.is-accent:hover { background: var(--accent-strong); }
+
+/* The menu band. A sibling of the panels, a child of .window — never a child
+   of .canvas. It starts its life tucked up underneath the toolbar's edge. */
+.menus {
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.menu {
+  position: absolute;
+  top: 0;
+  pointer-events: auto;
+  width: 264px;
+  max-height: min(420px, 62vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2);
+  background: var(--surface-panel);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  border: 1px solid var(--border-strong);
+  border-top: 0;
+  border-radius: 0 0 var(--r-menu) var(--r-menu);
+  box-shadow: var(--shadow-menu);
+  /* Hidden state: tucked UP under the toolbar, so the open animation is a
+     genuine slide out from underneath the plane rather than a fade. */
+  opacity: 0;
+  transform: translateY(-12px);
+  transform-origin: top center;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration) var(--ease),
+    visibility 0s linear var(--duration);
+}
+
+.menu.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration) var(--ease),
+    visibility 0s;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border-radius: var(--r-button);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+
+.menu-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.menu-item .icon { width: 14px; height: 14px; color: var(--text-tertiary); }
+.menu-item.is-active { color: var(--accent-strong); background: var(--accent-soft); }
+.menu-item.is-active .icon { color: var(--accent); }
+
+.menu-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.menu-item-meta {
+  flex: 0 0 auto;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.menu-divider { height: 1px; margin: var(--space-1) var(--space-2); background: var(--border); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE CANVAS — z=0. Its bleed is the whole trick: it runs UNDER the panels,
+   so the panels have something to blur. A flex sibling would have nothing
+   behind it and the glass would read as an opaque slab.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  z-index: 0;
+  margin: 0 -1px;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 22% 8%, rgba(224, 130, 74, 0.22), transparent 62%),
+    radial-gradient(55% 70% at 82% 88%, rgba(76, 122, 255, 0.18), transparent 60%),
+    var(--bg-primary);
+}
+
+.frame {
+  position: absolute;
+  inset: var(--space-8);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-card);
+  background: linear-gradient(155deg, #2b3038 0%, #1d2025 55%, #262a31 100%);
+  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.7);
+}
+
+.frame-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 1px;
+  width: 76%;
+  height: 52%;
+  opacity: 0.5;
+}
+
+.frame-grid i { background: rgba(255, 255, 255, 0.045); border-radius: 2px; }
+
+.frame-tag {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+/* Panels float above the canvas. */
+.panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-panel);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  z-index: 1;
+}
+
+.panel-left { left: 0; border-right: 1px solid var(--border); }
+.panel-right { right: 0; width: 264px; border-left: 1px solid var(--border); }
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.panel-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--space-3) var(--space-4); }
+
+/* Thread rows — two lines: bright title, dim meta. */
+.thread {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px var(--space-2);
+  border-radius: var(--r-button);
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.thread:hover { background: var(--bg-tertiary); }
+
+.thread-top { display: flex; align-items: center; gap: var(--space-2); }
+
+.thread-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: var(--r-pill); }
+.dot.is-warn { background: var(--signal-warn); }
+.dot.is-work { background: var(--signal-work); }
+.dot.is-ok { background: var(--signal-ok); }
+
+.thread-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+/* Prop rows — dense, 32px, measured. */
+.prop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-1);
+}
+
+.prop-label {
+  flex: 0 0 84px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prop-track {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--bg-raised);
+  position: relative;
+}
+
+.prop-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill, 50%);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.prop-value {
+  flex: 0 0 38px;
+  text-align: right;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.section { padding-top: var(--space-4); }
+
+.section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 0 var(--space-1) var(--space-2);
+}
+
+/* Inverted active row — the app's one inversion rule. */
+.layer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-2);
+  border-radius: var(--r-button);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+
+.layer:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.layer.is-active { background: var(--bg-primary); color: var(--text-primary); }
+
+.layer-icon { display: inline-flex; color: var(--text-tertiary); }
+.layer.is-active .layer-icon { color: var(--accent); }
+.layer .icon { width: 14px; height: 14px; }
+
+.layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gap-16 { height: 16px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DOCUMENTATION
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.doc {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.doc section { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.doc h2 { font-size: var(--text-lg); font-weight: 600; letter-spacing: -0.01em; }
+.doc h3 { font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); }
+.doc p { max-width: 78ch; color: var(--text-secondary); }
+.doc p strong { color: var(--text-primary); font-weight: 600; }
+.doc code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.92em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tokens { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+
+.token {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--bg-secondary);
+}
+
+.swatch { height: 38px; border-radius: calc(var(--r-control) - 4px); border: 1px solid var(--border); }
+.token-name { font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); }
+.token-val {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.radii { display: flex; align-items: flex-end; gap: var(--space-5); flex-wrap: wrap; }
+.radius-cell { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+
+.radius-box {
+  width: 76px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+}
+
+.concentric { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; }
+.concentric-figure { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.concentric-figure figcaption {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 12px padding inside a 16px-radius parent → 28px outer. */
+.c-outer { padding: 12px; border-radius: 28px; background: var(--bg-tertiary); border: 1px solid var(--border); }
+.c-inner { width: 96px; height: 44px; border-radius: 16px; background: var(--accent-soft); border: 1px solid var(--accent-line); }
+
+/* 8px padding inside a 12px-radius chip → 20px outer. */
+.c2-outer { padding: 8px; border-radius: 20px; background: var(--bg-tertiary); border: 1px solid var(--border); }
+.c2-inner { width: 96px; height: 28px; border-radius: 12px; background: var(--accent); }
+
+.zstack { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
+
+.zrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-control);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.zrow.is-menu { border-color: var(--accent-line); background: var(--accent-soft); }
+
+.zbadge {
+  flex: 0 0 26px;
+  height: 26px;
+  display: grid; place-items: center;
+  border-radius: var(--r-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.zname { flex: 0 0 116px; font-weight: 600; }
+.zwhy { color: var(--text-tertiary); font-size: var(--text-xs); }
+
+.states { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.state-cell { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); min-width: 108px; }
+.state-cell span { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+.swatch-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-5);
+  border-radius: var(--r-button);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.swatch-button.is-hover { background: var(--bg-raised); }
+.swatch-button.is-press { background: var(--bg-raised); transform: scale(0.96); }
+.swatch-button.is-focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.swatch-button.is-disabled { opacity: 0.45; cursor: not-allowed; }
+.swatch-button.is-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+.type-ramp { display: flex; flex-direction: column; gap: var(--space-2); }
+.type-row { display: flex; align-items: baseline; gap: var(--space-4); }
+.type-name { flex: 0 0 84px; font-size: var(--text-xs); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.type-sample { color: var(--text-primary); }
+
+.contrast { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.crow {
+  display: grid;
+  grid-template-columns: 150px 1fr 76px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-control);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs);
+}
+
+.crow .ratio { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.crow .ratio.is-fail { color: #f87171; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--r-pill);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.rules { display: flex; flex-direction: column; gap: var(--space-3); }
+.rule { display: grid; grid-template-columns: 26px 1fr; gap: var(--space-3); align-items: start; }
+.rule p { font-size: var(--text-sm); }
+
+.rule-n, .rule-dash {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: var(--r-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+pre {
+  padding: var(--space-4);
+  border-radius: var(--r-control);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  overflow-x: auto;
+  color: var(--text-secondary);
+}
+
+.tweakbar {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--r-menu);
+  background: var(--surface-chrome);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-menu);
+  z-index: 50;
+}
+
+.tweakbar button {
+  padding: 6px var(--space-3);
+  border-radius: var(--r-button);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.tweakbar button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.tweakbar button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent-line); }
+
+@media (max-width: 900px) {
+  .app { padding: 0; }
+  .window { width: 100%; height: 100%; min-height: 100dvh; border-radius: 0; border: 0; }
+  .doc { padding: var(--space-5); }
+
+  /* A 264px menu in a 390px window, anchored to the far-right trigger, ran
+     outside the window (measured). On a narrow window the menu stops at the
+     edge, so it can never leave the window. */
+  .menu { width: min(264px, calc(100vw - 16px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel, .toolbar, .menu { background: var(--bg-secondary); }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     THE ARTIFACT
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="app">
+  <div class="window">
+
+    <header class="toolbar">
+      <span class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg>
+        </span>
+        LAYERS
+      </span>
+
+      <button class="trigger" data-menu="menu-shader" aria-expanded="false" aria-controls="menu-shader">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg>
+        Studio
+        <svg class="icon is-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+
+      <button class="trigger is-accent" data-menu="menu-new" aria-expanded="false" aria-controls="menu-new">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New
+      </button>
+
+      <button class="trigger" data-menu="menu-edit" aria-expanded="false" aria-controls="menu-edit">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg>
+        Edit
+      </button>
+
+      <button class="trigger" data-menu="menu-share" aria-expanded="false" aria-controls="menu-share">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 15v5h14v-5"/></svg>
+        Share
+      </button>
+
+      <span class="toolbar-spacer"></span>
+
+      <span class="chip">1920 × 1080</span>
+      <span class="chip">P3 Linear</span>
+      <span class="chip">ACES</span>
+    </header>
+
+
+    <div class="canvas" id="canvas">
+      <div class="frame">
+        <div class="frame-grid" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <span class="frame-tag">4 passes · 120 fps · 12 ms</span>
+      </div>
+    </div>
+
+    <!-- ── Panels: absolute, so they float over the canvas and have something
+         for the backdrop filter to blur. ── -->
+    <!-- ── The menu band. Child of .window, SIBLING of .canvas and of the panels. ──
+         NOT inside .canvas (its stacking context would trap the menus below the
+         panels) and NOT inside a .panel (a panel's own backdrop-filter would
+         filter the menu — it vanished into the glass). ── -->
+    <aside class="panel panel-left">
+      <div class="panel-head">
+        <span class="panel-title">Shaders</span>
+        <button class="trigger" style="height:24px;padding:0 6px;font-size:11px" aria-label="Add shader">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="panel-body">
+        <button class="layer is-active">
+          <span class="layer-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg></span>
+          <span class="layer-name">Studio</span>
+        </button>
+        <div class="gap-16"></div>
+
+        <div class="panel-title" style="padding:0 8px 6px">Threads</div>
+
+        <button class="thread">
+          <span class="thread-top"><span class="thread-name">preview envs</span><span class="dot is-warn" aria-hidden="true"></span></span>
+          <span class="thread-meta"><span>SCO-38820</span><span>·</span><span>38s</span><span>·</span><span>3 PRs</span></span>
+        </button>
+        <button class="thread">
+          <span class="thread-top"><span class="thread-name">pull shared</span><span class="dot is-work" aria-hidden="true"></span></span>
+          <span class="thread-meta"><span>SCO-41404</span><span>·</span><span>5m</span><span>·</span><span>2 PRs</span></span>
+        </button>
+        <button class="thread">
+          <span class="thread-top"><span class="thread-name">migrator</span><span class="dot is-work" aria-hidden="true"></span></span>
+          <span class="thread-meta"><span>SCO-40182</span><span>·</span><span>8m</span><span>·</span><span>3 PRs</span></span>
+        </button>
+        <button class="thread">
+          <span class="thread-top"><span class="thread-name">ps query perf</span><span class="dot is-ok" aria-hidden="true"></span></span>
+          <span class="thread-meta"><span>SCO-36409</span><span>·</span><span>2h</span><span>·</span><span>30 PRs</span></span>
+        </button>
+      </div>
+    </aside>
+
+    <aside class="panel panel-right">
+      <div class="panel-head">
+        <span class="panel-title">Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="section">
+          <div class="prop"><span class="prop-label">Opacity</span><span class="prop-track"><i style="--fill:100%"></i></span><span class="prop-value">100</span></div>
+          <div class="prop"><span class="prop-label">Scale</span><span class="prop-track"><i style="--fill:20%"></i></span><span class="prop-value">20</span></div>
+          <div class="prop"><span class="prop-label">Octaves</span><span class="prop-track"><i style="--fill:38%"></i></span><span class="prop-value">3</span></div>
+          <div class="prop"><span class="prop-label">Strength</span><span class="prop-track"><i style="--fill:30%"></i></span><span class="prop-value">0.3</span></div>
+          <div class="prop"><span class="prop-label">Seed</span><span class="prop-track"><i style="--fill:8%"></i></span><span class="prop-value">1</span></div>
+        </div>
+        <div class="section">
+          <div class="section-title">Appearance</div>
+          <div class="prop"><span class="prop-label">Blend</span><span class="prop-value">Normal</span></div>
+          <div class="prop"><span class="prop-label">Monochrome</span><span class="prop-value">On</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── The menu band. Child of .window, SIBLING of .canvas and of the
+         panels. Never inside .canvas: its stacking context would trap the
+         menus below the panels. ── -->
+    <div class="menus" id="menus">
+
+      <div class="menu" id="menu-shader" role="menu" aria-label="Shader">
+        <button class="menu-item is-active" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg>
+          <span class="menu-item-label">Studio</span>
+          <span class="menu-item-meta">6</span>
+        </button>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/></svg>
+          <span class="menu-item-label">Pattern</span>
+          <span class="menu-item-meta">8</span>
+        </button>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>
+          <span class="menu-item-label">Adjustments</span>
+          <span class="menu-item-meta">12</span>
+        </button>
+        <div class="menu-divider" role="separator"></div>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="menu-item-label">All components</span>
+          <span class="menu-item-meta">⌘K</span>
+        </button>
+      </div>
+
+      <div class="menu" id="menu-new" role="menu" aria-label="New">
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+          <span class="menu-item-label">New canvas</span>
+          <span class="menu-item-meta">1920×1080</span>
+        </button>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg>
+          <span class="menu-item-label">Add layer</span>
+          <span class="menu-item-meta">⌘⇧L</span>
+        </button>
+        <div class="menu-divider" role="separator"></div>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/></svg>
+          <span class="menu-item-label">From preset</span>
+        </button>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
+          <span class="menu-item-label">From image</span>
+        </button>
+      </div>
+
+      <div class="menu" id="menu-edit" role="menu" aria-label="Edit">
+        <button class="menu-item" role="menuitem"><span class="menu-item-label">Undo</span><span class="menu-item-meta">⌘Z</span></button>
+        <button class="menu-item" role="menuitem"><span class="menu-item-label">Redo</span><span class="menu-item-meta">⌘⇧Z</span></button>
+        <div class="menu-divider" role="separator"></div>
+        <button class="menu-item" role="menuitem"><span class="menu-item-label">Duplicate layer</span><span class="menu-item-meta">⌘D</span></button>
+        <button class="menu-item" role="menuitem"><span class="menu-item-label">Flatten stack</span></button>
+        <div class="menu-divider" role="separator"></div>
+        <button class="menu-item" role="menuitem"><span class="menu-item-label">Clear canvas</span><span class="menu-item-meta">⌫</span></button>
+      </div>
+
+      <div class="menu" id="menu-share" role="menu" aria-label="Share">
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+          <span class="menu-item-label">Copy link</span>
+          <span class="menu-item-meta">⌘⇧C</span>
+        </button>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 15v5h14v-5"/></svg>
+          <span class="menu-item-label">Export PNG</span>
+          <span class="menu-item-meta">4K</span>
+        </button>
+        <div class="menu-divider" role="separator"></div>
+        <button class="menu-item" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          <span class="menu-item-label">Invite</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     THE DOCUMENTATION
+     ════════════════════════════════════════════════════════════════════════ -->
+<main class="doc">
+
+  <section>
+    <h2>LAYERS Studio — the design system</h2>
+    <p>This artifact is the visual language the next LAYERS surface should be built
+    in. It is derived from the graphite glass system in
+    <strong>docs/design-graphite.md</strong> — the glass, the contrast discipline and
+    the panel-over-canvas structure are unchanged — with one layer added: a chosen
+    radius ladder, one warm accent instead of a cool blue, and menus that emerge from
+    <strong>underneath the canvas plane</strong> rather than dropping off a trigger.</p>
+    <p>The reference that prompted it was a studio-management surface: dense thread
+    lists, a small colour-coded status dot per row, and menus that slide out from
+    under the top plane. Those are posture choices, not copied chrome — the layout,
+    the panels and the tokens are LAYERS's own.</p>
+  </section>
+
+  <section>
+    <h2>1 · Surfaces</h2>
+    <p>Warm charcoal, not neutral grey and not tinted near-black. The lift between
+    steps is deliberately narrow: a panel should read as one material, not as a
+    stack of different ones.</p>
+    <div class="tokens">
+      <div class="token"><span class="swatch" style="background:#17181b"></span><span class="token-name">bg-primary</span><span class="token-val">#17181b</span></div>
+      <div class="token"><span class="swatch" style="background:#1e2024"></span><span class="token-name">bg-secondary</span><span class="token-val">#1e2024</span></div>
+      <div class="token"><span class="swatch" style="background:#26292e"></span><span class="token-name">bg-tertiary</span><span class="token-val">#26292e</span></div>
+      <div class="token"><span class="swatch" style="background:#2f3339"></span><span class="token-name">bg-raised</span><span class="token-val">#2f3339</span></div>
+      <div class="token"><span class="swatch" style="background:#35393f"></span><span class="token-name">border</span><span class="token-val">#35393f</span></div>
+      <div class="token"><span class="swatch" style="background:#4a5059"></span><span class="token-name">border-strong</span><span class="token-val">#4a5059</span></div>
+    </div>
+    <h3>Text</h3>
+    <p><strong>#eceef2</strong>, not pure white — pure white on charcoal reads harsh and
+    is the single most common tell of a generated dark UI.</p>
+    <div class="tokens">
+      <div class="token"><span class="swatch" style="background:#eceef2"></span><span class="token-name">text-primary</span><span class="token-val">#eceef2</span></div>
+      <div class="token"><span class="swatch" style="background:#a3aab5"></span><span class="token-name">text-secondary</span><span class="token-val">#a3aab5</span></div>
+      <div class="token"><span class="swatch" style="background:#a1a8b2"></span><span class="token-name">text-tertiary</span><span class="token-val">#a1a8b2</span></div>
+      <div class="token"><span class="swatch" style="background:#e0824a"></span><span class="token-name">accent</span><span class="token-val">#e0824a</span></div>
+      <div class="token"><span class="swatch" style="background:#f0955c"></span><span class="token-name">accent-strong</span><span class="token-val">#f0955c</span></div>
+    </div>
+    <h3>The accent is warm amber on purpose</h3>
+    <p>Two of the most common generated-dark-UI tells are a near-black ground with
+    an acid-green or vermilion accent, and an indigo accent chosen by default
+    rather than by reason. Amber is neither: it is warm against a cool charcoal,
+    it clears 3:1 as a boundary, and it reads as a studio signal rather than a
+    system colour. It is used for exactly one thing — the active trigger, the
+    selected row and focus.</p>
+    <h3>text-tertiary is lighter than it looks like it should be</h3>
+    <p>The graphite system uses <code>#8b95a3</code> for tertiary text. At this
+    system's surface ramp that measured <strong>3.96:1</strong> — below the 4.5:1
+    floor — so it is <code>#a1a8b2</code> here. The graphite doc hit the identical
+    trap with <code>#6b7280</code>, which failed AA at <em>any</em> alpha because the
+    colour itself was too dark for small text on a dark ground. A muted grey that
+    looks fine on a swatch routinely fails in situ.</p>
+  </section>
+
+  <section>
+    <h2>2 · The radius ladder</h2>
+    <p>Six steps, and they are related rather than arbitrary. The rule that makes
+    them hold together: <strong>outer radius = inner radius + padding</strong>. A
+    20px panel holds a 10px control because it has 10px of padding. A 12px chip
+    holds an 8px inset because it has 4px.</p>
+    <div class="radii">
+      <div class="radius-cell"><span class="radius-box" style="border-radius:20px">20</span><span class="token-val">window / panel</span></div>
+      <div class="radius-cell"><span class="radius-box" style="border-radius:16px">16</span><span class="token-val">menu</span></div>
+      <div class="radius-cell"><span class="radius-box" style="border-radius:14px">14</span><span class="token-val">card / frame</span></div>
+      <div class="radius-cell"><span class="radius-box" style="border-radius:12px">12</span><span class="token-val">chip</span></div>
+      <div class="radius-cell"><span class="radius-box" style="border-radius:10px">10</span><span class="token-val">control / button</span></div>
+      <div class="radius-cell"><span class="radius-box" style="border-radius:999px">999</span><span class="token-val">pill / dot</span></div>
+    </div>
+    <h3>Concentric in practice</h3>
+    <p>Two worked examples from the artifact above. Neither is decorative — the
+    arithmetic is what stops nested corners looking pinched.</p>
+    <div class="concentric">
+      <figure class="concentric-figure">
+        <span class="c-outer"><span class="c-inner"></span></span>
+        <figcaption>panel 28px outer = 16px inner + 12px padding</figcaption>
+      </figure>
+      <figure class="concentric-figure">
+        <span class="c2-outer"><span class="c2-inner"></span></span>
+        <figcaption>chip 20px outer = 12px inner + 8px padding</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 · The sliding menus</h2>
+    <p>This is the behaviour the brief asked for, and it is a structural decision,
+    not an animation trick. The menu is a <strong>sibling of the toolbar</strong>,
+    not a child of the trigger button. Three planes, in paint order:</p>
+    <div class="zstack">
+      <div class="zrow"><span class="zbadge">2</span><span class="zname">toolbar</span><span class="zwhy">sits on top; its bottom edge is the ceiling the menus hang from</span></div>
+      <div class="zrow is-menu"><span class="zbadge">1</span><span class="zname">menu</span><span class="zwhy">starts tucked 12px UP under the toolbar, slides down over the canvas</span></div>
+      <div class="zrow"><span class="zbadge">0</span><span class="zname">canvas</span><span class="zwhy">bleeds under the panels; the backdrop filter blurs it</span></div>
+    </div>
+    <p>Because the hidden state is <strong>translated up</strong> rather than merely
+    faded, the open animation is a genuine slide out from underneath the plane. A
+    dropdown that grows downward from the pill it belongs to reads as attached to
+    that pill; one that drops from the plane reads as attached to the surface.</p>
+    <h3>The z-index trap this fell into</h3>
+    <p>The first version put the menu band inside <code>.canvas</code>, which was
+    natural — the menus belong to the canvas visually. But <code>.canvas</code>
+    carries <code>z-index: 0</code> so the panels can sit above it, and a positioned
+    element with a z-index <em>establishes a stacking context</em>. Everything inside
+    it is then ranked against the other children of <code>.canvas</code>, and can
+    never rise above a <strong>sibling</strong> of <code>.canvas</code> — including
+    the left panel. The menu painted behind the panel and its left edge was clipped.</p>
+    <p>Geometry assertions passed this. They measured the menu's box, and the box
+    was correct; what was wrong was <em>what covered it</em>. Vision review caught
+    it. The fix was structural: the menus moved out of <code>.canvas</code> to be a
+    child of <code>.window</code> and a sibling of the panels, at the same z-index
+    (1) as the panels, with the toolbar still at 2.</p>
+    <p>The trigger's <code>aria-expanded</code> and the menu's own id are wired
+    properly, and the trigger is a real <code>&lt;button&gt;</code> — the seam
+    between trigger and menu is only visual.</p>
+  </section>
+
+  <section>
+    <h2>4 · Interaction states</h2>
+    <p>Motion is <strong>150–220ms with <code>cubic-bezier(0.2, 0, 0, 1)</code></strong>
+    — the standard ease-out. Nothing animates on hover except colour; the press
+    state is a <strong>scale(0.96)</strong>, never smaller, because anything below
+    0.95 feels exaggerated.</p>
+    <div class="states">
+      <div class="state-cell"><span class="swatch-button">Default</span><span>bg-tertiary</span></div>
+      <div class="state-cell"><span class="swatch-button is-hover">Hover</span><span>bg-raised</span></div>
+      <div class="state-cell"><span class="swatch-button is-press">Press</span><span>scale(0.96)</span></div>
+      <div class="state-cell"><span class="swatch-button is-focus">Focus</span><span>2px accent</span></div>
+      <div class="state-cell"><span class="swatch-button is-primary">Primary</span><span>accent fill</span></div>
+      <div class="state-cell"><span class="swatch-button is-disabled">Disabled</span><span>opacity 0.45</span></div>
+    </div>
+    <p><code>prefers-reduced-motion</code> removes every transition, including the
+    menu slide. The menu still opens — it just stops moving.</p>
+  </section>
+
+  <section>
+    <h2>5 · Type</h2>
+    <p>One family, six sizes, weights doing the work that colour usually does.
+    Numerals are <strong>tabular</strong> everywhere a value can change, so a
+    moving number never shifts the layout around it.</p>
+    <div class="type-ramp">
+      <div class="type-row"><span class="type-name">xl · 26/600</span><span class="type-sample" style="font-size:26px;font-weight:600">Untitled project</span></div>
+      <div class="type-row"><span class="type-name">lg · 18/600</span><span class="type-sample" style="font-size:18px;font-weight:600">Studio</span></div>
+      <div class="type-row"><span class="type-name">md · 15/600</span><span class="type-sample" style="font-size:15px;font-weight:600">LAYERS</span></div>
+      <div class="type-row"><span class="type-name">base · 13/400</span><span class="type-sample" style="font-size:13px">preview envs</span></div>
+      <div class="type-row"><span class="type-name">sm · 12/600</span><span class="type-sample" style="font-size:12px;font-weight:600">Pull requests</span></div>
+      <div class="type-row"><span class="type-name">xs · 11/400</span><span class="type-sample" style="font-size:11px">SCO-38820 · 38s · 3 PRs</span></div>
+    </div>
+    <p>Uppercase is used for exactly two things: panel titles and section labels,
+    both at 11px with 0.08em tracking. It is not a default treatment for every
+    label — that is a generated-UI tell.</p>
+  </section>
+
+  <section>
+    <h2>6 · Contrast</h2>
+    <p>Measured on the darkest surface the glass can composite to, which is the
+    binding case — a panel over a bright canvas. Every text token clears WCAG AA.</p>
+    <div class="doc-intro" id="contrast-note">
+      <div class="contrast" id="contrast-table">
+        <div class="crow"><span>text-primary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>text-secondary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>text-tertiary</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow"><span>accent</span><span>on effective panel over a <b>white</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-primary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-secondary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>text-tertiary</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+        <div class="crow" style="border-color:var(--accent-line)"><span>accent</span><span>on effective panel over a <b>black</b> canvas</span><span class="ratio" data-ratio>--</span></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-tertiary)">Computed in the page from the live token values, so it reflects
+      this palette rather than a remembered one. Toggle Light and the numbers change, because the tokens change. The
+      black-canvas rows are the lighter case; the white-canvas rows are the binding one.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>7 · Rules that were load-bearing</h2>
+    <div class="rules">
+      <div class="rule"><span class="rule-n">1</span><p><strong>The canvas must bleed under the panels.</strong> If the canvas is a flex sibling, a backdrop filter has nothing behind it and the glass reads as an opaque slab. Proven in pixels in the graphite doc: a magenta probe behind a panel came through as rgb(35,17,39).</p></div>
+      <div class="rule"><span class="rule-n">2</span><p><strong>Only the outer slab is glass.</strong> Controls, chips and selected rows are opaque. A translucent control on a translucent panel is unreadable, and the AA measurement in §6 does not survive it.</p></div>
+      <div class="rule"><span class="rule-n">3</span><p><strong>Icons inherit <code>currentColor</code> and never come from emoji.</strong> Emoji render inconsistently, cannot take a stroke weight, and break the monochrome discipline. The set here is one stroke weight throughout.</p></div>
+      <div class="rule"><span class="rule-n">4</span><p><strong>Icon-only controls keep a real text node.</strong> <code>display: none</code> removes a label from the accessibility tree entirely, which made buttons untargetable in automated checks. A visually-hidden span is not the same thing.</p></div>
+      <div class="rule"><span class="rule-n">5</span><p><strong>Measure at every width, and measure the axis that matters.</strong> A viewport media query is the wrong axis for a panel-width problem — this is the bug that clipped labels at some widths but not others.</p></div>
+      <div class="rule"><span class="rule-n">6</span><p><strong>Assert the box, then LOOK at the box.</strong> The menu's geometry was correct at every width while it painted behind the left panel and was clipped. No measurement of the menu's own rect could see that; only reviewing a screenshot could.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>8 · The menu, in CSS</h2>
+    <p>The whole behaviour is these rules. Note the hidden state is a translate,
+    not an opacity alone, and the transition list differs between the two states so
+    the exit is not delayed by the same easing.</p>
+    <pre>.menus  { position: absolute; top: 44px; inset-inline: 0; bottom: 0;
+         z-index: 1; }          /* over canvas (0), under toolbar (2) */
+
+.menu  { width: 264px;
+         border-top: 0;           /* the seam with the toolbar disappears */
+         border-radius: 0 0 16px 16px;   /* only the bottom corners round */
+         opacity: 0;
+         transform: translateY(-12px);   /* tucked UP under the toolbar */
+         visibility: hidden;
+         transition: opacity 150ms, transform 220ms,
+                     visibility 0s linear 220ms;
+       }
+
+.menu.is-open {
+         opacity: 1;
+         transform: translateY(0);
+         visibility: visible;
+         transition: opacity 150ms, transform 220ms, visibility 0s;
+       }</pre>
+  </section>
+
+  <section>
+    <h2>9 · What is deliberately not here</h2>
+    <p>Every one of these is a default that shows up in generated UI regardless of
+    the subject. Each was considered and dropped.</p>
+    <div class="rules">
+      <div class="rule"><span class="rule-dash">—</span><p><strong>No centre stack.</strong> The composition is three columns with a full-bleed canvas, because this is a tool surface, not a landing page.</p></div>
+      <div class="rule"><span class="rule-dash">—</span><p><strong>No feature tiles.</strong> Nothing is arranged as icon + heading + sentence × 3.</p></div>
+      <div class="rule"><span class="rule-dash">—</span><p><strong>No accent rail, no gradient wash as decoration.</strong> The only warm colour is the accent, and it marks one thing at a time.</p></div>
+      <div class="rule"><span class="rule-dash">—</span><p><strong>No monument stat.</strong> The numbers present are real measurements of the render, in 11px tabular numerals.</p></div>
+      <div class="rule"><span class="rule-dash">—</span><p><strong>No emoji as icons, no uppercase-as-default, no single-word italic accent.</strong></p></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Tweaks: theme + motion, persisted. Kept small and out of the composition. -->
+<div class="tweakbar" role="group" aria-label="Tweaks">
+  <button id="tw-theme" aria-pressed="false">Light</button>
+  <button id="tw-motion" aria-pressed="true">Motion</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Menus ─────────────────────────────────────────────────────────────
+     One open at a time. Click outside, or Escape, closes. The trigger's
+     aria-expanded tracks the menu's real state rather than being set
+     optimistically. */
+  var triggers = Array.prototype.slice.call(document.querySelectorAll("[data-menu]"));
+  var openId = null;
+
+  function closeAll() {
+    if (!openId) return;
+    var menu = document.getElementById(openId);
+    if (menu) menu.classList.remove("is-open");
+    var trg = document.querySelector('[data-menu="' + openId + '"]');
+    if (trg) trg.setAttribute("aria-expanded", "false");
+    openId = null;
+  }
+
+  function open(id) {
+    if (openId === id) { closeAll(); return; }
+    closeAll();
+    var menu = document.getElementById(id);
+    var trg = document.querySelector('[data-menu="' + id + '"]');
+    if (!menu || !trg) return;
+    menu.classList.add("is-open");
+    trg.setAttribute("aria-expanded", "true");
+    openId = id;
+  }
+
+  triggers.forEach(function (trg) {
+    trg.addEventListener("click", function (e) {
+      e.stopPropagation();
+      open(trg.getAttribute("data-menu"));
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".menu") && !e.target.closest("[data-menu]")) closeAll();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeAll();
+  });
+
+  /* Anchor each menu under its own trigger, so a trigger moving (theme,
+     reflow, font swap) cannot leave the menu stranded. Clamped so the menu
+     always stays inside the window — at 390px the far-right trigger anchored
+     a 264px menu outside it. */
+  function anchor() {
+    var band = document.getElementById("menus");
+    var win = document.querySelector(".window");
+    if (!band || !win) return;
+    var bandRect = band.getBoundingClientRect();
+    var winRect = win.getBoundingClientRect();
+    triggers.forEach(function (trg) {
+      var id = trg.getAttribute("data-menu");
+      var menu = document.getElementById(id);
+      if (!menu) return;
+      var w = menu.getBoundingClientRect().width || 264;
+      var left = trg.getBoundingClientRect().left - bandRect.left;
+      var maxLeft = bandRect.width - w - 4;
+      var clamped = Math.max(4, Math.min(left, Math.max(4, maxLeft)));
+      menu.style.left = Math.round(clamped) + "px";
+    });
+  }
+
+  window.addEventListener("resize", anchor);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(anchor);
+  window.addEventListener("load", anchor);
+  anchor();
+
+  /* ── Contrast, computed from the live tokens ─────────────────────────── */
+  // Declared before paintContrast() is called at the bottom of this function —
+  // it reads the root element, so it cannot be hoisted from the Tweaks block.
+  var root = document.documentElement;
+
+  function srgb(c) {
+    return c.map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+  }
+  function lum(rgb) {
+    var c = srgb(rgb);
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function ratio(a, b) {
+    var l1 = lum(a), l2 = lum(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function hex(h) {
+    h = h.replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+
+  // The effective panel colour over a WHITE canvas: brightness() on the
+  // backdrop, then the panel fill at its alpha over that.
+  function effectivePanel() {
+    var t = getComputedStyle(document.documentElement);
+    var a = parseFloat(t.getPropertyValue("--panel-alpha")) || 0.72;
+    var b = parseFloat(t.getPropertyValue("--glass-brightness")) || 1;
+    var fill = t.getPropertyValue("--surface-panel").trim();
+    var m = fill.match(/rgba?\(([^)]+)\)/);
+    var rgb = m ? m[1].split(",").map(function (x) { return parseFloat(x); }).slice(0, 3) : [30, 32, 36];
+    var backdrop = [255 * b, 255 * b, 255 * b];
+    return rgb.map(function (v, i) { return v * a + backdrop[i] * (1 - a); });
+  }
+
+  function paintContrast() {
+    var t = getComputedStyle(document.documentElement);
+    var a = parseFloat(t.getPropertyValue("--panel-alpha")) || 0.72;
+    var b = parseFloat(t.getPropertyValue("--glass-brightness")) || 1;
+    var fill = t.getPropertyValue("--surface-panel").trim();
+    var m = fill.match(/rgba?\(([^)]+)\)/);
+    var rgb = m ? m[1].split(",").map(function (x) { return parseFloat(x); }).slice(0, 3) : [30, 32, 36];
+
+    var rows = document.querySelectorAll("#contrast-table .crow");
+    var tokens = ["--text-primary", "--text-secondary", "--text-tertiary", "--accent"];
+
+    // Both canvases. brightness() runs on the backdrop BEFORE the panel
+    // composites. `glass-brightness` is a DARK-mode device: over a white canvas
+    // it is what keeps the composite dark enough for light text. In light mode
+    // the same factor applied to a BLACK canvas LIGHTENS it (0 × 0.96 = 0 is
+    // unchanged, but any non-black content is brightened), which is backwards —
+    // so light mode uses 1, and the white case is irrelevant because the panel
+    // is opaque enough on its own.
+    var isLight = !root.hasAttribute("data-theme") || root.getAttribute("data-theme") === "light";
+    var cases = isLight
+      ? [
+          // In light mode the panel is near-white, so a BLACK canvas is the
+          // binding case: it is what pulls the composite darkest, against dark
+          // text.
+          { backdrop: [0, 0, 0] },
+          { backdrop: [242, 243, 245] }
+        ]
+      : [
+          // In dark mode a WHITE canvas is the binding case: brightness() has
+          // darkened it to 255 × b, and that is still brighter than the panel.
+          { backdrop: [255 * b, 255 * b, 255 * b] },
+          { backdrop: [0, 0, 0] }
+        ];
+
+    rows.forEach(function (row, i) {
+      var el = row.querySelector("[data-ratio]");
+      if (!el) return;
+      var c = i < 4 ? cases[0] : cases[1];
+      var tok = tokens[i % 4];
+      var fg = hex(getComputedStyle(document.documentElement).getPropertyValue(tok).trim());
+      var eff = rgb.map(function (v, k) { return v * a + c.backdrop[k] * (1 - a); });
+      var r = ratio(fg, eff);
+      el.textContent = r.toFixed(2) + ":1";
+      el.classList.toggle("is-fail", r < 4.5);
+    });
+  }
+
+  paintContrast();
+  requestAnimationFrame(paintContrast);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintContrast);
+
+  /* ── Tweaks ──────────────────────────────────────────────────────────── */
+  var twTheme = document.getElementById("tw-theme");
+  var twMotion = document.getElementById("tw-motion");
+
+  function applyTheme(dark) {
+    if (dark) root.setAttribute("data-theme", "dark");
+    else root.setAttribute("data-theme", "light");
+    twTheme.setAttribute("aria-pressed", String(!dark));
+    twTheme.textContent = dark ? "Light" : "Dark";
+    try { localStorage.setItem("layers-studio-theme", dark ? "dark" : "light"); } catch (e) {}
+    // The tokens changed, so the measured ratios must be recomputed.
+    requestAnimationFrame(paintContrast);
+  }
+
+  function applyMotion(on) {
+    root.style.setProperty("--duration", on ? "220ms" : "0ms");
+    root.style.setProperty("--duration-fast", on ? "150ms" : "0ms");
+    twMotion.setAttribute("aria-pressed", String(on));
+    twMotion.textContent = on ? "Motion" : "Reduced";
+    try { localStorage.setItem("layers-studio-motion", on ? "1" : "0"); } catch (e) {}
+  }
+
+  var savedTheme = null, savedMotion = null;
+  try {
+    savedTheme = localStorage.getItem("layers-studio-theme");
+    savedMotion = localStorage.getItem("layers-studio-motion");
+  } catch (e) {}
+
+  if (savedTheme === "light") applyTheme(false); else applyTheme(true);
+  applyMotion(savedMotion !== "0");
+
+  twTheme.addEventListener("click", function () {
+    applyTheme(root.getAttribute("data-theme") !== "dark");
+  });
+  twMotion.addEventListener("click", function () {
+    applyMotion(twMotion.getAttribute("aria-pressed") !== "true");
+  });
+})();
+</script>
+</body>
+</html>
