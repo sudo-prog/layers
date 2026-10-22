@@ -1,0 +1,93 @@
+# LAYERS properties panel + insert toolbar.
+# Run:  maestro test --headless .maestro/props-panel.yaml
+#
+# Maestro's managed Chromium renders at ~1200x459. The panel is taller than
+# that, so the flow asserts what is on screen, swipes, then continues. Anything
+# asserted after a swipe must live lower in the panel than before it.
+#
+# `#inspector` is the internal scroller and the document is `overflow: hidden`,
+# so `scrollUntilVisible` cannot reach below the fold — `swipe` is required.
+url: http://127.0.0.1:3000/
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*LAYERS.*"
+    timeout: 60000
+
+# ── Add a layer ────────────────────────────────────────────────────────────
+- tapOn: ".*Pattern.Dither.*"
+- extendedWaitUntil:
+    visible: ".*Transform.*"
+    timeout: 20000
+
+# ── Top of the panel ───────────────────────────────────────────────────────
+- assertVisible: ".*Transform.*"
+- assertVisible: ".*Sizing.*"
+- assertVisible: ".*Object Fit.*"
+- assertVisible: ".*Pattern/Dither.*"
+- takeScreenshot: 01-props-panel-top
+
+# ── Scroll the panel to the component section ──────────────────────────────
+# The component section starts ~620px down a 1166px panel; Maestro's viewport is
+# ~459px tall. Two swipes to reach it.
+- swipe:
+    start: 88%, 80%
+    end: 88%, 15%
+    duration: 700
+- swipe:
+    start: 88%, 80%
+    end: 88%, 35%
+    duration: 700
+
+# ── Dynamic prop affordance opens the driver editor ────────────────────────
+- tapOn: ".*dyn.*"
+- extendedWaitUntil:
+    visible: ".*Driver.*"
+    timeout: 20000
+- assertVisible: ".*Cursor.*"
+- assertVisible: ".*Auto.*"
+- assertVisible: ".*Map.*"
+- takeScreenshot: 02-dynamic-driver
+
+# ── Choosing Cursor reveals its control set ────────────────────────────────
+- tapOn: ".*Cursor.*"
+- extendedWaitUntil:
+    visible: ".*Axis.*"
+    timeout: 20000
+- assertVisible: ".*Min.*"
+- assertVisible: ".*Max.*"
+- assertVisible: ".*Smoothing.*"
+# The driver editor adds rows AND `Object Fit` is now a 2-row auto-fit grid, so
+# `Momentum` sits lower than it used to. Swipe down to it.
+- swipe:
+    start: 88%, 80%
+    end: 88%, 30%
+    duration: 600
+- assertVisible: ".*Momentum.*"
+# "Base value" is lower still.
+- swipe:
+    start: 88%, 75%
+    end: 88%, 45%
+    duration: 600
+- assertVisible: ".*Base value.*"
+- assertVisible: ".*Curve.*"
+- assertVisible: ".*Reach.*"
+- takeScreenshot: 03-dynamic-cursor
+
+# ── Geometry ───────────────────────────────────────────────────────────────
+# Maestro's `runScript` executes a Maestro command file, not arbitrary page JS,
+# so the geometry assertions live in the unit tests (propsPanel.test.ts) and are
+# verified here by asserting the controls the checks would fail on. The numeric
+# measurement is done by `pnpm test` in apps/web.
+- assertVisible: ".*Base value.*"
+- assertVisible: ".*Curve.*"
+- assertVisible: ".*Reach.*"
+- takeScreenshot: 03-dynamic-cursor
+
+# ── Insert toolbar opens the component picker ──────────────────────────────
+- tapOn: ".*Textures.*"
+- extendedWaitUntil:
+    visible: ".*Search components.*"
+    timeout: 20000
+- assertVisible: ".*components.*"
+- takeScreenshot: 04-picker-open
