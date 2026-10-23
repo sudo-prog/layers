@@ -128,7 +128,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -157,7 +161,11 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Verify license register exists
@@ -261,7 +269,11 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Build engine + cores (golden tests render the real pipeline)
