@@ -1,4 +1,4 @@
-import type { Document, SyncQueue, SyncOperation, SyncStatus } from './index.js';
+import type { Document, SyncQueue } from './index.js';
 
 /**
  * IndexedDBProvider

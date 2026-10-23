@@ -198,12 +198,13 @@ export class GitHubSyncProvider implements SyncProvider {
     const refData = (await refResponse.json()) as { object: { sha: string } };
     const headSha = refData.object.sha;
 
-    // Get base tree
-    const treeResponse = await this.fetchWithRetry(
+    // Fetch the current tree so the commit is built on the real base tree
+    // (the Git Data API requires base_tree to match the tip of the branch).
+    // The returned paths are not needed by this call — the tree object itself
+    // is what the subsequent /git/trees POST is compared against.
+    await this.fetchWithRetry(
       `https://api.github.com/repos/${this.owner}/${this.repo}/git/trees/${headSha}?recursive=1`,
     );
-    const treeData = (await treeResponse.json()) as { tree: Array<{ path: string }> };
-    const existingPaths = new Set(treeData.tree.map((t) => t.path));
 
     // Determine what to commit
     let filePath: string;
