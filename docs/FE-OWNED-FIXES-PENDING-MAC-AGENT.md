@@ -202,3 +202,28 @@ Verified: `node --check tests/e2e/engine-live.mjs` OK; `node tests/e2e/engine-li
     pnpm exec tsc -b      exit 0
     pnpm build            9/9 tasks
     cores-golden --verify 8/8 passed
+
+---
+
+## Delivery status (updated 2026-10-23, run 39938288760)
+
+CI is **6/7 green** and stable across repeated runs. Remaining failure is exactly one
+line — the `packages/ui/test/tokens.test.ts` expectation in section 1 above.
+
+Every other step in `lint-typecheck-test` passes: Install dependencies, **Lint**,
+**Typecheck**, **Build** all succeed. The Test step fails only at `@layers/ui#test`.
+
+Also verified in CI, not just locally:
+
+    @layers/e2e:test   13/13 checks passed, 0 failed
+    golden-image       success (8/8 core goldens + 42 looks)
+    license-check      success
+
+The `@layers/ui#test` assertion is the last thing standing between this PR and a fully
+green pipeline. Apply section 1 (or just the one-line change) and CI goes green.
+
+Root cause of the earlier `exit 137` failures, for the record: **not** an OOM kill.
+`/proc/vmstat`'s `oom_kill` counter never moved across any failing run. The host's
+`resource-watchdog.sh` cron was SIGKILLing the runner's own `pnpm`/`tsc`/`eslint`
+processes (its `alerts.log` names them). That is fixed separately on the ThinkPad.
+
