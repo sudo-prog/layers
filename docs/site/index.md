@@ -51,6 +51,8 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 | Document | Description |
 |----------|-------------|
 | [Headless GL CI](../research/headless-gl-ci.md) | Playwright + Chromium + SwiftShader setup for headless WebGL2 testing |
+| [CI Runner](../CI-RUNNER.md) | Self-hosted runner, the 7 jobs, and why CI was red from the first commit |
+| [FE-owned fixes pending](../FE-OWNED-FIXES-PENDING-MAC-AGENT.md) | Three verified fixes the Mac agent still needs to apply |
 
 ---
 
@@ -88,7 +90,7 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 
 | Suite | What it covers | How to run |
 |-------|----------------|------------|
-| Unit tests | All packages (326 JS + 257 Python = 583 total) | `pnpm test` |
+| Unit tests | All packages (447 JS + 257 Python = 704 total) | `pnpm test` |
 | Golden images | Per-core SSIM validation (8 fixtures) | CI `golden-image` job |
 | E2E browser | Live WebGL2 rendering, context loss, FPS | `pnpm build && node tests/e2e/*.mjs` |
 | License check | Dependency license allow-list | CI `license-check` job |
@@ -98,12 +100,24 @@ Welcome to the LAYERS documentation. This site is the canonical reference for ar
 
 ## 📊 CI Jobs
 
-1. **lint-typecheck-test** — TypeScript strict + lint + unit tests
-2. **license-check** — Cross-checks against `docs/licenses.md`
-3. **conflict-files** — Detects sync conflicts and `.env` files
-4. **ownership-check** — Enforces CODEOWNERS
-5. **python-test** — FastAPI + classical fallback + ranker + simplification (257 tests)
-6. **golden-image** — Playwright + Chromium + SwiftShader golden image validation
+Runs on the self-hosted ThinkPad runner (`vars.CI_RUNNER`; delete it to fall back to
+`ubuntu-latest`). Full detail in [CI-RUNNER](../CI-RUNNER.md).
+
+1. `changes` — path filter; skips untouched jobs
+2. **lint-typecheck-test** — ESLint + TypeScript strict + build + unit tests (Node 24)
+3. **license-check** — Cross-checks against `docs/licenses.md`
+4. **conflict-files** — Detects sync conflicts and `.env` files
+5. **ownership-check** — Enforces CODEOWNERS
+6. **python-test** — FastAPI + classical fallback + ranker + simplification (257 tests)
+7. **golden-image** — Playwright + Chromium + SwiftShader golden image validation
+
+The two memory-heavy jobs (`lint-typecheck-test`, `golden-image`) share a job-level
+`concurrency` group so only one runs at a time.
+
+**CI was red from the first commit** — the lint gate was silently broken (ESLint was never
+declared, no config existed) and 3 core goldens were stale. Both fixed in PR #18.
+See [CI-RUNNER](../CI-RUNNER.md) for the full story, including why `exit 137` was a
+watchdog kill and not an OOM kill.
 
 ---
 

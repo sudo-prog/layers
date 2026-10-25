@@ -17,7 +17,7 @@
 - Check that all dependencies are installed: `pnpm install`
 
 ### Tests fail
-- JS tests: `pnpm test` (Vitest, 326 tests)
+- JS tests: `pnpm test` (Vitest, 447 tests)
 - Python tests: `cd services/ai && python -m pytest` (257 tests)
 - Golden images: `pnpm test:golden` (Playwright + Chromium)
 - If tests fail after a pull, try `pnpm install` first
