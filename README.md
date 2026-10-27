@@ -148,6 +148,7 @@ surface is built around a layer tree and a full-canvas workspace.
 - `docs/design-graphite.md` — The graphite glass design system: tokens, every measurement behind them, the load-bearing constraints.
 - `docs/research/layers-studio-design-system.md` — The studio design system proposal: radius ladder, warm accent, and menus that slide from underneath the canvas plane. Artifact: `docs/research/layers-studio-design-system.html`.
 - `docs/research/layers-warm-radius-mockups.md` — Mockups in the warm-radius / glass style: a shell with 52px corners on a warm gradient, a dense control deck beside an atmospheric visual, and the live menu motion. Artifact: `docs/research/layers-warm-radius-mockups.html`.
+- `docs/research/layers-canvas-over-panels.md` — **Canvas-as-window design.** The bright canvas sits in front as a lit opening, with the black chrome laid on top of it; the panels use the same black as the base so there is no seam; no top bar. Artifact: `docs/research/layers-canvas-over-panels.html`.
 
 **Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
