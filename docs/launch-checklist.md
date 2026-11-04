@@ -14,8 +14,8 @@ Complete every item before advancing from Stage 2.5. A red ❌ blocks launch.
 
 | Gate | Threshold | Status | Evidence |
 |------|-----------|--------|----------|
-| Static (TS strict, lint clean) | Zero errors | ✅ | `pnpm build` 8/8 tasks + `tsc --noEmit` clean |
-| Unit tests | ≥80% schema/stack/sync, ≥70% else | ✅ | 326/326 JS + 257/257 Python = 583 total |
+| Static (TS strict, lint clean) | Zero errors | ✅ | `pnpm build` 9/9 tasks + `tsc -b` clean |
+| Unit tests | ≥80% schema/stack/sync, ≥70% else | ✅ | 447/447 JS + 257/257 Python = 704 total |
 | Visual regression (golden SSIM) | Per-core SSIM ≥ 0.98 | ✅ | 8/8 per-core golden checks, SSIM 1.0000 |
 | Cross-browser smoke | Chromium, WebKit, Firefox | ⬜ | Deferred — private use, single browser (Chromium) |
 | Performance — desktop | No regression > 5% | ⬜ | Deferred — no baseline established |

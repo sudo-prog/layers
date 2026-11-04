@@ -1,5 +1,23 @@
 # LAYERS — Session Handoff (2026-10-22)
 
+> **⚠️ SUPERSEDED — read this first (2026-10-23).**
+>
+> This document's central action items are **resolved**. Kept for the technical detail
+> in §4–§6, which is still accurate and useful.
+>
+> | Original premise | Actual state (2026-10-23) |
+> |--|--|
+> | `main` has **unrelated histories** with `feat/layers-desktop`; force-push would destroy 987 lines | **Resolved.** `16fc614 merge: unify LAYERS histories (main + feat/layers-desktop)` landed on `main`. `apps/LAYERS_DESKTOP` is present. |
+> | `feat/layers-desktop` needs pushing; PR never opened | **Done.** The desktop surface is merged into `main`. |
+> | §2's push instructions | **Do not follow.** Moot. |
+> | GitHub token rotation | Verify, don't assume: re-run the grep in §1. |
+>
+> **Current open work** is on `ci/fix-lint-and-golden-baselines` (PR #18) — see
+> `docs/CI-RUNNER.md`. CI is 6/7 green; the last red is one FE-owned line in
+> `packages/ui/test/tokens.test.ts` (handoff: `docs/FE-OWNED-FIXES-PENDING-MAC-AGENT.md`).
+
+---
+
 **Written by:** AIR HERMES (MacBook Air) · **For:** the next session, on either machine
 **Repo:** `~/Data/20_Projects/20.34_LAYERS` · **Branch:** `main` (local), 9 commits ahead of remote `main`
 

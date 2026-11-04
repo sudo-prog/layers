@@ -8,6 +8,18 @@ on:
   workflow_dispatch:
 
 # Cancel superseded runs on the same ref — saves runner minutes on rapid pushes.
+#
+# NOTE: this group only cancels runs SUPERSEDED by a newer push. It does NOT
+# serialise jobs WITHIN one run — GitHub runs every job of a run in parallel
+# by default. On this 4-core / ~8 GB / 4 GB-swap runner that means
+# `lint-typecheck-test` (pnpm build + turbo test) and `golden-image`
+# (pnpm install + Chromium download) can run at the same instant and exhaust
+# RAM, getting SIGKILL'd (exit 137):
+#   06:57:10  lint-typecheck-test  @layers/web#build exited (137)
+#   06:58:03  golden-image         Killed pnpm install (137)
+#   06:58:15  license-check        died at startup, zero steps (137)
+# Serialisation is therefore enforced per-job with the `concurrency:` blocks
+# below, which is the only mechanism that stops two jobs colliding.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -115,6 +127,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.js == 'true'
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    # Serialise against the other heavy jobs on this small runner. GitHub runs
+    # all jobs of a run in parallel; without this the tsc builds here race the
+    # pnpm install + Chromium download in golden-image and both get OOM-killed.
+    concurrency:
+      group: runner-heavy-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,7 +146,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -157,7 +179,11 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Verify license register exists
@@ -254,6 +280,11 @@ jobs:
     needs: changes
     if: needs.changes.outputs.golden == 'true'
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '["ubuntu-latest"]') }}
+    # Same group as lint-typecheck-test: the Chromium download here is what
+    # collided with that job's tsc builds.
+    concurrency:
+      group: runner-heavy-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -261,7 +292,11 @@ jobs:
           version: 9.15.9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom@30 requires Node ^22.22.2 || ^24.15.0 || >=26.0.0 and its
+          # undici@8 dependency requires >=22.19.0 (worker_threads.markAsUncloneable,
+          # added in Node 22.10). Node 20 fails at import with
+          # 'TypeError: webidl.util.markAsUncloneable is not a function'.
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Build engine + cores (golden tests render the real pipeline)

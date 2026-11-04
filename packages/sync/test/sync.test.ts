@@ -219,7 +219,7 @@ function setupSuccessfulCommitFetch(fetchMock: ReturnType<typeof vi.fn>) {
     if (url.includes('/git/blobs')) {
       return Response.json({ sha: 'blob-sha' });
     }
-    if (url.match(/\/api\.github\.com\/repos\/[^\/]+\/[^\/]+\/git\/trees$/)) {
+    if (url.match(/api\.github\.com\/repos\/[^/]+\/[^/]+\/git\/trees$/)) {
       return Response.json({ sha: 'tree-sha' });
     }
     if (url.includes('/git/commits')) {
@@ -418,7 +418,7 @@ describe('GitHubSyncProvider', () => {
       if (url.includes('/git/blobs')) {
         return Response.json({ sha: 'blob-sha' });
       }
-      if (url.match(/\/api\.github\.com\/repos\/[^\/]+\/[^\/]+\/git\/trees$/)) {
+      if (url.match(/api\.github\.com\/repos\/[^/]+\/[^/]+\/git\/trees$/)) {
         return Response.json({ sha: 'tree-sha' });
       }
       if (url.includes('/git/commits')) {

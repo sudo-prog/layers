@@ -94,7 +94,7 @@ the mobile shell is built around one stack and a bottom tab bar; the desktop
 surface is built around a layer tree and a full-canvas workspace.
 
 
-## Project Status (2026-10-19)
+## Project Status (2026-10-23)
 
 **Phase:** 0.1 (Setup & decisions) — **COMPLETE**
 **Phase:** 0.7 (Eval harness) — **COMPLETE** (metrics.js + curate-benchmark.js + benchmark pipeline green)
@@ -132,7 +132,7 @@ surface is built around a layer tree and a full-canvas workspace.
 - services/learning: README ✅
 
 ### Frontend (FE) — Stage 0.2/0.3/0.4 foundation + web app
-- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. **Shader compile cache** (localStorage) + **adaptive quality** (EMA FPS monitor) + **WebGPU parity** (detection + context). 54 tests.
+- `@layers/engine` — WebGL2 context manager (context-loss recovery), ping-pong FBOs, pass interface, blend composite (16 modes), multi-pass Renderer with **program cache** and per-pass opacity propagation. **Shader compile cache** (localStorage) + **adaptive quality** (EMA FPS monitor) + **WebGPU parity** (detection + context). 99 tests.
 - `@layers/cores` — **All 7 cores** with real GLSL: Pattern/Dither, Noise/Grain, Blur, Displacement, Color/Blend, Lighting, Outline. Cores 1–2 vendor **Paper Shaders** (Apache-2.0) — real Bayer matrices, `getBayerValue()`, simplex noise. 40 tests (33 unit + 7 cross-core composition).
 - `@layers/stack` — Effect stack state management (add/remove/update/move/toggle/select), pass estimation, mobile budget check. 11 tests.
 - `@layers/ui` — Design tokens (color/spacing/typography/motion), CSS variable generation, WCAG AA contrast checking, light/dark themes. 9 tests.
@@ -143,9 +143,12 @@ surface is built around a layer tree and a full-canvas workspace.
 - `tests/golden-infra/scripts/cores-golden.js` — Per-core golden images rendered through the **real** engine+cores pipeline, with an **effect-presence guard** that catches shaders which silently no-op. 8 fixtures, SSIM 1.0000.
 - `third_party/paper-design-shaders/` — Vendored Paper Shaders v0.0.81 with LICENSE, NOTICE, and PROVENANCE.md.
 - `docs/EFFICIENCY-LEDGER.md` — Pass/param/look/ms accounting + Simplification Gate verdict + bundle size audit.
+- `docs/CI-RUNNER.md` — The CI pipeline as it is: the 7 jobs, the self-hosted runner + kill switch, the two defects that made CI red from the first commit, and why `exit 137` was a watchdog kill rather than an OOM kill.
+- `docs/FE-OWNED-FIXES-PENDING-MAC-AGENT.md` — Three verified FE-owned fixes (ui test expectation, dead web debug code, e2e launch retry) that the pre-commit hook blocks from this machine.
 - `docs/design-graphite.md` — The graphite glass design system: tokens, every measurement behind them, the load-bearing constraints.
 - `docs/research/layers-studio-design-system.md` — The studio design system proposal: radius ladder, warm accent, and menus that slide from underneath the canvas plane. Artifact: `docs/research/layers-studio-design-system.html`.
 - `docs/research/layers-warm-radius-mockups.md` — Mockups in the warm-radius / glass style: a shell with 52px corners on a warm gradient, a dense control deck beside an atmospheric visual, and the live menu motion. Artifact: `docs/research/layers-warm-radius-mockups.html`.
+- `docs/research/layers-canvas-over-panels.md` — **Canvas-as-window design.** The bright canvas sits in front as a lit opening, with the black chrome laid on top of it; the panels use the same black as the base so there is no seam; no top bar. Artifact: `docs/research/layers-canvas-over-panels.html`.
 
 **Note on FPS:** The e2e benchmark uses `readPixels` as its GPU sync primitive because `gl.finish()` is a no-op in Chromium/SwiftShader builds (returns immediately without waiting for the rasteriser). Numbers are a CPU-rasterisation lower bound; the Stage 0.2 gate (8-pass >= 30 fps @ 1536px on reference phone) requires real hardware.
 
@@ -156,13 +159,30 @@ surface is built around a layer tree and a full-canvas workspace.
 - T-M-004: Graphite license/trademark/repo strategy ✅
 - T-M-005: Core 8 Relief v0
 
-### CI Jobs (6)
-1. lint-typecheck-test
-2. license-check (cross-checks against docs/licenses.md)
-3. conflict-files (sync-conflict + .env detection)
-4. ownership-check (CODEOWNERS enforcement)
-5. python-test (257 tests, FastAPI + classical fallback + ranker + simplification)
-6. golden-image (Playwright + Chromium + SwiftShader)
+### CI Jobs (7)
+
+`.github/workflows/ci.yml` — one workflow, seven jobs. Runs on the **self-hosted ThinkPad
+runner** by default (`vars.CI_RUNNER` = `["self-hosted","linux","x64"]`); deleting that
+repo variable falls back to `ubuntu-latest`.
+
+1. `changes` — path filter; computes which areas moved and skips untouched jobs
+2. `lint-typecheck-test` — lint + `tsc -b` + build + unit tests (Node 24)
+3. `license-check` — BLOCKED-license scan + cross-check against `docs/licenses.md`
+4. `conflict-files` — sync-conflict and `.env` detection
+5. `ownership-check` — CODEOWNERS enforcement (`.github/scripts/ownership-check.sh`)
+6. `python-test` — 257 tests (FastAPI + classical fallback + ranker + simplification)
+7. `golden-image` — Playwright + Chromium + SwiftShader; 8 core goldens + 42 multi-look checks
+
+**Concurrency (added 2026-10-23).** `lint-typecheck-test` and `golden-image` share a
+job-level group `runner-heavy-<ref>` so only one heavy job runs at a time. The
+workflow-level group (`ci-<ref>`, `cancel-in-progress: true`) only cancels runs
+superseded by a newer push — it does **not** stop two jobs of the same run racing. See
+`docs/CI-RUNNER.md` for why this was necessary.
+
+**CI was red from the first commit.** ESLint was never declared as a dependency and no
+config file existed, so `eslint .` resolved to whatever was on PATH and died with
+"couldn't find an eslint.config.(js|mjs|cjs) file". Three core goldens were stale against
+the `bee8d84` renderer changes. Both were fixed in PR #18 — see `docs/CI-RUNNER.md`.
 
 ### Key Decisions
 - Graphite: reference-only (no fork, dual MIT/Apache-2.0)
@@ -175,15 +195,16 @@ surface is built around a layer tree and a full-canvas workspace.
 - Rate limiting: 60 req/min per IP for compute-heavy endpoints
 - Anonymization salt: env-sourced (LAYERS_ANON_SALT)
 
-### Tests (verified 2026-10-19)
-- **326/326 JS unit tests passing** (8 packages: web 155, schema 54, sync 46, engine 54, cores 40, stack 11, vector 11, ui 9)
+### Tests (verified 2026-10-23)
+- **447/447 JS unit tests passing** across 9 packages: web 155, engine 99, schema 54,
+  sync 46, cores 40, desktop 22, stack 11, vector 11, ui 9
 - **257/257 Python tests passing** (19 test files: classical fallback, ranker, simplification, events, retrieval, mock AI, search, extract, health, multiscale)
 - 3/3 golden-image fixtures passing (legacy)
 - 8/8 per-core golden checks passing (SSIM 1.0000, effect-presence guard on)
 - **42/42 multi-look checks passing — Stage 0.3 gate: >= 6 distinct looks per core, all 7 cores**
 - 13/13 live browser checks passing (tests/e2e)
-- pnpm build: 8/8 tasks successful
-- pnpm test: 17/17 turbo tasks successful
+- pnpm build: 9/9 tasks successful
+- pnpm test: 19/19 turbo tasks successful
 
 ### Bundle Size
 | Component | Gzipped | Gate | Status |
@@ -200,8 +221,14 @@ surface is built around a layer tree and a full-canvas workspace.
 - **Stage 2.5:** closed beta (100 users), staged rollout, rollback drill execution — pending (private personal use until out of beta)
 
 ### Commits
-- 20+ commits on main (2026-10-07 → 2026-10-19)
-- Merged PRs: #9 (Stage 1.5), #10 (Stage 1.6), #12 (Stages 2.3/2.4), #14 (Stage 2.2)
+- 20+ commits on main (2026-10-07 → 2026-10-23)
+- Merged PRs: #2, #4–#16 (Stages 1.5, 1.6, 2.2, 2.3, 2.4 and their doc follow-ups)
+- **Open:** #18 (`ci/fix-lint-and-golden-baselines`) — restores the lint gate, regenerates
+  3 stale goldens, fixes the Node 20→24 mismatch, caps turbo concurrency, serialises the
+  heavy CI jobs. CI is 6/7 green; the last red is a one-line FE-owned test expectation
+  (`packages/ui/test/tokens.test.ts`). See `docs/CI-RUNNER.md` and
+  `docs/FE-OWNED-FIXES-PENDING-MAC-AGENT.md`.
+- **Open:** #17 (dependabot: vite 5 → 6)
 
 ### Project Location
 - **Code (ThinkPad):** `/home/thinkpad/Data/20_Projects/20.34_LAYERS/`

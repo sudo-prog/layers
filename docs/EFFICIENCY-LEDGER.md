@@ -1,5 +1,11 @@
 # Efficiency Ledger
 
+> **Counts in this file are historical snapshots, not current.** It records the
+> state at each stage it describes. For the current totals see `README.md`
+> (verified 2026-10-23): **447 JS tests** (9 packages) + **257 Python tests**.
+> The figures below understate the current totals because stages have landed
+> since they were written.
+>
 > **Philosophy: DO MORE WITH LESS.** Every change removes, merges, or justifies
 > complexity and reports its delta here.
 >
