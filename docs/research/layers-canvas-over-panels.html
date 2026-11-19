@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAYERS Desktop — canvas over panels</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYERS DESKTOP — CANVAS OVER PANELS
+
+   Four layers, bottom to top:
+     1. black            the base layer, fills everything
+     2. side panels      sit ON the black, at the left and right edges
+     3. canvas           sits ON TOP of the panels, centred, overlapping them
+     4. pill toolbar     on the canvas, bottom centre
+
+   So the canvas overlaps the panels. The panels show only as strips at the
+   edges; their rounded corners face INWARD toward the canvas. The black shows
+   around everything.
+
+   The panels collapse to a thin black navbar — icons only.
+
+   Tokens are the graphite system's. `apps/LAYERS_DESKTOP` is untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"] {
+  /* Graphite system, unchanged. */
+  --bg-primary: #0a0b0d;      /* layer 1 — the black base */
+  --bg-secondary: #101215;
+  --bg-tertiary: #16191d;
+  --bg-raised: #1c2026;
+  --border: #262b33;
+  --border-strong: #363c46;
+
+  --text-primary: #f2f4f7;
+  --text-secondary: #9aa3af;
+  --text-tertiary: #8b95a3;
+
+  --accent: #7aa2ff;
+  --accent-hover: #9ab8ff;
+
+  --panel-alpha: 0.74;
+  --chrome-alpha: 0.80;
+  --glass-blur: 32px;
+  --glass-saturate: 1.25;
+  --glass-brightness: 0.45;
+  --surface-panel: rgb(16 18 21 / 0.74);
+  --surface-chrome: rgb(10 11 13 / 0.80);
+
+  /* ── The radius ladder — the one addition. ────────────────────────────
+     The canvas is the hero surface, so it takes the large radius. The panels
+     are behind it and their corners face inward, so they take a smaller one —
+     and the panel corner must be SMALLER than the canvas corner, or the two
+     curves read as one broken edge instead of as two nested surfaces. */
+  --r-shell: 20px;      /* the whole app */
+  --r-canvas: 28px;
+  --r-panel: 20px;
+  --r-row: 8px;
+  --r-control: 6px;
+  --r-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+
+  --duration-fast: 130ms;
+  --duration: 220ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* The black frame. This is the strip of base that shows between a panel and
+     the canvas — the canvas's box starts this far past the panel's inner edge,
+     so what sits between them is the black base, not a border. */
+  --gap: 12px;
+  --panel-left-w: 240px;
+  --panel-right-w: 288px;
+  --topbar-h: 44px;
+  --nav-w: 56px;      /* the collapsed navbar */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.45;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+.icon { width: 16px; height: 16px; flex: 0 0 auto; color: currentColor; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+
+/* The app is one rounded black surface running to the edge. The body of the
+   document is inset so the rounding is actually visible against the desktop. */
+html, body { padding: 0; }
+body { background: #000; }
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  border-radius: var(--r-shell);
+  overflow: hidden;   /* the rounded corners clip the children */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAYER 1 — the black base
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* The base IS the app surface — the same black the panels use, so the boundary
+   between a panel and the black around it is invisible. Any tint or wash here
+   creates a step, and a step reads as a seam. */
+.base {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--bg-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE BODY — panels behind, canvas on top
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  z-index: 1;
+  /* The frame is the 12px of black between a panel and the canvas. It must be
+     the SAME black as the app surface — if this element is transparent, the
+     frame's owner is whatever is behind it and any tonal difference reads as a
+     line at the canvas edge. */
+  background: var(--bg-primary);
+}
+
+/* ── LAYER 2 — the side panels. BEHIND the canvas. ────────────────────────
+   The panel's inner edge (the one the canvas overlaps) carries the radius, so
+   its corner faces INWARD toward the canvas. The outer edge is square and runs
+   to the window edge. */
+.panel {
+  /* SAME VALUE AS THE BASE. A faint tint was leaving a brightness step at the
+     panel/black boundary — a seam. Identical values mean no step, so the panel
+     and the black read as one continuous surface and the only thing separating
+     them is content. */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+.panel-left  { left: 0;  width: var(--panel-left-w); }
+.panel-right { right: 0; width: var(--panel-right-w); }
+
+/* ── Collapsed: the panel becomes a thin black navbar, icons only. ──────── */
+.panel.is-collapsed { width: var(--nav-w); background: var(--bg-primary); border: 0; }
+.panel.is-collapsed .panel-title,
+.panel.is-collapsed .tree-list,
+.panel.is-collapsed .inspector,
+.panel.is-collapsed .panel-footer { display: none; }
+
+/* The strip the top bar's contents moved into. Deliberately quiet: no
+   background of its own, so it does not reintroduce a seam against the black. */
+.panel-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) 0;
+  min-width: 0;
+}
+.strip-sep { width: 1px; height: 14px; background: var(--border); }
+.strip-name {
+  font: inherit; font-size: var(--text-xs); color: var(--text-secondary);
+  padding: 2px var(--space-2); border-radius: var(--r-control);
+  white-space: nowrap;
+}
+.strip-name:hover { background: rgb(255 255 255 / 0.05); color: var(--text-primary); }
+.strip-chip {
+  font: inherit; font-size: var(--text-xs); color: var(--text-tertiary);
+  padding: 2px var(--space-2); border-radius: var(--r-control);
+  white-space: nowrap;
+}
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.panel-title {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-tertiary);
+}
+
+.collapse-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: var(--r-control); color: var(--text-tertiary);
+}
+.collapse-btn:hover { background: rgb(255 255 255 / 0.06); color: var(--text-primary); }
+.collapse-btn .icon { width: 13px; height: 13px; transition: transform var(--duration) var(--ease); }
+.panel.is-collapsed .collapse-btn .icon { transform: rotate(180deg); }
+
+/* The collapsed navbar's icon list */
+.rail-icons {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+.panel.is-collapsed .rail-icons { display: flex; }
+
+.rail-icon-btn {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: var(--r-row);
+  color: var(--text-tertiary);
+}
+.rail-icon-btn:hover { background: rgb(255 255 255 / 0.06); color: var(--text-primary); }
+.rail-icon-btn.is-active { color: var(--accent); background: rgb(122 162 255 / 0.14); }
+
+.tree { display: flex; flex-direction: column; }
+.tree-grow { flex: 1; min-height: 0; }
+.tree-list {
+  padding: 0 var(--space-2) var(--space-2);
+  display: flex; flex-direction: column; gap: 1px;
+  overflow-y: auto; min-height: 0;
+}
+
+.tree-row {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%; padding: 5px var(--space-2);
+  font: inherit; font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border-radius: var(--r-row);
+  min-width: 0;
+}
+.tree-row:hover { background: rgb(255 255 255 / 0.05); color: var(--text-primary); }
+.tree-row.is-active { background: rgb(122 162 255 / 0.16); color: var(--text-primary); }
+.tree-row.is-active .tree-row-icon { color: var(--accent); }
+.tree-row-icon { display: inline-flex; color: var(--text-tertiary); }
+.tree-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-row.is-hidden .tree-row-name { opacity: 0.45; text-decoration: line-through; }
+
+.panel-footer {
+  margin-top: auto;
+  display: flex; justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs); font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.inspector { padding: 0 var(--space-3) var(--space-6); overflow-y: auto; min-height: 0; }
+
+.insp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-2); padding: var(--space-2) var(--space-1) var(--space-3);
+}
+.insp-title { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; color: var(--accent); min-width: 0; }
+.insp-icon { display: inline-flex; color: var(--accent); }
+.insp-actions { display: flex; gap: 2px; flex: 0 0 auto; }
+
+.prop-section { border-top: 1px solid var(--border); }
+.section-head {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%; padding: var(--space-2) var(--space-1);
+  font: inherit; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-tertiary); background: none; border: 0;
+}
+.section-head:hover { color: var(--text-secondary); }
+.section-body { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--space-3); }
+
+.ctl { display: flex; align-items: center; gap: var(--space-2); min-height: 32px; min-width: 0; }
+.ctl-label {
+  flex: 0 0 88px; font-size: var(--text-xs); color: var(--text-tertiary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ctl-range { flex: 1; min-width: 0; height: 18px; accent-color: var(--accent); background: transparent; }
+.ctl-value {
+  flex: 0 0 46px; text-align: right; font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums; color: var(--text-secondary); white-space: nowrap;
+}
+.ctl-select {
+  flex: 1; min-width: 0; font: inherit; font-size: var(--text-xs);
+  color: var(--text-primary); background: var(--bg-tertiary);
+  border: 1px solid var(--border); border-radius: var(--r-control);
+  padding: 4px var(--space-2);
+}
+.ctl-toggle {
+  flex: 0 0 auto; width: 34px; height: 20px;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--bg-tertiary); position: relative;
+}
+.ctl-toggle-knob {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease);
+}
+.ctl-toggle.is-on { background: var(--accent); border-color: var(--accent); }
+.ctl-toggle.is-on .ctl-toggle-knob { background: #fff; transform: translateX(14px); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAYER 3 — the canvas. ON TOP of the panels.
+
+   It is a rounded card that overlaps both panels, so the panels show only as
+   strips at the edges. Its corners face the panels on every side.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* The canvas is a ROUND WINDOW. The bright canvas surface is painted first,
+   full-bleed, and the black is laid ON TOP of it with a hole cut in the middle
+   — so the black is what frames the window, and the canvas reads as floating in
+   front. A raised card with a shadow would read as a panel sitting on the black;
+   this is the opposite: the black is on top, and the canvas is what shows through.
+
+   The hole is the four insets below; the frame is the black around them. */
+.canvas-card {
+  position: absolute;
+  z-index: 2;
+  top: var(--gap);
+  bottom: var(--gap);
+  left: calc(var(--panel-left-w) + var(--gap));
+  right: calc(var(--panel-right-w) + var(--gap));
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-canvas);
+  overflow: hidden;
+  /* A BRIGHT surface. This is the thing that reads as "floating in front" —
+     the dark chrome around it is what makes it a window rather than a panel.
+     The luminance has to be clearly above the surrounding chrome or the window
+     does not read; the previous pass was only marginally lighter and read as
+     another panel. */
+  background: linear-gradient(160deg, #6b7787 0%, #525c6b 52%, #5f6a79 100%);
+  /* NO BORDER. On a bright surface a 1px light border is the brightest thing in
+     the app, so it drew a hard vertical line exactly where the panel meets the
+     canvas — a seam. The canvas is defined by its own luminance against the
+     black around it, not by an outline. */
+}
+
+/* When a panel collapses to a navbar, the black frame gets narrower and the
+   window widens to reclaim the difference. */
+.canvas-card.nav-left  { left: calc(var(--nav-w) + var(--gap)); }
+.canvas-card.nav-right { right: calc(var(--nav-w) + var(--gap)); }
+
+/* On the bright canvas the chrome text inverts: dark on light, or it disappears. */
+.canvas-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgb(0 0 0 / 0.14);
+  font-size: var(--text-xs); color: rgb(0 0 0 / 0.58);
+  font-weight: 500;
+}
+
+.canvas-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* The ambient wash, so the canvas always has a gradient. */
+  background:
+    radial-gradient(120% 90% at 12% 4%, rgb(122 162 255 / 0.30) 0%, transparent 58%),
+    radial-gradient(100% 80% at 96% 96%, rgb(122 162 255 / 0.22) 0%, transparent 60%),
+    linear-gradient(160deg, #7c8898 0%, #5d6775 100%);
+}
+
+.frame {
+  width: min(340px, 60%);
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-row);
+  overflow: hidden;
+  box-shadow: 0 16px 40px -10px rgb(0 0 0 / 0.6);
+  background: linear-gradient(155deg, #1a1e23 0%, #12151a 55%, #181c21 100%);
+}
+.frame-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; width: 100%; height: 100%; opacity: 0.5; }
+.frame-grid i { background: rgba(255,255,255,0.05); }
+
+.canvas-readout {
+  position: absolute; bottom: var(--space-2); left: var(--space-3);
+  font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: rgb(0 0 0 / 0.48);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAYER 4 — the pill toolbar, on the canvas
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.insert-host {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+.insert-host > * { pointer-events: auto; }
+
+.insert-bar {
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  border: 1px solid rgb(0 0 0 / 0.28);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.06);
+  border-radius: var(--r-pill);
+  background: var(--surface-chrome);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.55);
+}
+
+.insert-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 var(--space-3);
+  font: inherit; font-size: var(--text-xs); color: var(--text-secondary);
+  border-radius: var(--r-pill); white-space: nowrap; flex: 0 0 auto;
+}
+.insert-btn:hover { background: rgb(255 255 255 / 0.06); color: var(--text-primary); }
+.insert-btn-label { white-space: nowrap; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE RADIUS SWITCH
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.radius-bar {
+  position: fixed; right: var(--space-5); bottom: var(--space-5);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-row);
+  background: var(--surface-chrome);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 24px 60px -12px rgb(0 0 0 / 0.75);
+  z-index: 50;
+}
+.radius-bar-title { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); }
+.radius-group { display: flex; gap: 4px; }
+.radius-btn {
+  padding: 5px var(--space-3); border-radius: var(--r-control);
+  font-size: var(--text-xs); color: var(--text-secondary); border: 1px solid var(--border);
+}
+.radius-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.radius-btn[aria-pressed="true"] { background: rgb(122 162 255 / 0.16); color: var(--accent); border-color: var(--accent); }
+
+/* Collapse toggle in the bar too, so the navbar state is reachable. */
+.nav-btn {
+  padding: 5px var(--space-3); border-radius: var(--r-control);
+  font-size: var(--text-xs); color: var(--text-secondary); border: 1px solid var(--border);
+}
+.nav-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.nav-btn[aria-pressed="true"] { background: rgb(122 162 255 / 0.16); color: var(--accent); border-color: var(--accent); }
+
+@media (max-width: 1180px) {
+  :root { --panel-left-w: 200px; --panel-right-w: 248px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="base" aria-hidden="true"></div>
+
+  <div class="body">
+
+    <!-- ══ LAYER 2 — the panels, BEHIND ══ -->
+    <aside class="panel panel-left" id="rail-left">
+      <!-- The top bar is gone. Its contents come down into the panel: project
+           name, resolution, colour pipeline. Kept as one quiet strip so the
+           panel top edge is where the app top edge is. -->
+      <div class="panel-strip">
+        <span class="logo">LAYERS</span>
+        <span class="strip-sep" aria-hidden="true"></span>
+        <button class="strip-name">Untitled</button>
+        <span class="strip-chip">1920 × 1080</span>
+      </div>
+
+      <div class="panel-head">
+        <span class="panel-title">Shaders</span>
+        <button class="collapse-btn" data-rail="rail-left" aria-expanded="true" aria-controls="rail-left" title="Collapse panel">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+          <span class="sr-only">Collapse Shaders panel</span>
+        </button>
+      </div>
+
+      <div class="rail-icons">
+        <button class="rail-icon-btn is-active" aria-label="Shaders"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg><span class="sr-only">Shaders</span></button>
+        <button class="rail-icon-btn" aria-label="Layers"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16"/></svg><span class="sr-only">Layers</span></button>
+        <button class="rail-icon-btn" aria-label="Library"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5Z"/></svg><span class="sr-only">Library</span></button>
+        <button class="rail-icon-btn" aria-label="History"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span class="sr-only">History</span></button>
+      </div>
+
+      <div class="tree-list">
+        <button class="tree-row is-active">
+          <span class="tree-row-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 14 9 5 9-5"/></svg></span>
+          <span class="tree-row-name">Untitled</span>
+        </button>
+      </div>
+
+      <div class="panel-title" style="padding:0 16px 6px">Layers</div>
+      <div class="tree-list tree-grow">
+        <button class="tree-row is-active">
+          <span class="tree-row-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/></svg></span>
+          <span class="tree-row-name">Pattern/Dither</span>
+        </button>
+        <button class="tree-row">
+          <span class="tree-row-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg></span>
+          <span class="tree-row-name">Noise/Grain</span>
+        </button>
+      </div>
+
+      <footer class="panel-footer"><span>4 passes</span><span>120 fps</span></footer>
+    </aside>
+
+    <aside class="panel panel-right" id="rail-right">
+      <div class="panel-strip">
+        <span class="strip-chip is-static">P3 Linear</span>
+        <span class="strip-chip is-static">ACES</span>
+      </div>
+
+      <div class="panel-head">
+        <span class="panel-title">Props</span>
+        <button class="collapse-btn" data-rail="rail-right" aria-expanded="true" aria-controls="rail-right" title="Collapse panel">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="sr-only">Collapse Props panel</span>
+        </button>
+      </div>
+
+      <div class="rail-icons">
+        <button class="rail-icon-btn is-active" aria-label="Props"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg><span class="sr-only">Props</span></button>
+        <button class="rail-icon-btn" aria-label="Blend"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg><span class="sr-only">Blend</span></button>
+        <button class="rail-icon-btn" aria-label="Mask"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18"/></svg><span class="sr-only">Mask</span></button>
+      </div>
+
+      <div class="inspector">
+        <div class="insp-head">
+          <span class="insp-title">
+            <span class="insp-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg></span>
+            Noise/Grain
+          </span>
+          <span class="insp-actions">
+            <button class="icon-btn" aria-label="Move layer up"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+            <button class="icon-btn" aria-label="Delete layer"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+          </span>
+        </div>
+
+        <section class="prop-section">
+          <button class="section-head"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>Transform</button>
+          <div class="section-body">
+            <div class="ctl"><span class="ctl-label">Opacity</span><input class="ctl-range" type="range" min="0" max="100" value="100"><span class="ctl-value">100</span></div>
+          </div>
+        </section>
+
+        <section class="prop-section">
+          <button class="section-head"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>Appearance</button>
+          <div class="section-body">
+            <div class="ctl"><span class="ctl-label">Blend</span><select class="ctl-select"><option>Normal</option><option>Multiply</option><option>Screen</option></select></div>
+            <div class="ctl"><span class="ctl-label">Monochrome</span><span class="ctl-toggle is-on" role="switch" aria-checked="true" tabindex="0"><span class="ctl-toggle-knob"></span></span></div>
+          </div>
+        </section>
+
+        <section class="prop-section">
+          <button class="section-head"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>Noise/Grain</button>
+          <div class="section-body">
+            <div class="ctl"><span class="ctl-label">Scale</span><input class="ctl-range" type="range" min="1" max="100" value="20"><span class="ctl-value">20</span></div>
+            <div class="ctl"><span class="ctl-label">Octaves</span><input class="ctl-range" type="range" min="1" max="8" value="3"><span class="ctl-value">3</span></div>
+            <div class="ctl"><span class="ctl-label">Strength</span><input class="ctl-range" type="range" min="0" max="100" value="30"><span class="ctl-value">0.3</span></div>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ══ LAYER 3 — the canvas, ON TOP ══ -->
+    <main class="canvas-card" id="canvas-card">
+      <div class="canvas-head">
+        <span>Canvas · 1920 × 1080</span>
+        <span style="margin-left:auto">P3 Linear</span>
+      </div>
+      <div class="canvas-body">
+        <div class="frame">
+          <div class="frame-grid" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="canvas-readout">4 passes · 120 fps · 12 ms</div>
+
+        <!-- ══ LAYER 4 — the pill toolbar ══ -->
+        <div class="insert-host">
+          <div class="insert-bar">
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/></svg><span class="insert-btn-label">Textures</span></button>
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg><span class="insert-btn-label">Adjustments</span></button>
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity="0.5"/></svg><span class="insert-btn-label">Blurs</span></button>
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c3 0 3 6 6 6s3-6 6-6 3 6 6 6"/></svg><span class="insert-btn-label">Distortions</span></button>
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg><span class="insert-btn-label">Light</span></button>
+            <button class="insert-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg><span class="insert-btn-label">Edges</span></button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<div class="radius-bar" role="group" aria-label="Canvas radius">
+  <span class="radius-bar-title">Radius</span>
+  <div class="radius-group">
+    <button class="radius-btn" data-radius="16" aria-pressed="false">16</button>
+    <button class="radius-btn" data-radius="28" aria-pressed="true">28</button>
+    <button class="radius-btn" data-radius="44" aria-pressed="false">44</button>
+  </div>
+  <span class="radius-bar-title" style="margin-left:8px">Panels</span>
+  <button class="nav-btn" data-nav="expanded" aria-pressed="true">Expanded</button>
+  <button class="nav-btn" data-nav="collapsed" aria-pressed="false">Navbar</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var card = document.getElementById("canvas-card");
+
+  /* ── Radius. The canvas is the hero surface, so it takes the large value;
+     the panels step down. The panel radius must stay SMALLER than the canvas
+     radius, or the two curves read as one broken edge. */
+  document.querySelectorAll(".radius-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var v = Number(btn.getAttribute("data-radius"));
+      root.style.setProperty("--r-canvas", v + "px");
+      root.style.setProperty("--r-panel", Math.max(6, Math.round(v * 0.7)) + "px");
+      document.querySelectorAll(".radius-btn").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+    });
+  });
+
+  /* ── Panel collapse → thin black navbar. The canvas widens to reclaim the
+     space, so the canvas stays the hero and the panels stay behind. */
+  function setNav(side, collapsed) {
+    var rail = document.getElementById("rail-" + side);
+    if (!rail) return;
+    rail.classList.toggle("is-collapsed", collapsed);
+    card.classList.toggle("nav-" + side, collapsed);
+    rail.querySelectorAll(".collapse-btn").forEach(function (b) {
+      b.setAttribute("aria-expanded", String(!collapsed));
+      b.setAttribute("title", collapsed ? "Expand panel" : "Collapse panel");
+    });
+  }
+
+  document.querySelectorAll(".collapse-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var rail = document.getElementById(btn.getAttribute("data-rail"));
+      setNav(rail.id.replace("rail-", ""), !rail.classList.contains("is-collapsed"));
+    });
+  });
+
+  document.querySelectorAll(".nav-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var collapseAll = btn.getAttribute("data-nav") === "collapsed";
+      setNav("left", collapseAll);
+      setNav("right", collapseAll);
+      document.querySelectorAll(".nav-btn").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

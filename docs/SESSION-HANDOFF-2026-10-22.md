@@ -114,6 +114,13 @@ different address are rejected — set `user.email` accordingly before pushing.
 
 ### `apps/LAYERS_DESKTOP` — the desktop editor
 
+> **Update 2026-11-19:** the shell was rebuilt to the approved canvas-as-window
+> design (PR #19, `fdf4da3`) — 20px rounded shell, canvas as a 28px window on
+> top, zero-seam same-black panels, 12px gaps, pill toolbar, Expanded/Navbar.
+> The structural notes below describe the pre-2026-11-19 shell; the current
+> design record is `docs/research/layers-canvas-over-panels.md` and the gate
+> is `apps/LAYERS_DESKTOP/parity-probe.mjs`.
+
 19 files, ~3,300 lines. Runs on **`:3003`** (3000 = mobile prototype, 3001 = stale
 dist server, 3002 = an unrelated 3DDD.STUDIO server).
 
