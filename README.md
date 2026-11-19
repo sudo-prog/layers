@@ -8,6 +8,8 @@ See the [Product Vision](03-Reference/Product-Vision) in the vault for the full 
 >
 > **✅ Desktop surface added (2026-10-21):** `apps/LAYERS_DESKTOP` is the full-canvas shader editor — a shader tree, a layer stack, a full-bleed canvas the panels glass over, and a props panel, with multiple shaders coexisting as frames. It reuses `packages/engine`, `packages/cores` and `packages/stack` unchanged; only the shell is new. Runs on `:3003`. See `apps/LAYERS_DESKTOP/README.md`.
 
+> **✅ Canvas-as-window design IMPLEMENTED (2026-11-19, PR #19, `fdf4da3`):** the desktop shell now IS the user-approved design from `docs/research/layers-canvas-over-panels.html` — 20px rounded app shell, the canvas as a 28px rounded window painted on top, panels the same black as the base (zero seam), 12px gaps, glass pill toolbar, Expanded/Navbar modes. All editor functionality preserved; verified at 1440 and 390 (`parity-probe.mjs`). The "panels glass over a full-bleed canvas" description above is the pre-2026-11-19 structure.
+
 ## Repository layout
 
 ```

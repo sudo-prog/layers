@@ -48,19 +48,40 @@ same code the mobile app runs.
   purpose: the theme must render before any JS runs, and a JS-only token pipeline
   would flash unstyled.
 
-## Design
+## Design — canvas-as-window (IMPLEMENTED 2026-11-19, PR #19)
 
-The same graphite glass as the mobile build — see `docs/design-graphite.md` for
-the full rationale and every measurement. The load-bearing points:
+The shell is the user-approved design from
+`docs/research/layers-canvas-over-panels.html` (approved 2026-10-23,
+"Looks Great!"; the user clarified 2026-11-19 that approval meant ship it,
+and it shipped as `fdf4da3`, PR #19). The earlier "panels glass over a
+full-bleed canvas" structure is REPLACED by:
 
-- **`brightness(0.45)` in the backdrop filter.** The canvas behind a panel can be
-  white or black; darkening the backdrop *before* compositing is what lets a low
-  alpha (0.74) still clear WCAG AA. Without it, text fails over a bright canvas.
-- **The canvas is full-bleed and the panels float above it.** Panels are
-  `z-index: 2` over a stage with negative side margins. A backdrop filter blurs
-  what is painted behind the element — with the canvas as a flex *sibling* there
-  is nothing behind a panel and the glass reads as a flat slab.
-- **Desktop proportions**: 264px left / 316px right panels, a 44px top bar.
+- **20px rounded app shell** (`--r-shell`), base `#0a0b0d` to the edge.
+- **The canvas is a bright rounded WINDOW (28px, `--r-canvas`) painted ON
+  TOP**, inset 12px (`--gap`) from the panels and the top/bottom.
+- **Panels are the SAME colour value as the base** — not a tint, not glass.
+  Zero brightness step at the boundary, so panel and base read as one
+  continuous black surface; only content separates them.
+- **Glass pill toolbar + radius bar** (16/28/44) float on the canvas window.
+- **Expanded / Navbar modes** (`data-nav=expanded|collapsed`, `aria-pressed`):
+  Expanded shows both rails; Navbar collapses them and the window widens.
+  Viewports ≤900px boot collapsed.
+- The graphite token system (`docs/design-graphite.md`) still governs color,
+  type and the glass treatment of the floating chrome; `brightness(0.45)`
+  remains load-bearing for any translucent surface over the bright window.
+
+All functionality is unchanged: WebGL renderer, shader tree, layer stack,
+component picker, props panel (Transform/Appearance/core params), zoom,
+dims dialog, theme toggle, live pass/fps readout.
+
+### Parity verification (the gate for this design)
+
+`parity-probe.mjs` (Playwright + SwiftShader) measures the built app at
+1440x900 and 390x844: shell radius 20px, canvas radius 28px, panel bg ==
+base bg exactly, 12px gaps, docOverflowX 0, hit-fails 0, WebGL2 live,
+theme dark→light→dark, Noise/Grain Scale/Octaves/Strength present, both
+nav states. Run: `node apps/LAYERS_DESKTOP/parity-probe.mjs` (needs
+playwright-core; writes parity-probe.json + parity-*.png).
 
 ## Verified
 

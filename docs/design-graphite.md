@@ -8,6 +8,13 @@ This document records the tokens, the measurements behind them, and the
 constraints that are load-bearing. The numbers are not taste — each one is the
 result of a measurement that is reproduced below.
 
+> **Structure note (2026-11-19):** the desktop shell now uses the approved
+> canvas-as-window design (PR #19) — panels are the SAME black as the base
+> (zero seam), and the bright canvas is a rounded window on top. The graphite
+> tokens, contrast math and `brightness(0.45)` rationale below still govern
+> every translucent surface (the floating pill toolbar/chrome over the bright
+> window). Design record: `docs/research/layers-canvas-over-panels.md`.
+
 ---
 
 ## 1. The palette
