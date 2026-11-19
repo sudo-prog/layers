@@ -2,9 +2,9 @@
  * LAYERS Desktop — entry point.
  *
  * The full-canvas shader editor: a shader tree, a layer stack, a full-bleed
- * canvas the panels glass over, and a props panel. Multiple shaders coexist as
- * frames, which is the desktop surface's whole reason for existing next to the
- * mobile prototype.
+ * canvas window the panels sit behind, and a props panel. Multiple shaders
+ * coexist as frames, which is the desktop surface's whole reason for existing
+ * next to the mobile prototype.
  */
 
 import { Editor, DIMENSIONS } from "./editor.js";
@@ -23,38 +23,27 @@ let zoom = 1;
 function applyZoom(next: number): void {
   zoom = Math.max(0.05, Math.min(4, next));
   const frame = $("frame");
-  if (frame) {
-    // Size the frame from the DOCUMENT, then scale it. Relying on the canvas's
-    // `width: 100%` alone is circular — the frame has no intrinsic size, so it
-    // collapsed and the render sat off-centre and clipped.
-    const doc = editor?.active;
-    if (doc) {
-      frame.style.setProperty("--frame-w", `${doc.width}px`);
-      frame.style.setProperty("--frame-h", `${doc.height}px`);
-    }
+  const doc = editor?.active;
+  if (frame && doc) {
+    // Size the frame from the document, then scale it. Relying on the canvas's
+    // CSS width alone is circular — the frame needs an intrinsic size.
+    frame.style.width = `${doc.width}px`;
+    frame.style.height = `${doc.height}px`;
     frame.style.transform = `scale(${zoom})`;
   }
   const readout = $("zoom-level");
   if (readout) readout.textContent = `${Math.round(zoom * 100)}%`;
 }
 
-/** Fit the active frame inside the visible canvas (between the panels). */
+/** Fit the active frame inside the visible canvas viewport. */
 function zoomToFit(): void {
   const doc = editor?.active;
-  const area = $("canvas-area");
-  if (!doc || !area) return;
+  const viewport = $("canvas-viewport");
+  if (!doc || !viewport) return;
 
-  // The canvas area is FULL-BLEED, so `clientWidth` includes both panels. The
-  // VISIBLE strip is `clientWidth - panel-left - panel-right`. Fitting against
-  // clientWidth alone would size the frame for space that is behind a panel.
-  const cs = getComputedStyle(document.documentElement);
-  const left = parseFloat(cs.getPropertyValue("--panel-left-w")) || 264;
-  const right = parseFloat(cs.getPropertyValue("--panel-right-w")) || 316;
-  const visibleW = area.clientWidth - left - right;
-
-  // Vertically the stage already excludes the top bar (it is a flex sibling), so
-  // only the toolbar and breathing room need subtracting — not the whole chrome.
-  const visibleH = area.clientHeight - 88;
+  const pad = 64;
+  const visibleW = viewport.clientWidth - pad * 2;
+  const visibleH = viewport.clientHeight - pad * 2;
   if (visibleW <= 0 || visibleH <= 0) return;
 
   applyZoom(Math.min(visibleW / doc.width, visibleH / doc.height, 1));
@@ -74,13 +63,13 @@ function loop(): void {
   const now = performance.now();
   if (now - lastFps >= 1000) {
     const fps = Math.round((frameCount * 1000) / (now - lastFps));
-    const el = $("fps-display");
+    const el = $("footer-fps");
     if (el) el.textContent = `${fps} fps`;
     frameCount = 0;
     lastFps = now;
   }
 
-  const pc = $("pass-count");
+  const pc = $("footer-passes");
   if (pc && editor) pc.textContent = `${editor.passCount()} passes`;
 
   requestAnimationFrame(loop);
@@ -119,7 +108,7 @@ function renderShaderList(): void {
 }
 
 function renderLayerList(): void {
-  const host = $("layer-list");
+  const host = $("stack-list");
   if (!host || !editor) return;
   host.innerHTML = "";
 
@@ -148,7 +137,7 @@ function renderLayerList(): void {
     const actions = document.createElement("span");
     actions.className = "tree-row-actions";
     const eye = document.createElement("span");
-    eye.className = "icon-btn";
+    eye.className = "tree-row-flag";
     eye.setAttribute("role", "img");
     eye.setAttribute("aria-label", item.enabled ? "Visible" : "Hidden");
     eye.innerHTML = iconSvg(item.enabled ? "eye" : "eyeOff", 13);
@@ -164,7 +153,7 @@ function renderLayerList(): void {
 }
 
 function renderProps(): void {
-  const host = $("inspector");
+  const host = $("props-panel");
   if (!host || !editor) return;
   const doc = editor.active;
   renderInspector(host, doc?.stack.items ?? [], doc?.stack.selectedId ?? null, {
@@ -199,8 +188,12 @@ function renderAll(): void {
   renderLayerList();
   renderProps();
   const doc = editor?.active;
-  const dl = $("dims-label");
-  if (dl && doc) dl.textContent = `${doc.width} × ${doc.height}`;
+  if (doc) {
+    const dl = $("dims-label");
+    if (dl) dl.textContent = `${doc.width} × ${doc.height}`;
+    const cm = $("canvas-meta");
+    if (cm) cm.textContent = `Canvas · ${doc.width} × ${doc.height}`;
+  }
 }
 
 // ── Toolbar ─────────────────────────────────────────────────────────────────
@@ -208,8 +201,10 @@ function renderAll(): void {
 function mountInsertBar(): void {
   const host = $("insert-host");
   if (!host) return;
+  host.innerHTML = "";
   const bar = document.createElement("div");
   bar.className = "insert-bar";
+  bar.id = "insert-bar";
   bar.setAttribute("role", "toolbar");
   bar.setAttribute("aria-label", "Add component");
 
@@ -223,35 +218,35 @@ function mountInsertBar(): void {
     b.setAttribute("aria-label", `${cat.label}, ${n} components`);
     b.innerHTML =
       `${iconSvg(cat.id, 14)}` +
-      `<span class="insert-btn-label">${cat.label}</span>` +
-      // Kept in the accessibility tree at every width so the control stays
-      // nameable by text; the visible label is hidden below 1180px.
-      `<span class="sr-only insert-btn-name">${cat.label}</span>`;
+      `<span class="insert-btn-label">${cat.label}</span>`;
     b.addEventListener("click", () => openPicker(cat.id as CategoryId));
     bar.appendChild(b);
   }
 
-  host.innerHTML = "";
   host.appendChild(bar);
 }
 
 function mountTopbar(): void {
-  $("btn-zoom-in")?.addEventListener("click", () => applyZoom(zoom * 1.25));
-  $("btn-zoom-out")?.addEventListener("click", () => applyZoom(zoom / 1.25));
-  $("btn-zoom-fit")?.addEventListener("click", zoomToFit);
+  $("zoom-in")?.addEventListener("click", () => applyZoom(zoom * 1.25));
+  $("zoom-out")?.addEventListener("click", () => applyZoom(zoom / 1.25));
+  $("zoom-fit")?.addEventListener("click", zoomToFit);
 
-  const theme = $("btn-theme");
-  theme?.addEventListener("click", () => {
+  const themeBtn = $("toggle-theme");
+  const syncThemeIcon = () => {
+    const dark = document.documentElement.getAttribute("data-theme") !== "light";
+    if (themeBtn) {
+      themeBtn.innerHTML = iconSvg(dark ? "sun" : "moon", 14);
+      themeBtn.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+      themeBtn.title = dark ? "Switch to light theme" : "Switch to dark theme";
+    }
+  };
+  themeBtn?.addEventListener("click", () => {
     const root = document.documentElement;
     const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
     root.setAttribute("data-theme", next);
-    theme.innerHTML = iconSvg(next === "dark" ? "moon" : "sun");
-    theme.setAttribute("aria-label", next === "dark" ? "Switch to light theme" : "Switch to dark theme");
+    syncThemeIcon();
   });
-  if (theme) {
-    const dark = document.documentElement.getAttribute("data-theme") === "dark";
-    theme.innerHTML = iconSvg(dark ? "moon" : "sun");
-  }
+  syncThemeIcon();
 
   const proj = $("btn-project");
   proj?.addEventListener("click", () => {
@@ -263,8 +258,79 @@ function mountTopbar(): void {
     }
   });
 
-  // Dimensions switcher: a real popover, grouped by device class.
+  // Pipeline label/button — keep interactive hook alive.
+  $("btn-pipeline")?.addEventListener("click", () => {
+    // No-op toggle point preserved for future wiring; label remains accurate.
+  });
+
   $("btn-dims")?.addEventListener("click", () => toggleDimsMenu());
+}
+
+// ── Shell controls (rails, radius, nav modes) ───────────────────────────────
+
+function setRailCollapsed(side: "left" | "right", collapsed: boolean): void {
+  const rail = $(`rail-${side}`);
+  const card = $("canvas-card");
+  if (!rail || !card) return;
+  rail.classList.toggle("is-collapsed", collapsed);
+  card.classList.toggle(`nav-${side}`, collapsed);
+  rail.querySelectorAll<HTMLElement>(".collapse-btn").forEach((b) => {
+    b.setAttribute("aria-expanded", String(!collapsed));
+    b.setAttribute("title", collapsed ? "Expand panel" : "Collapse panel");
+  });
+}
+
+function mountShellControls(): void {
+  // Per-rail collapse buttons
+  document.querySelectorAll<HTMLElement>(".collapse-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const railId = btn.getAttribute("data-rail");
+      if (!railId) return;
+      const rail = document.getElementById(railId);
+      if (!rail) return;
+      const side = railId.replace("rail-", "") as "left" | "right";
+      setRailCollapsed(side, !rail.classList.contains("is-collapsed"));
+      // Sync the global nav buttons to reflect actual state
+      syncNavButtons();
+    });
+  });
+
+  // Radius buttons
+  document.querySelectorAll<HTMLElement>(".radius-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const v = Number(btn.getAttribute("data-radius"));
+      if (!Number.isFinite(v)) return;
+      const root = document.documentElement;
+      root.style.setProperty("--r-canvas", `${v}px`);
+      root.style.setProperty("--r-panel", `${Math.max(6, Math.round(v * 0.7))}px`);
+      document.querySelectorAll<HTMLElement>(".radius-btn").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+    });
+  });
+
+  // Expanded / Navbar mode buttons
+  document.querySelectorAll<HTMLElement>(".nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const collapseAll = btn.getAttribute("data-nav") === "collapsed";
+      setRailCollapsed("left", collapseAll);
+      setRailCollapsed("right", collapseAll);
+      document.querySelectorAll<HTMLElement>(".nav-btn").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+    });
+  });
+}
+
+function syncNavButtons(): void {
+  const left = $("rail-left");
+  const right = $("rail-right");
+  const allCollapsed = !!left?.classList.contains("is-collapsed") && !!right?.classList.contains("is-collapsed");
+  document.querySelectorAll<HTMLElement>(".nav-btn").forEach((b) => {
+    const nav = b.getAttribute("data-nav");
+    if (nav === "collapsed") b.setAttribute("aria-pressed", String(allCollapsed));
+    if (nav === "expanded") b.setAttribute("aria-pressed", String(!allCollapsed));
+  });
 }
 
 // ── Dimensions popover ──────────────────────────────────────────────────────
@@ -311,17 +377,21 @@ function toggleDimsMenu(): void {
     }
   }
 
-  btn.parentElement?.appendChild(menu);
+  // Anchor menu to the button
+  const host = btn.closest(".panel-strip") || btn.parentElement;
+  if (host) {
+    (host as HTMLElement).style.position = (host as HTMLElement).style.position || "relative";
+  }
+  btn.insertAdjacentElement("afterend", menu);
   dimsMenu = menu;
   btn.setAttribute("aria-expanded", "true");
 
   const onDocClick = (e: MouseEvent) => {
-    if (dimsMenu && !dimsMenu.contains(e.target as Node) && e.target !== btn) {
+    if (dimsMenu && !dimsMenu.contains(e.target as Node) && e.target !== btn && !btn.contains(e.target as Node)) {
       closeDimsMenu();
     }
   };
   setTimeout(() => document.addEventListener("click", onDocClick), 0);
-  menu.dataset.bound = "1";
   (menu as HTMLElement & { _off?: () => void })._off = () =>
     document.removeEventListener("click", onDocClick);
 }
@@ -348,6 +418,7 @@ function boot(): void {
   editor.rebuildPasses();
 
   mountTopbar();
+  mountShellControls();
   mountInsertBar();
 
   initPicker({
@@ -357,10 +428,17 @@ function boot(): void {
       renderAll();
     },
     close: () => {
-      // Re-focus the toolbar so keyboard users are not dropped into the void.
       $("insert-host")?.querySelector<HTMLElement>("button")?.focus();
     },
   });
+
+  // On narrow viewports, default to navbar (collapsed) mode so the canvas
+  // window remains usable while preserving the rail-behind-canvas geometry.
+  if (window.innerWidth <= 900) {
+    setRailCollapsed("left", true);
+    setRailCollapsed("right", true);
+    syncNavButtons();
+  }
 
   renderAll();
   zoomToFit();
@@ -370,8 +448,6 @@ function boot(): void {
   // assert on it without evaluating JS in the page (see src/selfcheck.ts).
   if (new URLSearchParams(location.search).has("selfcheck")) {
     void import("./selfcheck.js").then((m) => {
-      // Exposed so a harness can re-publish AFTER it has added a layer — the
-      // boot-time publish runs before any layer exists.
       (window as unknown as { __publishSelfCheck?: () => unknown }).__publishSelfCheck = m.publishSelfCheck;
       setTimeout(() => m.publishSelfCheck(), 800);
     });

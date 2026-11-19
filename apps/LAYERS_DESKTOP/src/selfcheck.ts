@@ -35,20 +35,27 @@ export function runSelfCheck(): GeometryResult {
   };
 
   const cs = getComputedStyle(document.documentElement);
-  const pl = parseFloat(cs.getPropertyValue("--panel-left-w")) || 0;
-  const pr = parseFloat(cs.getPropertyValue("--panel-right-w")) || 0;
-  const ca = rect(q(".canvas-area"));
+  const ca = rect(q(".canvas-card") || q(".canvas-area"));
   const frame = rect(q("#frame"));
   const bar = rect(q(".insert-bar"));
 
-  const visibleCanvas = { l: ca.l + pl, r: ca.r - pr, w: ca.r - pr - (ca.l + pl) };
+  // New layout: the canvas card/window IS the visible canvas region.
+  // Old layout: .canvas-area was full-bleed with panels overlaid, so the
+  // visible strip was clientWidth minus panel widths. Detect by presence.
+  const hasCard = !!q(".canvas-card");
+  let visibleCanvas: { l: number; r: number; w: number };
+  if (hasCard) {
+    visibleCanvas = { l: ca.l, r: ca.r, w: ca.r - ca.l };
+  } else {
+    const pl = parseFloat(cs.getPropertyValue("--panel-left-w")) || 0;
+    const pr = parseFloat(cs.getPropertyValue("--panel-right-w")) || 0;
+    visibleCanvas = { l: ca.l + pl, r: ca.r - pr, w: ca.r - pr - (ca.l + pl) };
+  }
 
   const truncated: string[] = [];
   const walk = (n: Element) => {
     // Skip `sr-only` nodes: they are 1px wide BY DESIGN, so `scrollWidth >
     // clientWidth` is always true and they would report as false positives.
-    // (They did — every insert-button label was "truncated" when the real
-    // labels measured a clean 45px inside an 89px button.)
     if (n.classList?.contains("sr-only")) return;
     if (n.children.length === 0 && (n.textContent ?? "").trim()) {
       if (n.scrollWidth - n.clientWidth > 1) truncated.push((n.textContent ?? "").trim().slice(0, 24));
